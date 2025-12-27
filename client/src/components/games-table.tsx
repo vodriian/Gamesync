@@ -48,11 +48,32 @@ export function GamesTable({ games, columns }: GamesTableProps) {
       case "playtime_forever":
         return <span className="font-mono text-muted-foreground">{(game.playtime_forever / 60).toFixed(1)}h</span>;
       case "proton_tier": {
+        const tierValue = game.customProperties?.tier || "";
         const tier = game.proton?.tier || "unknown";
         const colorClass = TIER_COLORS[tier] || TIER_COLORS.unknown;
         return (
-          <Badge variant="outline" className={cn("capitalize text-[10px] h-5 px-1.5", colorClass)}>
-            {tier}
+          <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5 whitespace-nowrap", colorClass)}>
+            {tierValue || tier}
+          </Badge>
+        );
+      }
+      case "proton_confidence": {
+        const confidence = game.customProperties?.confidence || "00 unknown ❓";
+        return (
+          <span className="text-xs whitespace-nowrap">{confidence}</span>
+        );
+      }
+      case "steam_rating": {
+        const rating = game.customProperties?.rating || "00 no reviews 0️⃣";
+        return (
+          <span className="text-xs whitespace-nowrap">{rating}</span>
+        );
+      }
+      case "status": {
+        const status = game.customProperties?.status || "02 backlog 📚";
+        return (
+          <Badge variant="secondary" className="text-[10px] h-5 px-1.5 whitespace-nowrap">
+            {status}
           </Badge>
         );
       }
@@ -67,8 +88,11 @@ export function GamesTable({ games, columns }: GamesTableProps) {
           </div>
         );
       default:
-        // Handle user defined columns (mocking data for now as empty or random)
-        if (col.type === 'select') return <span className="text-muted-foreground/30 text-xs italic">-</span>;
+        // Handle user defined columns
+        if (col.type === 'select') {
+          const value = game.customProperties?.[col.id] || game[col.id];
+          return value ? <span className="text-xs">{value}</span> : <span className="text-muted-foreground/30 text-xs italic">-</span>;
+        }
         if (col.type === 'multi_select') return <span className="text-muted-foreground/30 text-xs italic">-</span>;
         return <span className="text-muted-foreground text-sm">-</span>;
     }

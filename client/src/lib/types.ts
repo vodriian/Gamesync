@@ -55,11 +55,22 @@ export interface ColumnConfig {
 
 export const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: "name", label: "Name", type: "text", visible: true, system: true },
-  { id: "appid", label: "App ID", type: "number", visible: true, system: true },
-  { id: "playtime_forever", label: "Playtime (min)", type: "number", visible: true, system: true },
-  { id: "proton_tier", label: "Proton Tier", type: "select", visible: true, system: true, options: ["platinum", "gold", "silver", "bronze", "borked", "native"] },
-  { id: "notion_status", label: "Sync Status", type: "status", visible: true, system: true },
-  { id: "my_rating", label: "My Rating", type: "select", visible: false, system: false, options: ["⭐⭐⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐", "⭐⭐", "⭐"] },
-  { id: "comments", label: "Comments", type: "text", visible: false, system: false },
-  { id: "tags", label: "Tags", type: "multi_select", visible: false, system: false, options: ["Finished", "Backlog", "Abandonware", "Replay"] },
+  { id: "appid", label: "App ID", type: "number", visible: false, system: true },
+  { id: "playtime_forever", label: "Playtime", type: "number", visible: true, system: true },
+  { id: "proton_tier", label: "Tier", type: "select", visible: true, system: true, options: [
+    "06 native 🌿", "05 platinum 👑", "04 gold 🥇", "03 silver 🥈", 
+    "02 bronze 🥉", "01 borked 💥", "00 pending ⏳", "07 unknown ❓"
+  ]},
+  { id: "proton_confidence", label: "Confidence", type: "select", visible: true, system: true, options: [
+    "03 high ✅", "02 medium 🟡", "01 low ⚠️", "00 unknown ❓"
+  ]},
+  { id: "steam_rating", label: "Rating", type: "select", visible: true, system: true, options: [
+    "09 overwhelmingly positive 😍", "08 very positive 🙂", "07 positive 👍",
+    "06 mostly positive 🙂‍↕️", "05 mixed 😐", "04 mostly negative 👎",
+    "03 negative 😕", "02 very negative 😬", "01 overwhelmingly negative 💣", "00 no reviews 0️⃣"
+  ]},
+  { id: "status", label: "Status", type: "select", visible: true, system: true, options: [
+    "04 completed ✅", "03 playing 🎮", "02 backlog 📚", "01 dropped 🧹", "00 wishlist ⭐"
+  ]},
+  { id: "notion_status", label: "Sync", type: "status", visible: true, system: true },
 ];
