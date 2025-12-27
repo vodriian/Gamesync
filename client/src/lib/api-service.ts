@@ -237,5 +237,13 @@ export function gameToGameData(game: Game): GameData {
       score: game.ratingPositivePct || undefined,
     },
     notion_status: "synced",
+    // Pass through formatted select values
+    customProperties: {
+      tier: game.protonTier || undefined,
+      confidence: game.protonConfidence || undefined,
+      rating: game.steamRating || undefined,
+      status: game.status || undefined,
+      ...(game.customProperties && typeof game.customProperties === 'object' ? game.customProperties : {}),
+    },
   };
 }
