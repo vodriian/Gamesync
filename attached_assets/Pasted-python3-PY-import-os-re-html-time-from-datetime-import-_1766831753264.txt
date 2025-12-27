@@ -1,0 +1,265 @@
+python3 - <<'PY'
+import os, re, html, time
+from datetime import date
+from typing import Any, Dict, List, Optional, Tuple
+import requests
+
+STEAM_KEY = os.environ["STEAM_KEY"].strip()
+STEAMID64 = os.environ["STEAMID64"].strip()
+
+NOTION_TOKEN = os.environ["NOTION_TOKEN"].strip()
+NOTION_DATABASE_ID = os.environ["NOTION_DATABASE_ID"].strip()
+NOTION_VERSION = os.environ.get("NOTION_VERSION", "2025-09-03").strip()
+ADD_ABOUT_ON_CREATE = os.environ.get("ADD_ABOUT_ON_CREATE", "1").strip() == "1"
+
+def n_headers() -> Dict[str, str]:
+    return {
+        "Authorization": f"Bearer {NOTION_TOKEN}",
+        "Notion-Version": NOTION_VERSION,
+        "Content-Type": "application/json",
+    }
+
+def steam_owned_games() -> List[Dict[str, Any]]:
+    url = "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/"
+    params = {
+        "key": STEAM_KEY,
+        "steamid": STEAMID64,
+        "include_appinfo": 1,
+        "include_played_free_games": 1,
+        "skip_unvetted_apps": 0,
+    }
+    r = requests.get(url, params=params, timeout=60)
+    r.raise_for_status()
+    return r.json().get("response", {}).get("games", []) or []
+
+def steam_store_url(appid: int) -> str:
+    return f"https://store.steampowered.com/app/{appid}/"
+
+def steam_cover_url(appid: int) -> str:
+    return f"https://cdn.cloudflare.steamstatic.com/steam/apps/{appid}/header.jpg"
+
+def steam_reviews(appid: int) -> Optional[Tuple[str, int, int]]:
+    url = f"https://store.steampowered.com/appreviews/{appid}"
+    params = {"json": 1, "language": "all", "purchase_type": "all", "num_per_page": 0}
+    try:
+        r = requests.get(url, params=params, timeout=30)
+        r.raise_for_status()
+        data = r.json() or {}
+        q = data.get("query_summary") or {}
+        total = int(q.get("total_reviews") or 0)
+        pos = int(q.get("total_positive") or 0)
+        rating = (q.get("review_score_desc") or "").strip() or ""
+        pct = int(round((pos / total) * 100)) if total > 0 else 0
+        if not rating and total == 0:
+            return None
+        return (rating or "No reviews", total, pct)
+    except Exception:
+        return None
+
+def clean_about_html(s: str) -> str:
+    if not s:
+        return ""
+    s = s.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
+    s = re.sub(r"</p\s*>", "\n\n", s, flags=re.I)
+    s = re.sub(r"<p[^>]*>", "", s, flags=re.I)
+    s = re.sub(r"<li[^>]*>", "- ", s, flags=re.I)
+    s = re.sub(r"</li\s*>", "\n", s, flags=re.I)
+    s = re.sub(r"<ul[^>]*>|</ul\s*>|<ol[^>]*>|</ol\s*>", "\n", s, flags=re.I)
+    s = re.sub(r"<[^>]+>", "", s)
+    s = html.unescape(s)
+    s = re.sub(r"\n{3,}", "\n\n", s).strip()
+    return s
+
+def chunks(xs: List[int], n: int):
+    for i in range(0, len(xs), n):
+        yield xs[i:i+n]
+
+def steam_appdetails_about(appids: List[int]) -> Dict[int, str]:
+    """
+    Small batches. Manual URL so commas stay commas.
+    Fallback to per-app if a batch fails.
+    """
+    out: Dict[int, str] = {}
+
+    def fetch(ids: List[int]) -> Dict[int, str]:
+        ids_str = ",".join(str(a) for a in ids)
+        url = f"https://store.steampowered.com/api/appdetails?appids={ids_str}&l=en&cc=us"
+        r = requests.get(url, timeout=60)
+        r.raise_for_status()
+        data = r.json() or {}
+        got: Dict[int, str] = {}
+        for a in ids:
+            node = data.get(str(a)) or {}
+            if not node.get("success"):
+                continue
+            d = node.get("data") or {}
+            about = clean_about_html(d.get("about_the_game") or "")
+            if about:
+                got[a] = about
+        return got
+
+    try:
+        out.update(fetch(appids))
+        return out
+    except Exception:
+        for a in appids:
+            try:
+                out.update(fetch([a]))
+            except Exception:
+                continue
+        return out
+
+# --- Notion helpers (data source model) ---
+def notion_get_data_source_id(database_id: str) -> str:
+    r = requests.get(f"https://api.notion.com/v1/databases/{database_id}", headers=n_headers(), timeout=60)
+    r.raise_for_status()
+    db = r.json() or {}
+    dss = db.get("data_sources") or []
+    if not dss:
+        raise RuntimeError("No data_sources found on that database. (Is it a database page, and shared with the integration?)")
+    return dss[0]["id"]
+
+def notion_query_all_pages(data_source_id: str) -> List[Dict[str, Any]]:
+    out: List[Dict[str, Any]] = []
+    cursor = None
+    while True:
+        body: Dict[str, Any] = {"page_size": 100}
+        if cursor:
+            body["start_cursor"] = cursor
+        r = requests.post(f"https://api.notion.com/v1/data_sources/{data_source_id}/query", headers=n_headers(), json=body, timeout=120)
+        r.raise_for_status()
+        j = r.json() or {}
+        out.extend(j.get("results") or [])
+        cursor = j.get("next_cursor")
+        if not cursor:
+            break
+    return out
+
+def notion_create_page(data_source_id: str, props: Dict[str, Any]) -> Dict[str, Any]:
+    body = {"parent": {"type": "data_source_id", "data_source_id": data_source_id}, "properties": props}
+    r = requests.post("https://api.notion.com/v1/pages", headers=n_headers(), json=body, timeout=120)
+    r.raise_for_status()
+    return r.json()
+
+def notion_update_page(page_id: str, props: Dict[str, Any]) -> None:
+    r = requests.patch(f"https://api.notion.com/v1/pages/{page_id}", headers=n_headers(), json={"properties": props}, timeout=120)
+    r.raise_for_status()
+
+def notion_append_blocks(page_id: str, children: List[Dict[str, Any]]) -> None:
+    r = requests.patch(f"https://api.notion.com/v1/blocks/{page_id}/children", headers=n_headers(), json={"children": children}, timeout=120)
+    r.raise_for_status()
+
+def rich_text_chunks(text: str, max_len: int = 1800) -> List[str]:
+    text = text.strip()
+    if not text:
+        return []
+    parts = []
+    while text:
+        parts.append(text[:max_len])
+        text = text[max_len:]
+    return parts
+
+def about_blocks(about: str) -> List[Dict[str, Any]]:
+    blocks: List[Dict[str, Any]] = [{
+        "object": "block",
+        "type": "heading_2",
+        "heading_2": {"rich_text": [{"type": "text", "text": {"content": "About this game"}}]},
+    }]
+    for part in rich_text_chunks(about):
+        blocks.append({
+            "object": "block",
+            "type": "paragraph",
+            "paragraph": {"rich_text": [{"type": "text", "text": {"content": part}}]},
+        })
+    return blocks
+
+def title_prop(name: str) -> Dict[str, Any]:
+    return {"title": [{"type": "text", "text": {"content": name}}]}
+
+def number_prop(n: float) -> Dict[str, Any]:
+    return {"number": n}
+
+def url_prop(u: str) -> Dict[str, Any]:
+    return {"url": u}
+
+def select_prop(name: str) -> Dict[str, Any]:
+    return {"select": {"name": name}}
+
+def multi_select_prop(names: List[str]) -> Dict[str, Any]:
+    return {"multi_select": [{"name": n} for n in names]}
+
+def date_prop(iso: str) -> Dict[str, Any]:
+    return {"date": {"start": iso}}
+
+# ---------------- RUN ----------------
+print("Steam -> Notion sync (Notion v:", NOTION_VERSION, ")")
+today = date.today().isoformat()
+
+dsid = notion_get_data_source_id(NOTION_DATABASE_ID)
+print("Data source id:", dsid)
+
+existing_pages = notion_query_all_pages(dsid)
+appid_to_page: Dict[int, Dict[str, Any]] = {}
+for p in existing_pages:
+    props = p.get("properties") or {}
+    app = props.get("appid") or {}
+    v = app.get("number")
+    if isinstance(v, (int, float)):
+        appid_to_page[int(v)] = p
+
+steam_games = steam_owned_games()
+print("Steam games:", len(steam_games), "| Existing Notion rows:", len(appid_to_page))
+
+# Prefetch about text only for new pages (fast)
+new_appids = [int(g["appid"]) for g in steam_games if int(g["appid"]) not in appid_to_page]
+about_map: Dict[int, str] = {}
+if ADD_ABOUT_ON_CREATE and new_appids:
+    for batch in chunks(new_appids, 10):
+        about_map.update(steam_appdetails_about(batch))
+        time.sleep(0.2)
+
+created = 0
+updated = 0
+
+for g in steam_games:
+    appid = int(g["appid"])
+    name = (g.get("name") or str(appid)).strip()
+    hours = round((g.get("playtime_forever", 0) or 0) / 60.0, 1)
+
+    rev = steam_reviews(appid)
+
+    props: Dict[str, Any] = {
+        "Name": title_prop(name),
+        "appid": number_prop(appid),
+        "hours": number_prop(hours),
+        "SteamURL": url_prop(steam_store_url(appid)),
+        "Cover": url_prop(steam_cover_url(appid)),
+        "Store": multi_select_prop(["Steam"]),
+        "Status": select_prop("Backlog"),
+    }
+
+    if rev:
+        rating, total, pct = rev
+        props["Rating"] = select_prop(rating)
+        props["RatingTotal"] = number_prop(total)
+        props["RatingPositivePct"] = number_prop(pct)
+
+    existing = appid_to_page.get(appid)
+    if existing:
+        # Preserve "added" if it already exists
+        ex_added = ((existing.get("properties") or {}).get("added") or {}).get("date")
+        if not ex_added:
+            props["added"] = date_prop(today)
+        notion_update_page(existing["id"], props)
+        updated += 1
+    else:
+        props["added"] = date_prop(today)
+        page = notion_create_page(dsid, props)
+        created += 1
+
+        about = about_map.get(appid, "")
+        if about:
+            notion_append_blocks(page["id"], about_blocks(about))
+
+print(f"Done. Created: {created} | Updated: {updated}")
+PY
