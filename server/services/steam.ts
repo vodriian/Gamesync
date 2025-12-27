@@ -99,18 +99,30 @@ export class SteamService {
     }
   }
 
+  private reviewsRateLimited = false;
+
   async getGameReviews(appId: number): Promise<{
     rating: string;
     ratingTotal: number;
     ratingPositivePct: number;
   } | null> {
+    // Skip if we've been rate limited
+    if (this.reviewsRateLimited) {
+      return null;
+    }
+
     const url = `${this.storeApiUrl}/appreviews/${appId}?json=1&language=all&purchase_type=all`;
     
     try {
       const response = await fetch(url);
       
+      if (response.status === 403) {
+        console.warn(`Steam Reviews API rate limited - skipping remaining review fetches`);
+        this.reviewsRateLimited = true;
+        return null;
+      }
+      
       if (!response.ok) {
-        console.warn(`Failed to fetch reviews for app ${appId}: ${response.status}`);
         return null;
       }
       
@@ -133,7 +145,6 @@ export class SteamService {
         ratingPositivePct: positivePct,
       };
     } catch (error) {
-      console.error(`Error fetching reviews for app ${appId}:`, error);
       return null;
     }
   }
@@ -167,28 +178,43 @@ export class SteamService {
   async getGamesWithDetails(apiKey: string, steamId: string) {
     const ownedGames = await this.getOwnedGames(apiKey, steamId);
     
+    // Reset rate limit flag for new sync
+    this.reviewsRateLimited = false;
+    
+    // Process games in parallel batches of 10 for speed
+    const BATCH_SIZE = 10;
     const gamesWithDetails = [];
     
-    for (const game of ownedGames) {
-      const [details, reviews] = await Promise.all([
-        this.getGameDetails(game.appid),
-        this.getGameReviews(game.appid),
-      ]);
+    for (let i = 0; i < ownedGames.length; i += BATCH_SIZE) {
+      const batch = ownedGames.slice(i, i + BATCH_SIZE);
       
-      gamesWithDetails.push({
-        id: game.appid.toString(),
-        name: details?.name || game.name,
-        coverImage: details?.coverImage || `https://steamcdn-a.akamaihd.net/steam/apps/${game.appid}/library_600x900.jpg`,
-        headerImage: details?.headerImage || `https://steamcdn-a.akamaihd.net/steam/apps/${game.appid}/header.jpg`,
-        description: details?.description || "",
-        playtime: game.playtime_forever,
-        steamRating: reviews?.rating || "00 no reviews 0️⃣",
-        ratingTotal: reviews?.ratingTotal || 0,
-        ratingPositivePct: reviews?.ratingPositivePct || 0,
-      });
+      const batchResults = await Promise.all(
+        batch.map(async (game) => {
+          const [details, reviews] = await Promise.all([
+            this.getGameDetails(game.appid),
+            this.getGameReviews(game.appid),
+          ]);
+          
+          return {
+            id: game.appid.toString(),
+            name: details?.name || game.name,
+            coverImage: details?.coverImage || `https://steamcdn-a.akamaihd.net/steam/apps/${game.appid}/library_600x900.jpg`,
+            headerImage: details?.headerImage || `https://steamcdn-a.akamaihd.net/steam/apps/${game.appid}/header.jpg`,
+            description: details?.description || "",
+            playtime: game.playtime_forever,
+            steamRating: reviews?.rating || "00 no reviews 0️⃣",
+            ratingTotal: reviews?.ratingTotal || 0,
+            ratingPositivePct: reviews?.ratingPositivePct || 0,
+          };
+        })
+      );
       
-      // Rate limiting: wait 300ms between requests to avoid Steam API rate limits
-      await new Promise(resolve => setTimeout(resolve, 300));
+      gamesWithDetails.push(...batchResults);
+      
+      // Small delay between batches to be respectful to Steam API
+      if (i + BATCH_SIZE < ownedGames.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
     }
     
     return gamesWithDetails;

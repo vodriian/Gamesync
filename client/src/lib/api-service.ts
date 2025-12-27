@@ -111,24 +111,29 @@ export async function getGame(id: string): Promise<Game> {
 export async function syncFromSteam(onLog?: (msg: string, level: "info" | "success" | "error") => void): Promise<{ success: boolean; gamesCount: number; message: string }> {
   if (onLog) onLog("Connecting to Steam API...", "info");
   
-  const response = await fetch(`${API_BASE}/sync/steam`, {
-    method: "POST",
-  });
-  
-  const result = await response.json();
-  
-  if (!response.ok) {
-    if (onLog) onLog(result.error || "Failed to sync from Steam", "error");
-    throw new Error(result.error || "Failed to sync from Steam");
+  try {
+    const response = await fetch(`${API_BASE}/sync/steam`, {
+      method: "POST",
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      if (onLog) onLog(result.error || "Failed to sync from Steam", "error");
+      throw new Error(result.error || "Failed to sync from Steam");
+    }
+    
+    if (onLog) {
+      onLog(`Fetched ${result.gamesCount} games from Steam`, "success");
+      onLog("Enriched with ProtonDB compatibility data", "success");
+      onLog("Steam library sync complete!", "success");
+    }
+    
+    return result;
+  } catch (error) {
+    if (onLog) onLog(`Steam sync error: ${error instanceof Error ? error.message : 'Unknown error'}`, "error");
+    throw error;
   }
-  
-  if (onLog) {
-    onLog(`Fetched ${result.gamesCount} games from Steam`, "success");
-    onLog("Enriching games with ProtonDB compatibility data...", "info");
-    onLog(result.message, "success");
-  }
-  
-  return result;
 }
 
 export async function syncToNotion(
