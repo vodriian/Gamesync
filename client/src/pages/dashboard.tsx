@@ -196,22 +196,22 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-primary/30">
       {/* Header */}
       <header className="border-b border-border/40 bg-background/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded bg-primary/20 border border-primary/50 flex items-center justify-center">
-              <Database className="w-4 h-4 text-primary animate-pulse" />
+        <div className="container mx-auto px-4 md:px-6 h-14 md:h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="w-7 h-7 md:w-8 md:h-8 rounded bg-primary/20 border border-primary/50 flex items-center justify-center">
+              <Database className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary animate-pulse" />
             </div>
-            <h1 className="text-2xl font-display font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60">
-              GAMESYNC <span className="text-primary text-sm align-top">PRO</span>
+            <h1 className="text-lg md:text-2xl font-display font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60">
+              GAMESYNC <span className="text-primary text-[10px] md:text-sm align-top">PRO</span>
             </h1>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
             <Dialog open={openLogs} onOpenChange={setOpenLogs}>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
+                <Button variant="ghost" size="sm" className="gap-1 md:gap-2 text-muted-foreground hover:text-foreground px-2 md:px-3">
                   <ScrollText className="w-4 h-4" />
-                  Operations Log
+                  <span className="hidden sm:inline">Operations Log</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[600px] border-border/50 bg-card/95 backdrop-blur-xl max-h-[80vh] flex flex-col">
@@ -241,9 +241,9 @@ export default function Dashboard() {
 
             <Dialog open={openSettings} onOpenChange={setOpenSettings}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 border-border/50 hover:bg-muted/50">
+                <Button variant="outline" size="sm" className="gap-1 md:gap-2 border-border/50 hover:bg-muted/50 px-2 md:px-3">
                   <Settings className="w-4 h-4" />
-                  Settings
+                  <span className="hidden sm:inline">Settings</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[500px] border-border/50 bg-card/95 backdrop-blur-xl">
@@ -363,17 +363,39 @@ export default function Dashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 container mx-auto px-6 py-8 flex gap-8 h-[calc(100vh-64px)] overflow-hidden">
+      <main className="flex-1 container mx-auto px-4 md:px-6 py-4 md:py-8 flex gap-4 md:gap-8 h-[calc(100vh-56px)] md:h-[calc(100vh-64px)] overflow-hidden">
         
         {/* Left Panel: Game Grid */}
-        <div className="flex-1 flex flex-col gap-6 overflow-hidden">
-          <div className="flex items-center justify-between shrink-0">
-             <div>
-               <h2 className="text-3xl font-display font-bold">Library</h2>
-               <p className="text-muted-foreground text-sm">Manage your Steam collection sync status.</p>
+        <div className="flex-1 flex flex-col gap-4 md:gap-6 overflow-hidden">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0">
+             <div className="flex items-center justify-between md:block">
+               <div>
+                 <h2 className="text-2xl md:text-3xl font-display font-bold">Library</h2>
+                 <p className="text-muted-foreground text-xs md:text-sm hidden md:block">Manage your Steam collection sync status.</p>
+               </div>
+               
+               {/* Mobile view toggle */}
+               <div className="bg-muted/30 p-1 rounded-lg border border-border/50 flex items-center md:hidden">
+                 <Button 
+                   variant={viewMode === 'grid' ? 'secondary' : 'ghost'} 
+                   size="icon" 
+                   className="h-8 w-8 transition-all"
+                   onClick={() => setViewMode('grid')}
+                 >
+                   <LayoutGrid className="w-4 h-4" />
+                 </Button>
+                 <Button 
+                   variant={viewMode === 'table' ? 'secondary' : 'ghost'} 
+                   size="icon" 
+                   className="h-8 w-8 transition-all"
+                   onClick={() => setViewMode('table')}
+                 >
+                   <TableIcon className="w-4 h-4" />
+                 </Button>
+               </div>
              </div>
              
-             <div className="flex gap-3">
+             <div className="flex flex-wrap gap-2 md:gap-3">
                <AnimatePresence mode="popLayout">
                  {viewMode === 'table' && (
                    <motion.div
@@ -381,14 +403,15 @@ export default function Dashboard() {
                     animate={{ opacity: 1, scale: 1, width: 'auto' }}
                     exit={{ opacity: 0, scale: 0.9, width: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="overflow-hidden"
+                    className="overflow-hidden hidden md:block"
                    >
                      <ColumnManager columns={columns} onUpdateColumns={setColumns} />
                    </motion.div>
                  )}
                </AnimatePresence>
 
-               <div className="bg-muted/30 p-1 rounded-lg border border-border/50 flex items-center">
+               {/* Desktop view toggle */}
+               <div className="bg-muted/30 p-1 rounded-lg border border-border/50 hidden md:flex items-center">
                  <Button 
                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'} 
                    size="icon" 
@@ -407,65 +430,68 @@ export default function Dashboard() {
                  </Button>
                </div>
 
-               <Separator orientation="vertical" className="h-8 bg-border/50 mx-1" />
+               <Separator orientation="vertical" className="h-8 bg-border/50 mx-1 hidden md:block" />
 
                <Button 
                  variant="secondary" 
                  onClick={loadGames} 
                  disabled={refreshing}
-                 className="gap-2"
+                 className="gap-2 text-xs md:text-sm flex-1 md:flex-none"
                >
                  <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
-                 Refresh Library
+                 <span className="hidden sm:inline">Refresh Library</span>
+                 <span className="sm:hidden">Refresh</span>
                </Button>
                
                {config.craftCollectionId && (
                  <Button 
                    onClick={handleCraftSync} 
                    disabled={syncingCraft}
-                   className="gap-2 bg-purple-600 hover:bg-purple-700 text-white shadow-[0_0_20px_rgba(147,51,234,0.3)]"
+                   className="gap-2 bg-purple-600 hover:bg-purple-700 text-white shadow-[0_0_20px_rgba(147,51,234,0.3)] text-xs md:text-sm"
                  >
                    {syncingCraft ? <RefreshCw className="w-4 h-4 animate-spin" /> : <PenTool className="w-4 h-4" />}
-                   Sync to Craft
+                   <span className="hidden sm:inline">Sync to Craft</span>
+                   <span className="sm:hidden">Craft</span>
                  </Button>
                )}
                
                <Button 
                  onClick={handleSync} 
                  disabled={syncingNotion}
-                 className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(139,92,246,0.3)]"
+                 className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(139,92,246,0.3)] text-xs md:text-sm flex-1 md:flex-none"
                >
                  {syncingNotion ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
-                 Sync to Notion
+                 <span className="hidden sm:inline">Sync to Notion</span>
+                 <span className="sm:hidden">Notion</span>
                </Button>
              </div>
           </div>
 
           {/* Stats Bar */}
-          <div className="grid grid-cols-4 gap-4 shrink-0">
-            <div className="p-4 rounded-lg bg-card/50 border border-border/50 backdrop-blur-sm">
-              <div className="text-muted-foreground text-xs uppercase tracking-wider mb-1">Total Games</div>
-              <div className="text-2xl font-display font-bold">{games.length}</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 shrink-0">
+            <div className="p-3 md:p-4 rounded-lg bg-card/50 border border-border/50 backdrop-blur-sm">
+              <div className="text-muted-foreground text-[10px] md:text-xs uppercase tracking-wider mb-1">Total Games</div>
+              <div className="text-xl md:text-2xl font-display font-bold">{games.length}</div>
             </div>
-            <div className="p-4 rounded-lg bg-card/50 border border-border/50 backdrop-blur-sm">
-               <div className="text-muted-foreground text-xs uppercase tracking-wider mb-1">Playtime</div>
-               <div className="text-2xl font-display font-bold">
+            <div className="p-3 md:p-4 rounded-lg bg-card/50 border border-border/50 backdrop-blur-sm">
+               <div className="text-muted-foreground text-[10px] md:text-xs uppercase tracking-wider mb-1">Playtime</div>
+               <div className="text-xl md:text-2xl font-display font-bold">
                  {Math.round(games.reduce((acc, g) => acc + g.playtime_forever, 0) / 60)}h
                </div>
             </div>
-            <div className="p-4 rounded-lg bg-card/50 border border-border/50 backdrop-blur-sm">
-               <div className="text-muted-foreground text-xs uppercase tracking-wider mb-1">Steam Deck Verified</div>
-               <div className="text-2xl font-display font-bold text-green-500">
+            <div className="p-3 md:p-4 rounded-lg bg-card/50 border border-border/50 backdrop-blur-sm">
+               <div className="text-muted-foreground text-[10px] md:text-xs uppercase tracking-wider mb-1">Deck Ready</div>
+               <div className="text-xl md:text-2xl font-display font-bold text-green-500">
                  {games.filter(g => g.proton?.tier === 'native' || g.proton?.tier === 'platinum').length}
                </div>
             </div>
-            <div className="p-4 rounded-lg bg-card/50 border border-border/50 backdrop-blur-sm">
-               <div className="text-muted-foreground text-xs uppercase tracking-wider mb-1">Sync Status</div>
-               <div className="flex items-center gap-2">
-                 <span className="text-2xl font-display font-bold text-yellow-500">
+            <div className="p-3 md:p-4 rounded-lg bg-card/50 border border-border/50 backdrop-blur-sm">
+               <div className="text-muted-foreground text-[10px] md:text-xs uppercase tracking-wider mb-1">Synced</div>
+               <div className="flex items-center gap-1 md:gap-2">
+                 <span className="text-xl md:text-2xl font-display font-bold text-yellow-500">
                     {games.filter(g => g.notion_status === 'synced').length}
                  </span>
-                 <span className="text-sm text-muted-foreground">/ {games.length}</span>
+                 <span className="text-xs md:text-sm text-muted-foreground">/ {games.length}</span>
                </div>
             </div>
           </div>
