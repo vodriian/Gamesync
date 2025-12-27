@@ -112,7 +112,7 @@ export function ColumnManager({ columns, onUpdateColumns }: ColumnManagerProps) 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2 border-dashed border-border/60 hover:border-primary/50">
+        <Button variant="outline" size="sm" className="h-[42px] gap-2 border-dashed border-border/60 hover:border-primary/50">
           <Columns className="w-3.5 h-3.5" />
           Columns
         </Button>
