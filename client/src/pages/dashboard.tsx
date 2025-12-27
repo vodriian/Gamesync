@@ -49,7 +49,9 @@ export default function Dashboard() {
     refetchOnMount: false // Don't refetch when mounting if we have data
   });
 
-  const [syncing, setSyncing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [syncingNotion, setSyncingNotion] = useState(false);
+  const [syncingCraft, setSyncingCraft] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [columns, setColumns] = useState<ColumnConfig[]>(DEFAULT_COLUMNS);
@@ -104,7 +106,7 @@ export default function Dashboard() {
       return;
     }
 
-    setSyncing(true);
+    setRefreshing(true);
     try {
       await syncFromSteam((msg, level) => addLog(msg, level));
       // Refetch games from database after syncing
@@ -112,7 +114,7 @@ export default function Dashboard() {
     } catch (error) {
       addLog("Failed to sync from Steam.", "error");
     } finally {
-      setSyncing(false);
+      setRefreshing(false);
     }
   };
 
@@ -136,7 +138,7 @@ export default function Dashboard() {
       return;
     }
 
-    setSyncing(true);
+    setSyncingNotion(true);
     try {
       await syncToNotion(games, config.notionToken, config.notionDbId, (msg, level) => {
         addLog(msg, level);
@@ -149,7 +151,7 @@ export default function Dashboard() {
         variant: "destructive"
       });
     } finally {
-      setSyncing(false);
+      setSyncingNotion(false);
     }
   };
 
@@ -173,7 +175,7 @@ export default function Dashboard() {
       return;
     }
 
-    setSyncing(true);
+    setSyncingCraft(true);
     try {
       await syncToCraft(games, config.craftUrl, config.craftCollectionId, (msg, level) => {
         addLog(msg, level);
@@ -186,7 +188,7 @@ export default function Dashboard() {
         variant: "destructive"
       });
     } finally {
-      setSyncing(false);
+      setSyncingCraft(false);
     }
   };
 
@@ -410,30 +412,30 @@ export default function Dashboard() {
                <Button 
                  variant="secondary" 
                  onClick={loadGames} 
-                 disabled={loading || syncing}
+                 disabled={refreshing}
                  className="gap-2"
                >
-                 <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
+                 <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
                  Refresh Library
                </Button>
                
                {config.craftCollectionId && (
                  <Button 
                    onClick={handleCraftSync} 
-                   disabled={loading || syncing}
+                   disabled={syncingCraft}
                    className="gap-2 bg-purple-600 hover:bg-purple-700 text-white shadow-[0_0_20px_rgba(147,51,234,0.3)]"
                  >
-                   {syncing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <PenTool className="w-4 h-4" />}
+                   {syncingCraft ? <RefreshCw className="w-4 h-4 animate-spin" /> : <PenTool className="w-4 h-4" />}
                    Sync to Craft
                  </Button>
                )}
                
                <Button 
                  onClick={handleSync} 
-                 disabled={loading || syncing}
+                 disabled={syncingNotion}
                  className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(139,92,246,0.3)]"
                >
-                 {syncing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
+                 {syncingNotion ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
                  Sync to Notion
                </Button>
              </div>
