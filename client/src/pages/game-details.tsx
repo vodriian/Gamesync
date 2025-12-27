@@ -9,22 +9,6 @@ import { ArrowLeft, Clock, ExternalLink, Share2, Star, ThumbsUp, Database, Setti
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 
-const MOCK_ABOUT = `
-  <h2>About This Game</h2>
-  <p>This is a placeholder description for the game. In a real application, this content would be fetched from the Steam Store API's 'appdetails' endpoint.</p>
-  <br/>
-  <p><strong>Key Features:</strong></p>
-  <ul>
-    <li>Immersive gameplay mechanics that challenge your skills.</li>
-    <li>Stunning visuals and atmospheric sound design.</li>
-    <li>A rich, narrative-driven experience with deep lore.</li>
-    <li>ProtonDB Verified for excellent performance on Linux and Steam Deck.</li>
-  </ul>
-  <br/>
-  <p>Explore a vast world filled with secrets, engage in intense combat, and uncover the truth behind the mystery. Whether you're a casual player or a hardcore gamer, this title offers something for everyone.</p>
-  <br/>
-  <p><em>Sync this game to Notion to keep track of your progress, rating, and personal notes!</em></p>
-`;
 
 export default function GameDetails() {
   const [match, params] = useRoute("/game/:appid");
@@ -183,8 +167,14 @@ export default function GameDetails() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-10">
             {/* Main Content: About */}
             <div className="lg:col-span-2 space-y-8">
-              <div className="prose prose-invert prose-lg max-w-none">
-                <div dangerouslySetInnerHTML={{ __html: MOCK_ABOUT }} />
+              <div className="space-y-4">
+                <h2 className="text-xl font-display font-bold text-white/90">About This Game</h2>
+                <p className="text-muted-foreground leading-relaxed text-base">
+                  {game.description || "No description available for this game."}
+                </p>
+                <p className="text-sm text-muted-foreground/70 italic">
+                  Sync this game to Notion to keep track of your progress, rating, and personal notes!
+                </p>
               </div>
             </div>
 

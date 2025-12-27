@@ -23,6 +23,9 @@ export interface GameData extends SteamGame {
   review_total?: number;
   notion_status?: "synced" | "pending" | "error";
   last_synced?: string;
+  description?: string;
+  header_url?: string;
+  customProperties?: Record<string, any>;
   
   // Dynamic user columns
   [key: string]: any;

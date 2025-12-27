@@ -231,7 +231,9 @@ export function gameToGameData(game: Game): GameData {
     name: game.name,
     playtime_forever: 0,
     cover_url: game.coverImage || "",
+    header_url: game.headerImage || "",
     store_url: `https://store.steampowered.com/app/${game.id}/`,
+    description: game.description || "",
     proton: {
       tier,
       score: game.ratingPositivePct || undefined,
