@@ -1,16 +1,138 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { insertUserConfigSchema, insertCustomColumnSchema } from "@shared/schema";
+import { z } from "zod";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // put application routes here
-  // prefix all routes with /api
+  
+  // Configuration Routes
+  app.get("/api/config", async (req, res) => {
+    try {
+      const config = await storage.getUserConfig();
+      res.json(config || {});
+    } catch (error) {
+      console.error("Error fetching config:", error);
+      res.status(500).json({ error: "Failed to fetch configuration" });
+    }
+  });
 
-  // use storage to perform CRUD operations on the storage interface
-  // e.g. storage.insertUser(user) or storage.getUserByUsername(username)
+  app.post("/api/config", async (req, res) => {
+    try {
+      const validatedConfig = insertUserConfigSchema.parse(req.body);
+      const config = await storage.upsertUserConfig(validatedConfig);
+      res.json(config);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid configuration data", details: error.errors });
+      } else {
+        console.error("Error saving config:", error);
+        res.status(500).json({ error: "Failed to save configuration" });
+      }
+    }
+  });
+
+  // Custom Columns Routes
+  app.get("/api/columns", async (req, res) => {
+    try {
+      const columns = await storage.getCustomColumns();
+      res.json(columns);
+    } catch (error) {
+      console.error("Error fetching columns:", error);
+      res.status(500).json({ error: "Failed to fetch columns" });
+    }
+  });
+
+  app.post("/api/columns", async (req, res) => {
+    try {
+      const validatedColumn = insertCustomColumnSchema.parse(req.body);
+      const column = await storage.createCustomColumn(validatedColumn);
+      res.json(column);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid column data", details: error.errors });
+      } else {
+        console.error("Error creating column:", error);
+        res.status(500).json({ error: "Failed to create column" });
+      }
+    }
+  });
+
+  app.patch("/api/columns/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const column = await storage.updateCustomColumn(id, req.body);
+      
+      if (!column) {
+        res.status(404).json({ error: "Column not found" });
+        return;
+      }
+      
+      res.json(column);
+    } catch (error) {
+      console.error("Error updating column:", error);
+      res.status(500).json({ error: "Failed to update column" });
+    }
+  });
+
+  app.delete("/api/columns/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteCustomColumn(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting column:", error);
+      res.status(500).json({ error: "Failed to delete column" });
+    }
+  });
+
+  app.post("/api/columns/reorder", async (req, res) => {
+    try {
+      const { columnIds } = req.body;
+      
+      if (!Array.isArray(columnIds)) {
+        res.status(400).json({ error: "columnIds must be an array" });
+        return;
+      }
+      
+      await storage.reorderColumns(columnIds);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error reordering columns:", error);
+      res.status(500).json({ error: "Failed to reorder columns" });
+    }
+  });
+
+  // Games Routes
+  app.get("/api/games", async (req, res) => {
+    try {
+      const games = await storage.getGames();
+      res.json(games);
+    } catch (error) {
+      console.error("Error fetching games:", error);
+      res.status(500).json({ error: "Failed to fetch games" });
+    }
+  });
+
+  app.get("/api/games/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const game = await storage.getGame(id);
+      
+      if (!game) {
+        res.status(404).json({ error: "Game not found" });
+        return;
+      }
+      
+      res.json(game);
+    } catch (error) {
+      console.error("Error fetching game:", error);
+      res.status(500).json({ error: "Failed to fetch game" });
+    }
+  });
 
   return httpServer;
 }
