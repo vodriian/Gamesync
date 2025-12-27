@@ -5,6 +5,7 @@ import { insertUserConfigSchema, insertCustomColumnSchema } from "@shared/schema
 import { z } from "zod";
 import { steamService } from "./services/steam";
 import { protondbService } from "./services/protondb";
+import { notionService } from "./services/notion";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -176,6 +177,51 @@ export async function registerRoutes(
       res.status(500).json({ 
         error: "Failed to sync from Steam", 
         details: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // Notion Sync Routes
+  app.post("/api/sync/notion", async (req, res) => {
+    try {
+      const config = await storage.getUserConfig();
+      
+      if (!config || !config.notionToken || !config.notionDatabaseId) {
+        res.status(400).json({ error: "Notion integration token and database ID are required" });
+        return;
+      }
+      
+      // Get games from database
+      const games = await storage.getGames();
+      
+      if (games.length === 0) {
+        res.status(400).json({ error: "No games to sync. Please sync from Steam first." });
+        return;
+      }
+      
+      // Get custom columns
+      const customColumns = await storage.getCustomColumns();
+      
+      // Sync to Notion
+      const result = await notionService.syncGames(
+        config.notionToken,
+        config.notionDatabaseId,
+        games,
+        customColumns
+      );
+      
+      res.json({
+        success: result.success,
+        synced: result.synced,
+        failed: result.failed,
+        errors: result.errors,
+        message: `Successfully synced ${result.synced} games to Notion${result.failed > 0 ? `, ${result.failed} failed` : ""}`,
+      });
+    } catch (error) {
+      console.error("Error syncing to Notion:", error);
+      res.status(500).json({
+        error: "Failed to sync to Notion",
+        details: error instanceof Error ? error.message : "Unknown error",
       });
     }
   });
