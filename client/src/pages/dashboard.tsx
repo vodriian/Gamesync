@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { RefreshCw, Settings, Database, Play, ShieldAlert, LayoutGrid, Table as TableIcon } from "lucide-react";
+import { RefreshCw, Settings, Database, Play, ShieldAlert, LayoutGrid, Table as TableIcon, ScrollText } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -52,6 +52,7 @@ export default function Dashboard() {
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [columns, setColumns] = useState<ColumnConfig[]>(DEFAULT_COLUMNS);
   const [openSettings, setOpenSettings] = useState(false);
+  const [openLogs, setOpenLogs] = useState(false);
 
   // Set initial load flag when games are loaded
   useEffect(() => {
@@ -125,6 +126,33 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-4">
+            <Dialog open={openLogs} onOpenChange={setOpenLogs}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
+                  <ScrollText className="w-4 h-4" />
+                  Operations Log
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[600px] border-border/50 bg-card/95 backdrop-blur-xl max-h-[80vh] flex flex-col">
+                <DialogHeader>
+                  <DialogTitle className="font-display tracking-wide text-xl">Operations Log</DialogTitle>
+                  <DialogDescription>
+                    Real-time synchronization activity and system events.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex-1 overflow-hidden min-h-[300px] flex flex-col gap-4">
+                  <SyncLog logs={logs} className="flex-1 border border-border/50 rounded-md" />
+                  <div className="p-4 rounded-lg border border-yellow-500/20 bg-yellow-500/5 text-yellow-200/80 text-xs leading-relaxed shrink-0">
+                    <div className="flex items-center gap-2 mb-2 text-yellow-400 font-bold">
+                      <ShieldAlert className="w-4 h-4" />
+                      <span>Prototype Mode</span>
+                    </div>
+                    Actual Steam API calls are blocked by browser CORS policies. This demo simulates the data flow logic using the Python script structure provided.
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
             <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-muted/30 border border-border/50 text-xs font-mono text-muted-foreground">
                <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
                SYSTEM ONLINE
@@ -324,20 +352,6 @@ export default function Dashboard() {
                </div>
              )}
           </div>
-        </div>
-
-        {/* Right Panel: Logs (Collapsible on mobile?) */}
-        <div className="w-[350px] shrink-0 hidden xl:flex flex-col gap-4">
-           <h3 className="font-display font-bold text-lg text-muted-foreground">Operations Log</h3>
-           <SyncLog logs={logs} className="flex-1" />
-           
-           <div className="p-4 rounded-lg border border-yellow-500/20 bg-yellow-500/5 text-yellow-200/80 text-xs leading-relaxed">
-             <div className="flex items-center gap-2 mb-2 text-yellow-400 font-bold">
-               <ShieldAlert className="w-4 h-4" />
-               <span>Prototype Mode</span>
-             </div>
-             Actual Steam API calls are blocked by browser CORS policies. This demo simulates the data flow logic using the Python script structure provided.
-           </div>
         </div>
 
       </main>
