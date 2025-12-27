@@ -118,7 +118,7 @@ export function ColumnManager({ columns, onUpdateColumns }: ColumnManagerProps) 
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl gap-0 p-0 overflow-hidden border-border/50 bg-card/95 backdrop-blur-xl">
-        <DialogHeader className="p-4 border-b border-border/50 bg-muted/10 flex flex-row items-center justify-between space-y-0">
+        <DialogHeader className="p-4 border-b border-border/50 bg-muted/10 flex flex-row items-center justify-between space-y-0 pr-12">
           <div className="space-y-1">
             <DialogTitle className="font-display font-medium text-base">Database Properties</DialogTitle>
             <DialogDescription className="text-xs">
