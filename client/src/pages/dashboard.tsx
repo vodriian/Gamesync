@@ -17,6 +17,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+// Global flag to track if initial load animation has occurred in this session
+let hasInitialLoadHappened = false;
+
 export default function Dashboard() {
   const [config, setConfig] = useState<AppConfig>({
     steamKey: "",
@@ -49,6 +52,13 @@ export default function Dashboard() {
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [columns, setColumns] = useState<ColumnConfig[]>(DEFAULT_COLUMNS);
   const [openSettings, setOpenSettings] = useState(false);
+
+  // Set initial load flag when games are loaded
+  useEffect(() => {
+    if (games.length > 0 && !loading) {
+      hasInitialLoadHappened = true;
+    }
+  }, [games, loading]);
 
   const addLog = (message: string, level: LogEntry["level"] = "info") => {
     const entry: LogEntry = {
@@ -299,7 +309,12 @@ export default function Dashboard() {
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-10">
                  <AnimatePresence>
                    {games.map((game, i) => (
-                     <GameCard key={game.appid} game={game} index={i} />
+                     <GameCard 
+                       key={game.appid} 
+                       game={game} 
+                       index={i} 
+                       enableAnimation={!hasInitialLoadHappened}
+                     />
                    ))}
                  </AnimatePresence>
                </div>
