@@ -366,8 +366,9 @@ export default function Dashboard() {
       <main className="flex-1 min-h-0 container mx-auto px-4 md:px-6 py-4 md:py-8 flex gap-4 md:gap-8 overflow-hidden">
         
         {/* Left Panel: Game Grid */}
-        <div className="flex-1 min-h-0 flex flex-col overflow-y-auto">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0 sticky top-0 bg-background/95 backdrop-blur-sm z-10 py-3 mb-2">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          {/* Sticky Title Bar - outside scroll area */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0 pb-3">
              <div className="flex items-center justify-between md:block">
                <div>
                  <h2 className="text-2xl md:text-3xl font-display font-bold">Library</h2>
@@ -467,38 +468,39 @@ export default function Dashboard() {
              </div>
           </div>
 
-          {/* Stats Bar */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 shrink-0">
-            <div className="p-3 md:p-4 rounded-lg bg-card/50 border border-border/50 backdrop-blur-sm">
-              <div className="text-muted-foreground text-[10px] md:text-xs uppercase tracking-wider mb-1">Total Games</div>
-              <div className="text-xl md:text-2xl font-display font-bold">{games.length}</div>
-            </div>
-            <div className="p-3 md:p-4 rounded-lg bg-card/50 border border-border/50 backdrop-blur-sm">
-               <div className="text-muted-foreground text-[10px] md:text-xs uppercase tracking-wider mb-1">Playtime</div>
-               <div className="text-xl md:text-2xl font-display font-bold">
-                 {Math.round(games.reduce((acc, g) => acc + g.playtime_forever, 0) / 60)}h
-               </div>
-            </div>
-            <div className="p-3 md:p-4 rounded-lg bg-card/50 border border-border/50 backdrop-blur-sm">
-               <div className="text-muted-foreground text-[10px] md:text-xs uppercase tracking-wider mb-1">Deck Ready</div>
-               <div className="text-xl md:text-2xl font-display font-bold text-green-500">
-                 {games.filter(g => g.proton?.tier === 'native' || g.proton?.tier === 'platinum').length}
-               </div>
-            </div>
-            <div className="p-3 md:p-4 rounded-lg bg-card/50 border border-border/50 backdrop-blur-sm">
-               <div className="text-muted-foreground text-[10px] md:text-xs uppercase tracking-wider mb-1">Synced</div>
-               <div className="flex items-center gap-1 md:gap-2">
-                 <span className="text-xl md:text-2xl font-display font-bold text-yellow-500">
+          {/* Scrollable Content Area */}
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {/* Stats Bar */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mb-4">
+              <div className="p-3 md:p-4 rounded-lg bg-card/50 border border-border/50 backdrop-blur-sm">
+                <div className="text-muted-foreground text-[10px] md:text-xs uppercase tracking-wider mb-1">Total Games</div>
+                <div className="text-xl md:text-2xl font-display font-bold">{games.length}</div>
+              </div>
+              <div className="p-3 md:p-4 rounded-lg bg-card/50 border border-border/50 backdrop-blur-sm">
+                <div className="text-muted-foreground text-[10px] md:text-xs uppercase tracking-wider mb-1">Playtime</div>
+                <div className="text-xl md:text-2xl font-display font-bold">
+                  {Math.round(games.reduce((acc, g) => acc + g.playtime_forever, 0) / 60)}h
+                </div>
+              </div>
+              <div className="p-3 md:p-4 rounded-lg bg-card/50 border border-border/50 backdrop-blur-sm">
+                <div className="text-muted-foreground text-[10px] md:text-xs uppercase tracking-wider mb-1">Deck Ready</div>
+                <div className="text-xl md:text-2xl font-display font-bold text-green-500">
+                  {games.filter(g => g.proton?.tier === 'native' || g.proton?.tier === 'platinum').length}
+                </div>
+              </div>
+              <div className="p-3 md:p-4 rounded-lg bg-card/50 border border-border/50 backdrop-blur-sm">
+                <div className="text-muted-foreground text-[10px] md:text-xs uppercase tracking-wider mb-1">Synced</div>
+                <div className="flex items-center gap-1 md:gap-2">
+                  <span className="text-xl md:text-2xl font-display font-bold text-yellow-500">
                     {games.filter(g => g.notion_status === 'synced').length}
-                 </span>
-                 <span className="text-xs md:text-sm text-muted-foreground">/ {games.length}</span>
-               </div>
+                  </span>
+                  <span className="text-xs md:text-sm text-muted-foreground">/ {games.length}</span>
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* View Container */}
-          <div className="pb-10">
-             {viewMode === 'grid' ? (
+            {/* View Container */}
+            {viewMode === 'grid' ? (
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-10">
                  <AnimatePresence>
                    {games.map((game, i) => (
