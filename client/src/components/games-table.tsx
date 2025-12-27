@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ExternalLink } from "lucide-react";
+import { Link } from "wouter";
 
 interface GamesTableProps {
   games: GameData[];
@@ -27,10 +28,19 @@ export function GamesTable({ games, columns }: GamesTableProps) {
     switch (col.id) {
       case "name":
         return (
-          <div className="flex items-center gap-2">
-            <img src={game.cover_url} alt="" className="w-8 h-4 object-cover rounded shadow-sm" />
-            <span className="font-medium truncate max-w-[200px]" title={game.name}>{game.name}</span>
-            <a href={game.store_url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
+          <div className="flex items-center gap-2 group/cell">
+            <Link href={`/game/${game.appid}`}>
+              <div className="flex items-center gap-2 cursor-pointer">
+                <img src={game.cover_url} alt="" className="w-8 h-4 object-cover rounded shadow-sm" />
+                <span className="font-medium truncate max-w-[200px] group-hover/cell:text-primary transition-colors" title={game.name}>{game.name}</span>
+              </div>
+            </Link>
+            <a 
+              href={game.store_url} 
+              target="_blank" 
+              rel="noreferrer" 
+              className="text-muted-foreground/50 hover:text-foreground transition-colors opacity-0 group-hover/cell:opacity-100"
+            >
               <ExternalLink className="w-3 h-3" />
             </a>
           </div>
