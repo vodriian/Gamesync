@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { RefreshCw, Settings, Database, Play, ShieldAlert, LayoutGrid, Table as TableIcon, ScrollText, PenTool } from "lucide-react";
+import { RefreshCw, Settings, Database, Play, LayoutGrid, Table as TableIcon, ScrollText, PenTool } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -223,13 +223,6 @@ export default function Dashboard() {
                 </DialogHeader>
                 <div className="flex-1 overflow-hidden min-h-[300px] flex flex-col gap-4">
                   <SyncLog logs={logs} className="flex-1 border border-border/50 rounded-md" />
-                  <div className="p-4 rounded-lg border border-yellow-500/20 bg-yellow-500/5 text-yellow-200/80 text-xs leading-relaxed shrink-0">
-                    <div className="flex items-center gap-2 mb-2 text-yellow-400 font-bold">
-                      <ShieldAlert className="w-4 h-4" />
-                      <span>Prototype Mode</span>
-                    </div>
-                    Actual Steam API calls are blocked by browser CORS policies. This demo simulates the data flow logic using the Python script structure provided.
-                  </div>
                 </div>
               </DialogContent>
             </Dialog>
