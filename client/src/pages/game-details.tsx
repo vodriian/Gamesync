@@ -1,7 +1,7 @@
 import { useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { GameData } from "@/lib/types";
-import { fetchSteamGames } from "@/lib/mock-service"; // We might need a single game fetcher, but filtering list is fine for mock
+import { getGame, gameToGameData } from "@/lib/api-service";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -32,24 +32,33 @@ export default function GameDetails() {
   const [match, params] = useRoute("/game/:appid");
   const appid = params?.appid ? parseInt(params.appid) : 0;
 
-  // In a real app, we'd use useQuery with a specific ID. 
-  // For this mock, we'll fetch all and find one, or generate a fallback if missing.
-  // We reuse the mock service but in a real app this would be a specific endpoint.
-  const { data: games } = useQuery({
-    queryKey: ['games'],
-    queryFn: () => fetchSteamGames("demo", "demo"),
+  const { data: game, isLoading } = useQuery({
+    queryKey: ['game', appid],
+    queryFn: async () => {
+      try {
+        const backendGame = await getGame(appid.toString());
+        return gameToGameData(backendGame);
+      } catch (error) {
+        // Fallback if game not found
+        return {
+          appid: appid,
+          name: "Game Not Found",
+          playtime_forever: 0,
+          cover_url: `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/header.jpg`,
+          store_url: `https://store.steampowered.com/app/${appid}/`,
+          proton: { tier: "unknown" },
+          notion_status: "pending"
+        } as GameData;
+      }
+    },
     staleTime: Infinity
   });
 
-  const game = games?.find(g => g.appid === appid) || {
-    appid: appid,
-    name: "Loading Game...",
-    playtime_forever: 0,
-    cover_url: `https://cdn.cloudflare.steamstatic.com/steam/apps/${appid}/header.jpg`,
-    store_url: `https://store.steampowered.com/app/${appid}/`,
-    proton: { tier: "unknown" },
-    notion_status: "pending"
-  } as GameData;
+  if (isLoading || !game) {
+    return <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="text-muted-foreground">Loading game details...</div>
+    </div>;
+  }
 
   const tier = game.proton?.tier || "unknown";
   

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AppConfig, GameData, LogEntry, ColumnConfig, DEFAULT_COLUMNS } from "@/lib/types";
-import { fetchSteamGames, syncToNotion, syncToCraft } from "@/lib/mock-service";
+import { syncFromSteam, syncToNotion, syncToCraft, getGames, gameToGameData, saveConfig, getConfig } from "@/lib/api-service";
 import { GameCard } from "@/components/game-card";
 import { GamesTable } from "@/components/games-table";
 import { SyncLog } from "@/components/sync-log";
@@ -32,17 +32,17 @@ export default function Dashboard() {
   
   const { data: games = [], isLoading: loading, refetch } = useQuery({
     queryKey: ['games'],
-    queryFn: () => {
-      addLog("Fetching library from Steam...", "info");
-      return fetchSteamGames(config.steamKey, config.steamId)
-        .then(data => {
-          addLog(`Successfully loaded ${data.length} games.`, "success");
-          return data;
-        })
-        .catch(() => {
-          addLog("Failed to fetch games.", "error");
-          return [];
-        });
+    queryFn: async () => {
+      try {
+        addLog("Fetching games from database...", "info");
+        const backendGames = await getGames();
+        const gameData = backendGames.map(gameToGameData);
+        addLog(`Loaded ${gameData.length} games from database.`, "success");
+        return gameData;
+      } catch (error) {
+        addLog("Failed to fetch games.", "error");
+        return [];
+      }
     },
     staleTime: Infinity, // Keep data fresh indefinitely unless manually refreshed
     refetchOnWindowFocus: false,
@@ -55,6 +55,26 @@ export default function Dashboard() {
   const [columns, setColumns] = useState<ColumnConfig[]>(DEFAULT_COLUMNS);
   const [openSettings, setOpenSettings] = useState(false);
   const [openLogs, setOpenLogs] = useState(false);
+
+  // Load configuration on mount
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const backendConfig = await getConfig();
+        setConfig({
+          steamKey: backendConfig.steamKey || "",
+          steamId: backendConfig.steamId || "",
+          notionToken: backendConfig.notionToken || "",
+          notionDbId: backendConfig.notionDatabaseId || "",
+          craftUrl: backendConfig.craftApiUrl || "",
+          craftCollectionId: backendConfig.craftCollectionId || "",
+        });
+      } catch (error) {
+        console.error("Failed to load configuration:", error);
+      }
+    };
+    loadConfig();
+  }, []);
 
   // Set initial load flag when games are loaded
   useEffect(() => {
@@ -73,8 +93,27 @@ export default function Dashboard() {
     setLogs(prev => [...prev, entry]);
   };
 
-  const loadGames = () => {
-    refetch();
+  const loadGames = async () => {
+    if (!config.steamKey || !config.steamId) {
+      toast({
+        title: "Configuration Missing",
+        description: "Please set your Steam API key and Steam ID in Settings.",
+        variant: "destructive"
+      });
+      setOpenSettings(true);
+      return;
+    }
+
+    setSyncing(true);
+    try {
+      await syncFromSteam((msg, level) => addLog(msg, level));
+      // Refetch games from database after syncing
+      await refetch();
+    } catch (error) {
+      addLog("Failed to sync from Steam.", "error");
+    } finally {
+      setSyncing(false);
+    }
   };
 
   const handleSync = async () => {
@@ -271,7 +310,29 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button onClick={() => setOpenSettings(false)}>Save Changes</Button>
+                  <Button onClick={async () => {
+                    try {
+                      await saveConfig({
+                        steamKey: config.steamKey,
+                        steamId: config.steamId,
+                        notionToken: config.notionToken,
+                        notionDatabaseId: config.notionDbId,
+                        craftApiUrl: config.craftUrl,
+                        craftCollectionId: config.craftCollectionId,
+                      });
+                      toast({
+                        title: "Settings Saved",
+                        description: "Your configuration has been saved successfully.",
+                      });
+                      setOpenSettings(false);
+                    } catch (error) {
+                      toast({
+                        title: "Save Failed",
+                        description: "Failed to save configuration. Please try again.",
+                        variant: "destructive",
+                      });
+                    }
+                  }}>Save Changes</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
