@@ -127,29 +127,30 @@ export default function Dashboard() {
       return;
     }
 
-    setSyncing(true);
-    
-    // Pass columns to sync function in future so it knows what properties to create in Notion
-    await syncToNotion(games, config.notionToken, config.notionDbId, (msg, level) => {
-      addLog(msg, level);
-    });
+    if (games.length === 0) {
+      toast({
+        title: "No Games to Sync",
+        description: "Please refresh your library from Steam first.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    // We should ideally update the cache here, but for demo we might need to manually update local state if we weren't just showing a status
-    // For now the sync function mocks returning nothing, but locally we want to see the status update.
-    // Since React Query owns 'games', we should update the cache.
-    // However, for this prototype, refetching or just letting the mock service handle it is easier.
-    // But wait, setGames was previously used to update notion_status locally.
-    // We can't mutate 'games' directly if it comes from useQuery.
-    // For this prototype, I'll rely on the mock service potentially not updating the actual list reference without a refetch.
-    // Let's just mock the UI update by forcing a refetch or better yet, using setQueryData.
-    
-    // Simulating local update for demo:
-    // queryClient.setQueryData(['games'], (old: GameData[]) => old.map(g => ({ ...g, notion_status: "synced" }))); 
-    // I need to import useQueryClient for that. simpler is to just refetch for now or leave as is if the mock backend (service) was real.
-    // But since it's a mock service that returns static data, refetching won't show the change unless the mock service stateful.
-    // The mock service IS stateful for the session.
-    
-    setSyncing(false);
+    setSyncing(true);
+    try {
+      await syncToNotion(games, config.notionToken, config.notionDbId, (msg, level) => {
+        addLog(msg, level);
+      });
+    } catch (error) {
+      addLog("Failed to sync to Notion.", "error");
+      toast({
+        title: "Sync Failed",
+        description: "Failed to sync to Notion. Check the operations log for details.",
+        variant: "destructive"
+      });
+    } finally {
+      setSyncing(false);
+    }
   };
 
   const handleCraftSync = async () => {
@@ -163,11 +164,30 @@ export default function Dashboard() {
       return;
     }
 
+    if (games.length === 0) {
+      toast({
+        title: "No Games to Sync",
+        description: "Please refresh your library from Steam first.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setSyncing(true);
-    await syncToCraft(games, config.craftUrl, config.craftCollectionId, (msg, level) => {
-      addLog(msg, level);
-    });
-    setSyncing(false);
+    try {
+      await syncToCraft(games, config.craftUrl, config.craftCollectionId, (msg, level) => {
+        addLog(msg, level);
+      });
+    } catch (error) {
+      addLog("Failed to sync to Craft.", "error");
+      toast({
+        title: "Sync Failed",
+        description: "Failed to sync to Craft. Check the operations log for details.",
+        variant: "destructive"
+      });
+    } finally {
+      setSyncing(false);
+    }
   };
 
   return (
