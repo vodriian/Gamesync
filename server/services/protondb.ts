@@ -1,9 +1,3 @@
-interface ProtonDBReport {
-  appId: number;
-  rating: string;
-  tier: string;
-}
-
 interface ProtonDBResponse {
   bestReportedTier: string;
   confidence: string;
@@ -16,22 +10,24 @@ interface ProtonDBResponse {
 export class ProtonDBService {
   private readonly baseUrl = "https://www.protondb.com/api/v1";
 
-  async getGameRating(appId: string): Promise<{ rating: string; tier: string } | null> {
+  async getGameRating(appId: string): Promise<{ 
+    tier: string; 
+    confidence: string;
+  } | null> {
     const url = `${this.baseUrl}/reports/summaries/${appId}.json`;
     
     try {
       const response = await fetch(url);
       
       if (!response.ok) {
-        // Game not found in ProtonDB or API error
         return null;
       }
       
       const data: ProtonDBResponse = await response.json();
       
       return {
-        rating: data.tier || "unknown",
-        tier: data.bestReportedTier || data.tier || "unknown",
+        tier: this.normalizeTier(data.tier || data.bestReportedTier),
+        confidence: this.normalizeConfidence(data.confidence, data.total),
       };
     } catch (error) {
       console.error(`Error fetching ProtonDB rating for app ${appId}:`, error);
@@ -39,16 +35,44 @@ export class ProtonDBService {
     }
   }
 
-  async enrichGamesWithProtonData<T extends { id: string }>(games: T[]): Promise<(T & { protonRating: string | null; protonTier: string | null })[]> {
-    const enrichedGames: (T & { protonRating: string | null; protonTier: string | null })[] = [];
+  private normalizeTier(tier: string): string {
+    const t = (tier || "").toLowerCase();
+    
+    if (t === "native") return "06 native 🌿";
+    if (t === "platinum") return "05 platinum 👑";
+    if (t === "gold") return "04 gold 🥇";
+    if (t === "silver") return "03 silver 🥈";
+    if (t === "bronze") return "02 bronze 🥉";
+    if (t === "borked") return "01 borked 💀";
+    if (t === "pending") return "00 pending ⏳";
+    
+    return "00 unknown ❓";
+  }
+
+  private normalizeConfidence(confidence: string, reportCount: number): string {
+    const c = (confidence || "").toLowerCase();
+    
+    // ProtonDB uses "good", "adequate", "inadequate" or similar
+    if (c === "good" || c === "high" || reportCount >= 50) return "03 high ✅";
+    if (c === "adequate" || c === "medium" || reportCount >= 10) return "02 medium 🟡";
+    if (c === "inadequate" || c === "low" || reportCount >= 1) return "01 low ⚠️";
+    
+    return "00 unknown ❓";
+  }
+
+  async enrichGamesWithProtonData<T extends { id: string }>(games: T[]): Promise<(T & { 
+    protonTier: string; 
+    protonConfidence: string;
+  })[]> {
+    const enrichedGames: (T & { protonTier: string; protonConfidence: string })[] = [];
     
     for (const game of games) {
       const protonData = await this.getGameRating(game.id);
       
       enrichedGames.push({
         ...game,
-        protonRating: protonData?.rating || null,
-        protonTier: protonData?.tier || null,
+        protonTier: protonData?.tier || "00 unknown ❓",
+        protonConfidence: protonData?.confidence || "00 unknown ❓",
       });
       
       // Rate limiting: wait 200ms between requests
@@ -65,10 +89,13 @@ export class ProtonDBService {
       silver: "#c0c0c0",
       bronze: "#cd7f32",
       borked: "#ff0000",
+      native: "#22c55e",
       unknown: "#6b7280",
     };
     
-    return colors[tier.toLowerCase()] || colors.unknown;
+    // Extract tier name from formatted string (e.g., "05 platinum 👑" -> "platinum")
+    const tierName = tier.split(" ")[1] || tier.toLowerCase();
+    return colors[tierName] || colors.unknown;
   }
 }
 

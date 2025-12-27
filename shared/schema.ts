@@ -23,6 +23,7 @@ export const customColumns = pgTable("custom_columns", {
   options: jsonb("options"), // for select/multi-select types
   position: integer("position").notNull(),
   visible: integer("visible").notNull().default(1), // SQLite-style boolean (1 = true, 0 = false)
+  isSystem: integer("is_system").notNull().default(0), // 1 = system column, cannot be deleted
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -32,10 +33,18 @@ export const games = pgTable("games", {
   name: text("name").notNull(),
   coverImage: text("cover_image"),
   headerImage: text("header_image"),
-  protonRating: text("proton_rating"),
-  protonTier: text("proton_tier"),
   description: text("description"),
-  customProperties: jsonb("custom_properties"), // User-defined property values
+  // ProtonDB data
+  protonTier: text("proton_tier"),
+  protonConfidence: text("proton_confidence"),
+  // Steam review data
+  steamRating: text("steam_rating"),
+  ratingTotal: integer("rating_total"),
+  ratingPositivePct: integer("rating_positive_pct"),
+  // User status
+  status: text("status"),
+  // Custom properties
+  customProperties: jsonb("custom_properties"),
   lastSynced: timestamp("last_synced"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -65,3 +74,86 @@ export type CustomColumn = typeof customColumns.$inferSelect;
 
 export type InsertGame = z.infer<typeof insertGameSchema>;
 export type Game = typeof games.$inferSelect;
+
+// Default system columns with select options
+export const DEFAULT_SYSTEM_COLUMNS = [
+  {
+    name: "Tier",
+    type: "select",
+    options: [
+      "06 native 🌿",
+      "05 platinum 👑",
+      "04 gold 🥇",
+      "03 silver 🥈",
+      "02 bronze 🥉",
+      "01 borked 💀",
+      "00 pending ⏳",
+      "00 unknown ❓"
+    ],
+    position: 0,
+    visible: 1,
+    isSystem: 1,
+  },
+  {
+    name: "Confidence",
+    type: "select",
+    options: [
+      "03 high ✅",
+      "02 medium 🟡",
+      "01 low ⚠️",
+      "00 unknown ❓"
+    ],
+    position: 1,
+    visible: 1,
+    isSystem: 1,
+  },
+  {
+    name: "Rating",
+    type: "select",
+    options: [
+      "09 overwhelmingly positive 😍",
+      "08 very positive 🙂",
+      "07 positive 👍",
+      "06 mostly positive 🙂‍↕️",
+      "05 mixed 😐",
+      "04 mostly negative 👎",
+      "03 negative 😕",
+      "02 very negative 😬",
+      "01 overwhelmingly negative 💣",
+      "00 no reviews 0️⃣"
+    ],
+    position: 2,
+    visible: 1,
+    isSystem: 1,
+  },
+  {
+    name: "RatingTotal",
+    type: "number",
+    options: null,
+    position: 3,
+    visible: 1,
+    isSystem: 1,
+  },
+  {
+    name: "RatingPositivePct",
+    type: "number",
+    options: null,
+    position: 4,
+    visible: 1,
+    isSystem: 1,
+  },
+  {
+    name: "Status",
+    type: "select",
+    options: [
+      "04 completed ✅",
+      "03 playing 🎮",
+      "02 backlog 📚",
+      "01 dropped 🧹",
+      "00 wishlist ⭐"
+    ],
+    position: 5,
+    visible: 1,
+    isSystem: 1,
+  },
+];

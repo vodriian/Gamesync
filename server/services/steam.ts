@@ -30,6 +30,18 @@ interface SteamAppDetailsResponse {
   };
 }
 
+interface SteamReviewsResponse {
+  success: number;
+  query_summary: {
+    num_reviews: number;
+    review_score: number;
+    review_score_desc: string;
+    total_positive: number;
+    total_negative: number;
+    total_reviews: number;
+  };
+}
+
 export class SteamService {
   private readonly baseUrl = "https://api.steampowered.com";
   private readonly storeApiUrl = "https://store.steampowered.com/api";
@@ -87,14 +99,81 @@ export class SteamService {
     }
   }
 
+  async getGameReviews(appId: number): Promise<{
+    rating: string;
+    ratingTotal: number;
+    ratingPositivePct: number;
+  } | null> {
+    const url = `${this.storeApiUrl}/appreviews/${appId}?json=1&language=all&purchase_type=all`;
+    
+    try {
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        console.warn(`Failed to fetch reviews for app ${appId}: ${response.status}`);
+        return null;
+      }
+      
+      const data: SteamReviewsResponse = await response.json();
+      
+      if (!data.success || !data.query_summary) {
+        return null;
+      }
+      
+      const summary = data.query_summary;
+      const total = summary.total_reviews;
+      const positivePct = total > 0 ? Math.round((summary.total_positive / total) * 100) : 0;
+      
+      // Map Steam's review_score_desc to our normalized format
+      const rating = this.normalizeRating(summary.review_score_desc, positivePct);
+      
+      return {
+        rating,
+        ratingTotal: total,
+        ratingPositivePct: positivePct,
+      };
+    } catch (error) {
+      console.error(`Error fetching reviews for app ${appId}:`, error);
+      return null;
+    }
+  }
+
+  private normalizeRating(steamDesc: string, positivePct: number): string {
+    const desc = steamDesc.toLowerCase();
+    
+    if (desc.includes("overwhelmingly positive")) return "09 overwhelmingly positive 😍";
+    if (desc.includes("very positive")) return "08 very positive 🙂";
+    if (desc === "positive") return "07 positive 👍";
+    if (desc.includes("mostly positive")) return "06 mostly positive 🙂‍↕️";
+    if (desc.includes("mixed")) return "05 mixed 😐";
+    if (desc.includes("mostly negative")) return "04 mostly negative 👎";
+    if (desc === "negative") return "03 negative 😕";
+    if (desc.includes("very negative")) return "02 very negative 😬";
+    if (desc.includes("overwhelmingly negative")) return "01 overwhelmingly negative 💣";
+    
+    // Fallback based on percentage
+    if (positivePct === 0) return "00 no reviews 0️⃣";
+    if (positivePct >= 95) return "09 overwhelmingly positive 😍";
+    if (positivePct >= 80) return "08 very positive 🙂";
+    if (positivePct >= 70) return "07 positive 👍";
+    if (positivePct >= 60) return "06 mostly positive 🙂‍↕️";
+    if (positivePct >= 40) return "05 mixed 😐";
+    if (positivePct >= 30) return "04 mostly negative 👎";
+    if (positivePct >= 20) return "03 negative 😕";
+    if (positivePct >= 10) return "02 very negative 😬";
+    return "01 overwhelmingly negative 💣";
+  }
+
   async getGamesWithDetails(apiKey: string, steamId: string) {
     const ownedGames = await this.getOwnedGames(apiKey, steamId);
     
-    // Fetch details for each game (with rate limiting)
     const gamesWithDetails = [];
     
     for (const game of ownedGames) {
-      const details = await this.getGameDetails(game.appid);
+      const [details, reviews] = await Promise.all([
+        this.getGameDetails(game.appid),
+        this.getGameReviews(game.appid),
+      ]);
       
       gamesWithDetails.push({
         id: game.appid.toString(),
@@ -103,10 +182,13 @@ export class SteamService {
         headerImage: details?.headerImage || `https://steamcdn-a.akamaihd.net/steam/apps/${game.appid}/header.jpg`,
         description: details?.description || "",
         playtime: game.playtime_forever,
+        steamRating: reviews?.rating || "00 no reviews 0️⃣",
+        ratingTotal: reviews?.ratingTotal || 0,
+        ratingPositivePct: reviews?.ratingPositivePct || 0,
       });
       
-      // Rate limiting: wait 250ms between requests to avoid Steam API rate limits
-      await new Promise(resolve => setTimeout(resolve, 250));
+      // Rate limiting: wait 300ms between requests to avoid Steam API rate limits
+      await new Promise(resolve => setTimeout(resolve, 300));
     }
     
     return gamesWithDetails;

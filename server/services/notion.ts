@@ -75,9 +75,16 @@ export class NotionService {
     token: string,
     databaseId: string,
     game: {
+      id: string;
       name: string;
       coverImage?: string | null;
       description?: string | null;
+      protonTier?: string | null;
+      protonConfidence?: string | null;
+      steamRating?: string | null;
+      ratingTotal?: number | null;
+      ratingPositivePct?: number | null;
+      status?: string | null;
       customProperties?: any;
     },
     customColumns: CustomColumn[]
@@ -93,6 +100,32 @@ export class NotionService {
         },
       };
 
+      // Add system properties
+      if (game.protonTier) {
+        properties["Tier"] = this.convertPropertyValue(game.protonTier, "select");
+      }
+      if (game.protonConfidence) {
+        properties["Confidence"] = this.convertPropertyValue(game.protonConfidence, "select");
+      }
+      if (game.steamRating) {
+        properties["Rating"] = this.convertPropertyValue(game.steamRating, "select");
+      }
+      if (game.ratingTotal !== undefined && game.ratingTotal !== null) {
+        properties["RatingTotal"] = this.convertPropertyValue(game.ratingTotal, "number");
+      }
+      if (game.ratingPositivePct !== undefined && game.ratingPositivePct !== null) {
+        properties["RatingPositivePct"] = this.convertPropertyValue(game.ratingPositivePct, "number");
+      }
+      if (game.status) {
+        properties["Status"] = this.convertPropertyValue(game.status, "select");
+      }
+
+      // Add Steam Store URL
+      properties["SteamURL"] = this.convertPropertyValue(
+        `https://store.steampowered.com/app/${game.id}/`,
+        "url"
+      );
+
       // Add cover image if available
       let coverConfig: any = undefined;
       if (game.coverImage) {
@@ -101,9 +134,10 @@ export class NotionService {
         };
       }
 
-      // Add custom properties based on custom columns
+      // Add custom properties based on custom columns (non-system columns)
       if (game.customProperties && customColumns) {
         for (const column of customColumns) {
+          if (column.isSystem === 1) continue; // Skip system columns, already handled above
           const value = game.customProperties[column.name];
           if (value !== undefined && value !== null) {
             properties[column.name] = this.convertPropertyValue(value, column.type);
@@ -178,6 +212,12 @@ export class NotionService {
       name: string;
       coverImage?: string | null;
       description?: string | null;
+      protonTier?: string | null;
+      protonConfidence?: string | null;
+      steamRating?: string | null;
+      ratingTotal?: number | null;
+      ratingPositivePct?: number | null;
+      status?: string | null;
       customProperties?: any;
     }>,
     customColumns: CustomColumn[]

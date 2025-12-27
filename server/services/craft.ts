@@ -16,9 +16,16 @@ export class CraftService {
     apiUrl: string,
     collectionId: string,
     game: {
+      id: string;
       name: string;
       coverImage?: string | null;
       description?: string | null;
+      protonTier?: string | null;
+      protonConfidence?: string | null;
+      steamRating?: string | null;
+      ratingTotal?: number | null;
+      ratingPositivePct?: number | null;
+      status?: string | null;
       customProperties?: any;
     },
     customColumns: CustomColumn[]
@@ -46,10 +53,34 @@ export class CraftService {
         content += `## About this game\n\n${game.description}\n\n`;
       }
       
-      // Add custom properties as a table
-      if (game.customProperties && customColumns && customColumns.length > 0) {
-        content += `## Properties\n\n`;
-        for (const column of customColumns) {
+      // Add system properties
+      content += `## Game Details\n\n`;
+      content += `**Steam URL**: https://store.steampowered.com/app/${game.id}/\n`;
+      if (game.protonTier) {
+        content += `**Tier**: ${game.protonTier}\n`;
+      }
+      if (game.protonConfidence) {
+        content += `**Confidence**: ${game.protonConfidence}\n`;
+      }
+      if (game.steamRating) {
+        content += `**Rating**: ${game.steamRating}\n`;
+      }
+      if (game.ratingTotal !== undefined && game.ratingTotal !== null) {
+        content += `**Total Reviews**: ${game.ratingTotal}\n`;
+      }
+      if (game.ratingPositivePct !== undefined && game.ratingPositivePct !== null) {
+        content += `**Positive %**: ${game.ratingPositivePct}%\n`;
+      }
+      if (game.status) {
+        content += `**Status**: ${game.status}\n`;
+      }
+      content += `\n`;
+      
+      // Add custom properties (non-system columns)
+      const nonSystemColumns = customColumns.filter(col => col.isSystem !== 1);
+      if (game.customProperties && nonSystemColumns.length > 0) {
+        content += `## Custom Properties\n\n`;
+        for (const column of nonSystemColumns) {
           const value = game.customProperties[column.name];
           if (value !== undefined && value !== null) {
             content += `**${column.name}**: ${value}\n`;
@@ -103,6 +134,12 @@ export class CraftService {
       name: string;
       coverImage?: string | null;
       description?: string | null;
+      protonTier?: string | null;
+      protonConfidence?: string | null;
+      steamRating?: string | null;
+      ratingTotal?: number | null;
+      ratingPositivePct?: number | null;
+      status?: string | null;
       customProperties?: any;
     }>,
     customColumns: CustomColumn[]

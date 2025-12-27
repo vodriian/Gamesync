@@ -13,6 +13,14 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   
+  // Initialize default system columns on startup
+  try {
+    await storage.initializeDefaultColumns();
+    console.log("Default system columns initialized");
+  } catch (error) {
+    console.error("Error initializing default columns:", error);
+  }
+  
   // Configuration Routes
   app.get("/api/config", async (req, res) => {
     try {
@@ -162,8 +170,11 @@ export async function registerRoutes(
           coverImage: game.coverImage,
           headerImage: game.headerImage,
           description: game.description,
-          protonRating: game.protonRating,
           protonTier: game.protonTier,
+          protonConfidence: game.protonConfidence,
+          steamRating: game.steamRating,
+          ratingTotal: game.ratingTotal,
+          ratingPositivePct: game.ratingPositivePct,
           customProperties: {},
         });
       }

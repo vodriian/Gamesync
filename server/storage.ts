@@ -10,6 +10,7 @@ import {
   userConfig,
   customColumns,
   games,
+  DEFAULT_SYSTEM_COLUMNS,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -130,6 +131,36 @@ export class DatabaseStorage implements IStorage {
 
   async deleteGame(id: string): Promise<void> {
     await db.delete(games).where(eq(games.id, id));
+  }
+
+  // Initialize default system columns if they don't exist
+  async initializeDefaultColumns(): Promise<void> {
+    // Use a single query to check all existing system columns
+    const existingColumns = await db.select()
+      .from(customColumns)
+      .where(eq(customColumns.isSystem, 1));
+    
+    const existingNames = new Set(existingColumns.map(col => col.name));
+    
+    // Only insert columns that don't exist yet
+    const columnsToInsert = DEFAULT_SYSTEM_COLUMNS.filter(
+      col => !existingNames.has(col.name)
+    );
+    
+    if (columnsToInsert.length > 0) {
+      // Insert each column individually, ignoring duplicates
+      for (const column of columnsToInsert) {
+        try {
+          await db.insert(customColumns).values(column);
+        } catch (error) {
+          // Ignore duplicate key errors (race condition safe)
+          const message = error instanceof Error ? error.message : "";
+          if (!message.includes("duplicate key") && !message.includes("unique constraint")) {
+            throw error;
+          }
+        }
+      }
+    }
   }
 }
 

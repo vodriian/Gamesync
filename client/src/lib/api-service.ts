@@ -208,22 +208,33 @@ export async function syncToCraft(
   }
 }
 
+// Extract tier name from formatted string (e.g., "05 platinum 👑" -> "platinum")
+function extractTierName(formattedTier: string | null): "unknown" | "platinum" | "gold" | "silver" | "bronze" | "borked" | "native" | "pending" {
+  if (!formattedTier) return "unknown";
+  const parts = formattedTier.split(" ");
+  if (parts.length >= 2) {
+    const tierName = parts[1].toLowerCase();
+    const validTiers = ["unknown", "platinum", "gold", "silver", "bronze", "borked", "native", "pending"] as const;
+    if (validTiers.includes(tierName as any)) {
+      return tierName as typeof validTiers[number];
+    }
+  }
+  return "unknown";
+}
+
 // Convert backend Game format to frontend GameData format for compatibility
 export function gameToGameData(game: Game): GameData {
-  const validTiers = ["unknown", "platinum", "gold", "silver", "bronze", "borked", "native", "pending"] as const;
-  const tier = (game.protonTier && validTiers.includes(game.protonTier as any)) 
-    ? game.protonTier as typeof validTiers[number]
-    : "unknown";
+  const tier = extractTierName(game.protonTier);
   
   return {
     appid: parseInt(game.id),
     name: game.name,
-    playtime_forever: 0, // Not tracked in backend
+    playtime_forever: 0,
     cover_url: game.coverImage || "",
     store_url: `https://store.steampowered.com/app/${game.id}/`,
     proton: {
       tier,
-      score: game.protonRating ? parseInt(game.protonRating) : undefined,
+      score: game.ratingPositivePct || undefined,
     },
     notion_status: "synced",
   };
