@@ -254,7 +254,7 @@ export default function Dashboard() {
                         value={config.craftUrl || ""} 
                         onChange={e => setConfig({...config, craftUrl: e.target.value})}
                         className="col-span-3 bg-background/50 border-border/50 font-mono text-xs" 
-                        placeholder="https://api.craft.do/..."
+                        placeholder="https://connect.craft.do/links/.../api/v1"
                       />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
