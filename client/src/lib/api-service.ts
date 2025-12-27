@@ -238,7 +238,7 @@ export function gameToGameData(game: Game): GameData {
       tier,
       score: game.ratingPositivePct || undefined,
     },
-    notion_status: "synced",
+    notion_status: game.lastSynced ? "synced" : "pending",
     // Pass through formatted select values
     customProperties: {
       tier: game.protonTier || undefined,
