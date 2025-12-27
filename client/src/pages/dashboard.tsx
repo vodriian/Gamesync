@@ -1,23 +1,29 @@
 import { useState, useEffect } from "react";
-import { AppConfig, GameData, LogEntry } from "@/lib/types";
+import { AppConfig, GameData, LogEntry, ColumnConfig, DEFAULT_COLUMNS } from "@/lib/types";
 import { fetchSteamGames, syncToNotion } from "@/lib/mock-service";
 import { GameCard } from "@/components/game-card";
+import { GamesTable } from "@/components/games-table";
 import { SyncLog } from "@/components/sync-log";
+import { ColumnManager } from "@/components/column-manager";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { RefreshCw, Settings, Database, Play, CheckCircle2, ShieldAlert } from "lucide-react";
+import { RefreshCw, Settings, Database, Play, ShieldAlert, LayoutGrid, Table as TableIcon } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Dashboard() {
   const [games, setGames] = useState<GameData[]>([]);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [columns, setColumns] = useState<ColumnConfig[]>(DEFAULT_COLUMNS);
+  
   const [config, setConfig] = useState<AppConfig>({
     steamKey: "",
     steamId: "",
@@ -68,6 +74,7 @@ export default function Dashboard() {
 
     setSyncing(true);
     
+    // Pass columns to sync function in future so it knows what properties to create in Notion
     await syncToNotion(games, config.notionToken, config.notionDbId, (msg, level) => {
       addLog(msg, level);
     });
@@ -185,6 +192,31 @@ export default function Dashboard() {
              </div>
              
              <div className="flex gap-3">
+               <div className="bg-muted/30 p-1 rounded-lg border border-border/50 flex items-center">
+                 <Button 
+                   variant={viewMode === 'grid' ? 'secondary' : 'ghost'} 
+                   size="icon" 
+                   className="h-8 w-8"
+                   onClick={() => setViewMode('grid')}
+                 >
+                   <LayoutGrid className="w-4 h-4" />
+                 </Button>
+                 <Button 
+                   variant={viewMode === 'table' ? 'secondary' : 'ghost'} 
+                   size="icon" 
+                   className="h-8 w-8"
+                   onClick={() => setViewMode('table')}
+                 >
+                   <TableIcon className="w-4 h-4" />
+                 </Button>
+               </div>
+               
+               {viewMode === 'table' && (
+                 <ColumnManager columns={columns} onUpdateColumns={setColumns} />
+               )}
+
+               <Separator orientation="vertical" className="h-8 bg-border/50 mx-1" />
+
                <Button 
                  variant="secondary" 
                  onClick={loadGames} 
@@ -235,15 +267,21 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Grid */}
+          {/* View Container */}
           <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-muted/50 scrollbar-track-transparent">
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-10">
-               <AnimatePresence>
-                 {games.map((game, i) => (
-                   <GameCard key={game.appid} game={game} index={i} />
-                 ))}
-               </AnimatePresence>
-             </div>
+             {viewMode === 'grid' ? (
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-10">
+                 <AnimatePresence>
+                   {games.map((game, i) => (
+                     <GameCard key={game.appid} game={game} index={i} />
+                   ))}
+                 </AnimatePresence>
+               </div>
+             ) : (
+               <div className="pb-10">
+                 <GamesTable games={games} columns={columns} />
+               </div>
+             )}
           </div>
         </div>
 
