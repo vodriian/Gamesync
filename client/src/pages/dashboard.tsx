@@ -206,12 +206,12 @@ export default function Dashboard() {
             </h1>
           </div>
 
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-1 md:gap-4">
             <Dialog open={openLogs} onOpenChange={setOpenLogs}>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-1 md:gap-2 text-muted-foreground hover:text-foreground px-2 md:px-3">
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground h-9 w-9 md:h-auto md:w-auto md:px-3 md:gap-2">
                   <ScrollText className="w-4 h-4" />
-                  <span className="hidden sm:inline">Operations Log</span>
+                  <span className="hidden md:inline">Operations Log</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[600px] border-border/50 bg-card/95 backdrop-blur-xl max-h-[80vh] flex flex-col">
@@ -241,9 +241,9 @@ export default function Dashboard() {
 
             <Dialog open={openSettings} onOpenChange={setOpenSettings}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1 md:gap-2 border-border/50 hover:bg-muted/50 px-2 md:px-3">
+                <Button variant="outline" size="icon" className="border-border/50 hover:bg-muted/50 h-9 w-9 md:h-auto md:w-auto md:px-3 md:gap-2">
                   <Settings className="w-4 h-4" />
-                  <span className="hidden sm:inline">Settings</span>
+                  <span className="hidden md:inline">Settings</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[500px] border-border/50 bg-card/95 backdrop-blur-xl">
