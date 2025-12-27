@@ -1,13 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { ColumnConfig } from "@/lib/types";
-import { Columns, Plus, Trash2 } from "lucide-react";
+import { Columns, Plus, Trash2, X, ChevronRight, Settings2 } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 interface ColumnManagerProps {
   columns: ColumnConfig[];
@@ -17,10 +20,24 @@ interface ColumnManagerProps {
 export function ColumnManager({ columns, onUpdateColumns }: ColumnManagerProps) {
   const [newColName, setNewColName] = useState("");
   const [newColType, setNewColType] = useState<ColumnConfig["type"]>("text");
+  const [newColOptions, setNewColOptions] = useState<string[]>([]);
+  const [newOptionInput, setNewOptionInput] = useState("");
   const [isAdding, setIsAdding] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const toggleColumn = (id: string) => {
     onUpdateColumns(columns.map(c => c.id === id ? { ...c, visible: !c.visible } : c));
+  };
+
+  const addOption = () => {
+    if (!newOptionInput.trim()) return;
+    if (newColOptions.includes(newOptionInput.trim())) return;
+    setNewColOptions([...newColOptions, newOptionInput.trim()]);
+    setNewOptionInput("");
+  };
+
+  const removeOption = (opt: string) => {
+    setNewColOptions(newColOptions.filter(o => o !== opt));
   };
 
   const addColumn = () => {
@@ -30,10 +47,14 @@ export function ColumnManager({ columns, onUpdateColumns }: ColumnManagerProps) 
       label: newColName,
       type: newColType,
       visible: true,
-      system: false
+      system: false,
+      options: (newColType === 'select' || newColType === 'multi_select') ? newColOptions : undefined
     };
     onUpdateColumns([...columns, newCol]);
+    // Reset form
     setNewColName("");
+    setNewColType("text");
+    setNewColOptions([]);
     setIsAdding(false);
   };
 
@@ -41,92 +62,164 @@ export function ColumnManager({ columns, onUpdateColumns }: ColumnManagerProps) 
     onUpdateColumns(columns.filter(c => c.id !== id));
   };
 
+  const getTypeColor = (type: string) => {
+    switch(type) {
+      case 'text': return "text-slate-400 bg-slate-400/10 border-slate-400/20";
+      case 'number': return "text-blue-400 bg-blue-400/10 border-blue-400/20";
+      case 'select': return "text-purple-400 bg-purple-400/10 border-purple-400/20";
+      case 'multi_select': return "text-pink-400 bg-pink-400/10 border-pink-400/20";
+      case 'status': return "text-green-400 bg-green-400/10 border-green-400/20";
+      case 'url': return "text-cyan-400 bg-cyan-400/10 border-cyan-400/20";
+      case 'date': return "text-orange-400 bg-orange-400/10 border-orange-400/20";
+      default: return "text-muted-foreground";
+    }
+  };
+
   return (
-    <Popover>
-      <PopoverTrigger asChild>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2 border-dashed border-border/60 hover:border-primary/50">
           <Columns className="w-3.5 h-3.5" />
           Columns
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80 p-0 bg-card/95 backdrop-blur-xl border-border/50" align="end">
-        <div className="p-3 border-b border-border/50 bg-muted/20">
-          <h4 className="font-display font-medium text-sm">Table Columns</h4>
-          <p className="text-xs text-muted-foreground mt-0.5">Customize your Notion database structure</p>
-        </div>
-        
-        <div className="p-2 max-h-[300px] overflow-y-auto space-y-1">
-          {columns.map(col => (
-            <div key={col.id} className="flex items-center justify-between p-2 rounded hover:bg-muted/30 group">
-              <div className="flex items-center gap-2">
-                <Checkbox 
-                  id={`col-${col.id}`} 
-                  checked={col.visible} 
-                  onCheckedChange={() => toggleColumn(col.id)}
-                />
-                <Label htmlFor={`col-${col.id}`} className="text-sm cursor-pointer font-normal flex items-center gap-2">
-                  {col.label}
-                  <span className="text-[10px] text-muted-foreground uppercase bg-muted/50 px-1 rounded border border-border/30">
-                    {col.type}
-                  </span>
-                </Label>
-              </div>
-              {!col.system && (
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-6 w-6 opacity-0 group-hover:opacity-100 text-destructive hover:bg-destructive/10"
-                  onClick={() => deleteColumn(col.id)}
-                >
-                  <Trash2 className="w-3 h-3" />
-                </Button>
-              )}
-            </div>
-          ))}
-        </div>
+      </DialogTrigger>
+      <DialogContent className="max-w-[400px] gap-0 p-0 overflow-hidden border-border/50 bg-card/95 backdrop-blur-xl">
+        <DialogHeader className="p-4 border-b border-border/50 bg-muted/10">
+          <DialogTitle className="font-display font-medium text-base">Database Properties</DialogTitle>
+          <DialogDescription className="text-xs">
+            Manage visible columns and add custom Notion properties.
+          </DialogDescription>
+        </DialogHeader>
 
-        <Separator className="bg-border/50" />
-        
-        <div className="p-3 bg-muted/10">
+        <ScrollArea className="h-[350px] p-2">
           {!isAdding ? (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="w-full justify-start text-muted-foreground hover:text-primary"
-              onClick={() => setIsAdding(true)}
-            >
-              <Plus className="w-3.5 h-3.5 mr-2" />
-              Add Custom Property
-            </Button>
+             <div className="space-y-1">
+               {columns.map(col => (
+                 <div key={col.id} className="flex items-center justify-between p-2 rounded hover:bg-muted/30 group transition-colors">
+                   <div className="flex items-center gap-3">
+                     <Checkbox 
+                       id={`col-${col.id}`} 
+                       checked={col.visible} 
+                       onCheckedChange={() => toggleColumn(col.id)}
+                       className="border-border/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                     />
+                     <div className="flex flex-col gap-0.5">
+                        <Label htmlFor={`col-${col.id}`} className="text-sm cursor-pointer font-medium leading-none">
+                          {col.label}
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <span className={cn("text-[9px] uppercase tracking-wider px-1 rounded border", getTypeColor(col.type))}>
+                            {col.type.replace('_', ' ')}
+                          </span>
+                          {col.options && col.options.length > 0 && (
+                            <span className="text-[9px] text-muted-foreground">{col.options.length} options</span>
+                          )}
+                        </div>
+                     </div>
+                   </div>
+                   {!col.system && (
+                     <Button 
+                       variant="ghost" 
+                       size="icon" 
+                       className="h-7 w-7 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+                       onClick={() => deleteColumn(col.id)}
+                     >
+                       <Trash2 className="w-3.5 h-3.5" />
+                     </Button>
+                   )}
+                 </div>
+               ))}
+               
+               <Button 
+                 variant="ghost" 
+                 className="w-full justify-start mt-2 h-9 text-muted-foreground hover:text-primary hover:bg-primary/5 text-sm"
+                 onClick={() => setIsAdding(true)}
+               >
+                 <Plus className="w-3.5 h-3.5 mr-2" />
+                 Add Custom Property
+               </Button>
+             </div>
           ) : (
-            <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
-              <Input 
-                placeholder="Column Name" 
-                className="h-8 text-xs bg-background/50" 
-                value={newColName}
-                onChange={e => setNewColName(e.target.value)}
-                autoFocus
-              />
-              <div className="flex gap-2">
-                <Select value={newColType} onValueChange={(v: any) => setNewColType(v)}>
-                  <SelectTrigger className="h-8 text-xs flex-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="text">Text</SelectItem>
-                    <SelectItem value="select">Select</SelectItem>
-                    <SelectItem value="multi_select">Multi-Select</SelectItem>
-                    <SelectItem value="number">Number</SelectItem>
-                    <SelectItem value="url">URL</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button size="sm" className="h-8 px-3" onClick={addColumn}>Add</Button>
-                <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => setIsAdding(false)}>Cancel</Button>
-              </div>
-            </div>
+             <div className="space-y-4 p-2 animate-in slide-in-from-right-4 duration-200">
+                <div className="flex items-center gap-2 mb-4">
+                  <Button variant="ghost" size="icon" className="h-6 w-6 -ml-2" onClick={() => setIsAdding(false)}>
+                    <ChevronRight className="w-4 h-4 rotate-180" />
+                  </Button>
+                  <h4 className="text-sm font-medium">New Property</h4>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Property Name</Label>
+                    <Input 
+                      placeholder="e.g. Genre, Finished?" 
+                      className="bg-background/50 text-sm" 
+                      value={newColName}
+                      onChange={e => setNewColName(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Type</Label>
+                    <Select value={newColType} onValueChange={(v: any) => setNewColType(v)}>
+                      <SelectTrigger className="bg-background/50 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="text">Text</SelectItem>
+                        <SelectItem value="number">Number</SelectItem>
+                        <SelectItem value="select">Select</SelectItem>
+                        <SelectItem value="multi_select">Multi-Select</SelectItem>
+                        <SelectItem value="date">Date</SelectItem>
+                        <SelectItem value="url">URL</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {(newColType === 'select' || newColType === 'multi_select') && (
+                    <div className="space-y-2 pt-2 border-t border-border/30">
+                       <Label className="text-xs text-muted-foreground">Options</Label>
+                       <div className="flex gap-2">
+                         <Input 
+                           placeholder="Add option..." 
+                           className="bg-background/50 text-xs h-8"
+                           value={newOptionInput}
+                           onChange={e => setNewOptionInput(e.target.value)}
+                           onKeyDown={e => e.key === 'Enter' && addOption()}
+                         />
+                         <Button size="sm" variant="secondary" className="h-8" onClick={addOption}>
+                           <Plus className="w-3 h-3" />
+                         </Button>
+                       </div>
+                       
+                       <div className="flex flex-wrap gap-1.5 min-h-[40px] p-2 bg-background/30 rounded border border-border/30">
+                         {newColOptions.length === 0 && (
+                           <span className="text-xs text-muted-foreground/50 italic">No options added yet</span>
+                         )}
+                         {newColOptions.map(opt => (
+                           <Badge key={opt} variant="outline" className="text-[10px] pl-2 pr-1 h-5 gap-1 bg-primary/5 hover:bg-primary/10 transition-colors">
+                             {opt}
+                             <div 
+                               className="cursor-pointer hover:text-destructive" 
+                               onClick={() => removeOption(opt)}
+                             >
+                               <X className="w-2.5 h-2.5" />
+                             </div>
+                           </Badge>
+                         ))}
+                       </div>
+                    </div>
+                  )}
+
+                  <div className="pt-4 flex gap-2">
+                    <Button className="flex-1" onClick={addColumn} disabled={!newColName}>Create Property</Button>
+                  </div>
+                </div>
+             </div>
           )}
-        </div>
-      </PopoverContent>
-    </Popover>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
   );
 }

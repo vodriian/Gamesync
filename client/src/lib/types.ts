@@ -48,15 +48,16 @@ export interface ColumnConfig {
   type: "text" | "number" | "select" | "multi_select" | "date" | "url" | "status";
   visible: boolean;
   system?: boolean; // If true, cannot be deleted (e.g. Name, AppID)
+  options?: string[]; // Allowed values for select/multi_select
 }
 
 export const DEFAULT_COLUMNS: ColumnConfig[] = [
   { id: "name", label: "Name", type: "text", visible: true, system: true },
   { id: "appid", label: "App ID", type: "number", visible: true, system: true },
   { id: "playtime_forever", label: "Playtime (min)", type: "number", visible: true, system: true },
-  { id: "proton_tier", label: "Proton Tier", type: "select", visible: true, system: true },
+  { id: "proton_tier", label: "Proton Tier", type: "select", visible: true, system: true, options: ["platinum", "gold", "silver", "bronze", "borked", "native"] },
   { id: "notion_status", label: "Sync Status", type: "status", visible: true, system: true },
-  { id: "my_rating", label: "My Rating", type: "select", visible: false, system: false },
+  { id: "my_rating", label: "My Rating", type: "select", visible: false, system: false, options: ["⭐⭐⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐", "⭐⭐", "⭐"] },
   { id: "comments", label: "Comments", type: "text", visible: false, system: false },
-  { id: "tags", label: "Tags", type: "multi_select", visible: false, system: false },
+  { id: "tags", label: "Tags", type: "multi_select", visible: false, system: false, options: ["Finished", "Backlog", "Abandonware", "Replay"] },
 ];
