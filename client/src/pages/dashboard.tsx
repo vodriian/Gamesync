@@ -203,7 +203,7 @@ export default function Dashboard() {
                         type="password"
                         value={config.steamKey} 
                         onChange={e => setConfig({...config, steamKey: e.target.value})}
-                        className="col-span-3 bg-background/50 border-border/50 font-mono text-xs" 
+                        className="col-span-3 bg-background/50 border-border/50 font-mono text-xs placeholder:text-muted-foreground/40" 
                         placeholder="XXXXXXXXXXXXXXXX"
                       />
                     </div>
@@ -213,7 +213,7 @@ export default function Dashboard() {
                         id="steamId" 
                         value={config.steamId} 
                         onChange={e => setConfig({...config, steamId: e.target.value})}
-                        className="col-span-3 bg-background/50 border-border/50 font-mono text-xs" 
+                        className="col-span-3 bg-background/50 border-border/50 font-mono text-xs placeholder:text-muted-foreground/40" 
                         placeholder="76561198000000000"
                       />
                     </div>
@@ -229,7 +229,7 @@ export default function Dashboard() {
                         type="password"
                         value={config.notionToken} 
                         onChange={e => setConfig({...config, notionToken: e.target.value})}
-                        className="col-span-3 bg-background/50 border-border/50 font-mono text-xs" 
+                        className="col-span-3 bg-background/50 border-border/50 font-mono text-xs placeholder:text-muted-foreground/40" 
                         placeholder="secret_..."
                       />
                     </div>
@@ -239,7 +239,7 @@ export default function Dashboard() {
                         id="dbId" 
                         value={config.notionDbId} 
                         onChange={e => setConfig({...config, notionDbId: e.target.value})}
-                        className="col-span-3 bg-background/50 border-border/50 font-mono text-xs" 
+                        className="col-span-3 bg-background/50 border-border/50 font-mono text-xs placeholder:text-muted-foreground/40" 
                         placeholder="32 chars..."
                       />
                     </div>
@@ -253,7 +253,7 @@ export default function Dashboard() {
                         id="craftUrl" 
                         value={config.craftUrl || ""} 
                         onChange={e => setConfig({...config, craftUrl: e.target.value})}
-                        className="col-span-3 bg-background/50 border-border/50 font-mono text-xs" 
+                        className="col-span-3 bg-background/50 border-border/50 font-mono text-xs placeholder:text-muted-foreground/40" 
                         placeholder="https://connect.craft.do/links/.../api/v1"
                       />
                     </div>
@@ -264,7 +264,7 @@ export default function Dashboard() {
                         type="password"
                         value={config.craftCollectionId || ""} 
                         onChange={e => setConfig({...config, craftCollectionId: e.target.value})}
-                        className="col-span-3 bg-background/50 border-border/50 font-mono text-xs" 
+                        className="col-span-3 bg-background/50 border-border/50 font-mono text-xs placeholder:text-muted-foreground/40" 
                         placeholder="C8A2B9C7-11DD-44EE-99FF-A1B2C3D4E5F6"
                       />
                     </div>
