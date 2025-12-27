@@ -6,6 +6,7 @@ import { z } from "zod";
 import { steamService } from "./services/steam";
 import { protondbService } from "./services/protondb";
 import { notionService } from "./services/notion";
+import { craftService } from "./services/craft";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -221,6 +222,51 @@ export async function registerRoutes(
       console.error("Error syncing to Notion:", error);
       res.status(500).json({
         error: "Failed to sync to Notion",
+        details: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  // Craft Sync Routes
+  app.post("/api/sync/craft", async (req, res) => {
+    try {
+      const config = await storage.getUserConfig();
+      
+      if (!config || !config.craftApiUrl || !config.craftCollectionId) {
+        res.status(400).json({ error: "Craft API URL and collection ID are required" });
+        return;
+      }
+      
+      // Get games from database
+      const games = await storage.getGames();
+      
+      if (games.length === 0) {
+        res.status(400).json({ error: "No games to sync. Please sync from Steam first." });
+        return;
+      }
+      
+      // Get custom columns
+      const customColumns = await storage.getCustomColumns();
+      
+      // Sync to Craft
+      const result = await craftService.syncGames(
+        config.craftApiUrl,
+        config.craftCollectionId,
+        games,
+        customColumns
+      );
+      
+      res.json({
+        success: result.success,
+        synced: result.synced,
+        failed: result.failed,
+        errors: result.errors,
+        message: `Successfully synced ${result.synced} games to Craft${result.failed > 0 ? `, ${result.failed} failed` : ""}`,
+      });
+    } catch (error) {
+      console.error("Error syncing to Craft:", error);
+      res.status(500).json({
+        error: "Failed to sync to Craft",
         details: error instanceof Error ? error.message : "Unknown error",
       });
     }
