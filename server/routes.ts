@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertUserConfigSchema, insertCustomColumnSchema } from "@shared/schema";
 import { z } from "zod";
+import { steamService } from "./services/steam";
+import { protondbService } from "./services/protondb";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -131,6 +133,50 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching game:", error);
       res.status(500).json({ error: "Failed to fetch game" });
+    }
+  });
+
+  // Steam Sync Routes
+  app.post("/api/sync/steam", async (req, res) => {
+    try {
+      const config = await storage.getUserConfig();
+      
+      if (!config || !config.steamKey || !config.steamId) {
+        res.status(400).json({ error: "Steam API key and Steam ID are required" });
+        return;
+      }
+      
+      // Fetch games from Steam
+      const steamGames = await steamService.getGamesWithDetails(config.steamKey, config.steamId);
+      
+      // Enrich with ProtonDB data
+      const enrichedGames = await protondbService.enrichGamesWithProtonData(steamGames);
+      
+      // Save to database
+      for (const game of enrichedGames) {
+        await storage.upsertGame({
+          id: game.id,
+          name: game.name,
+          coverImage: game.coverImage,
+          headerImage: game.headerImage,
+          description: game.description,
+          protonRating: game.protonRating,
+          protonTier: game.protonTier,
+          customProperties: {},
+        });
+      }
+      
+      res.json({ 
+        success: true, 
+        gamesCount: enrichedGames.length,
+        message: `Successfully synced ${enrichedGames.length} games from Steam` 
+      });
+    } catch (error) {
+      console.error("Error syncing from Steam:", error);
+      res.status(500).json({ 
+        error: "Failed to sync from Steam", 
+        details: error instanceof Error ? error.message : "Unknown error" 
+      });
     }
   });
 
