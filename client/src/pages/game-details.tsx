@@ -205,18 +205,40 @@ export default function GameDetails() {
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <span className="text-muted-foreground">Status</span>
                     <div className="text-right">
-                      <Badge variant="secondary" className="text-[10px] uppercase">Backlog</Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        {game.customProperties?.status || "02 backlog 📚"}
+                      </Badge>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <span className="text-muted-foreground">Install Size</span>
-                    <span className="text-right font-mono">-- GB</span>
+                    <span className="text-muted-foreground">Rating</span>
+                    <div className="text-right">
+                      <Badge variant="outline" className="text-xs border-yellow-500/30 text-yellow-400 bg-yellow-500/10">
+                        {game.customProperties?.rating || "00 no reviews 0️⃣"}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <span className="text-muted-foreground">Tier</span>
+                    <div className="text-right">
+                      <Badge className={cn("text-xs", TIER_COLORS[tier])}>
+                        {game.customProperties?.tier || `${tier}`}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <span className="text-muted-foreground">Confidence</span>
+                    <span className="text-right text-xs">
+                      {game.customProperties?.confidence || "00 unknown ❓"}
+                    </span>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <span className="text-muted-foreground">Last Played</span>
-                    <span className="text-right">Oct 12, 2024</span>
+                    <span className="text-muted-foreground">Playtime</span>
+                    <span className="text-right font-mono">{Math.round(game.playtime_forever / 60)}h</span>
                   </div>
                 </div>
                 
