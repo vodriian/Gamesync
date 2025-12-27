@@ -27,7 +27,7 @@ export default function Dashboard() {
     notionToken: "",
     notionDbId: "",
     craftUrl: "",
-    craftToken: ""
+    craftCollectionId: ""
   });
   
   const { data: games = [], isLoading: loading, refetch } = useQuery({
@@ -114,7 +114,7 @@ export default function Dashboard() {
   };
 
   const handleCraftSync = async () => {
-    if (!config.craftUrl || !config.craftToken) {
+    if (!config.craftUrl || !config.craftCollectionId) {
       toast({
         title: "Configuration Missing",
         description: "Please set your Craft API credentials in Settings.",
@@ -125,7 +125,7 @@ export default function Dashboard() {
     }
 
     setSyncing(true);
-    await syncToCraft(games, config.craftUrl, config.craftToken, (msg, level) => {
+    await syncToCraft(games, config.craftUrl, config.craftCollectionId, (msg, level) => {
       addLog(msg, level);
     });
     setSyncing(false);
@@ -258,14 +258,14 @@ export default function Dashboard() {
                       />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="craftToken" className="text-right text-xs">API Key</Label>
+                      <Label htmlFor="craftCollectionId" className="text-right text-xs">Collection ID</Label>
                       <Input 
-                        id="craftToken" 
+                        id="craftCollectionId" 
                         type="password"
-                        value={config.craftToken || ""} 
-                        onChange={e => setConfig({...config, craftToken: e.target.value})}
+                        value={config.craftCollectionId || ""} 
+                        onChange={e => setConfig({...config, craftCollectionId: e.target.value})}
                         className="col-span-3 bg-background/50 border-border/50 font-mono text-xs" 
-                        placeholder="sk_craft_..."
+                        placeholder="C8A2B9C7-11DD-44EE-99FF-A1B2C3D4E5F6"
                       />
                     </div>
                   </div>
@@ -336,7 +336,7 @@ export default function Dashboard() {
                  Refresh Library
                </Button>
                
-               {config.craftToken && (
+               {config.craftCollectionId && (
                  <Button 
                    onClick={handleCraftSync} 
                    disabled={loading || syncing}

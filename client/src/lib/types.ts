@@ -34,7 +34,7 @@ export interface AppConfig {
   notionToken: string;
   notionDbId: string;
   craftUrl?: string;
-  craftToken?: string;
+  craftCollectionId?: string;
 }
 
 export interface LogEntry {

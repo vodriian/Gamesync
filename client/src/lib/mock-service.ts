@@ -84,15 +84,15 @@ export async function syncToNotion(games: GameData[], token: string, dbId: strin
   onLog("Sync complete!", "success");
 }
 
-export async function syncToCraft(games: GameData[], url: string, token: string, onLog: (msg: string, level: "info"|"success"|"error") => void) {
+export async function syncToCraft(games: GameData[], url: string, collectionId: string, onLog: (msg: string, level: "info"|"success"|"error") => void) {
   onLog("Starting sync to Craft...", "info");
   
-  if (!url || !token) {
+  if (!url || !collectionId) {
     onLog("Missing Craft API credentials. Please configure settings.", "error");
     return;
   }
 
-  onLog(`Connecting to Craft API: ${url}...`, "info");
+  onLog(`Connecting to Craft Collection: ${collectionId.substring(0, 8)}...`, "info");
   await new Promise(r => setTimeout(r, 1200));
   
   onLog("Authenticated successfully.", "success");
