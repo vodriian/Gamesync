@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AppConfig, GameData, LogEntry, ColumnConfig, DEFAULT_COLUMNS } from "@/lib/types";
-import { fetchSteamGames, syncToNotion } from "@/lib/mock-service";
+import { fetchSteamGames, syncToNotion, syncToCraft } from "@/lib/mock-service";
 import { GameCard } from "@/components/game-card";
 import { GamesTable } from "@/components/games-table";
 import { SyncLog } from "@/components/sync-log";
@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { RefreshCw, Settings, Database, Play, ShieldAlert, LayoutGrid, Table as TableIcon, ScrollText } from "lucide-react";
+import { RefreshCw, Settings, Database, Play, ShieldAlert, LayoutGrid, Table as TableIcon, ScrollText, PenTool } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -25,7 +25,9 @@ export default function Dashboard() {
     steamKey: "",
     steamId: "",
     notionToken: "",
-    notionDbId: ""
+    notionDbId: "",
+    craftUrl: "",
+    craftToken: ""
   });
   
   const { data: games = [], isLoading: loading, refetch } = useQuery({
@@ -108,6 +110,24 @@ export default function Dashboard() {
     // But since it's a mock service that returns static data, refetching won't show the change unless the mock service stateful.
     // The mock service IS stateful for the session.
     
+    setSyncing(false);
+  };
+
+  const handleCraftSync = async () => {
+    if (!config.craftUrl || !config.craftToken) {
+      toast({
+        title: "Configuration Missing",
+        description: "Please set your Craft API credentials in Settings.",
+        variant: "destructive"
+      });
+      setOpenSettings(true);
+      return;
+    }
+
+    setSyncing(true);
+    await syncToCraft(games, config.craftUrl, config.craftToken, (msg, level) => {
+      addLog(msg, level);
+    });
     setSyncing(false);
   };
 
@@ -224,6 +244,31 @@ export default function Dashboard() {
                       />
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-primary text-sm uppercase tracking-wider">Craft API (Beta)</h4>
+                    <Separator className="opacity-50" />
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="craftUrl" className="text-right text-xs">API URL</Label>
+                      <Input 
+                        id="craftUrl" 
+                        value={config.craftUrl || ""} 
+                        onChange={e => setConfig({...config, craftUrl: e.target.value})}
+                        className="col-span-3 bg-background/50 border-border/50 font-mono text-xs" 
+                        placeholder="https://api.craft.do/..."
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="craftToken" className="text-right text-xs">API Key</Label>
+                      <Input 
+                        id="craftToken" 
+                        type="password"
+                        value={config.craftToken || ""} 
+                        onChange={e => setConfig({...config, craftToken: e.target.value})}
+                        className="col-span-3 bg-background/50 border-border/50 font-mono text-xs" 
+                        placeholder="sk_craft_..."
+                      />
+                    </div>
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button onClick={() => setOpenSettings(false)}>Save Changes</Button>
@@ -290,6 +335,17 @@ export default function Dashboard() {
                  <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
                  Refresh Library
                </Button>
+               
+               {config.craftToken && (
+                 <Button 
+                   onClick={handleCraftSync} 
+                   disabled={loading || syncing}
+                   className="gap-2 bg-purple-600 hover:bg-purple-700 text-white shadow-[0_0_20px_rgba(147,51,234,0.3)]"
+                 >
+                   {syncing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <PenTool className="w-4 h-4" />}
+                   Sync to Craft
+                 </Button>
+               )}
                
                <Button 
                  onClick={handleSync} 

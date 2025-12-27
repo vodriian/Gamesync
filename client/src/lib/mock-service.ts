@@ -83,3 +83,33 @@ export async function syncToNotion(games: GameData[], token: string, dbId: strin
   
   onLog("Sync complete!", "success");
 }
+
+export async function syncToCraft(games: GameData[], url: string, token: string, onLog: (msg: string, level: "info"|"success"|"error") => void) {
+  onLog("Starting sync to Craft...", "info");
+  
+  if (!url || !token) {
+    onLog("Missing Craft API credentials. Please configure settings.", "error");
+    return;
+  }
+
+  onLog(`Connecting to Craft API: ${url}...`, "info");
+  await new Promise(r => setTimeout(r, 1200));
+  
+  onLog("Authenticated successfully.", "success");
+  onLog(`Preparing to sync ${games.length} items.`, "info");
+  
+  let processed = 0;
+  for (const game of games) {
+    await new Promise(r => setTimeout(r, 350));
+    
+    // Simulate sync
+    onLog(`[SYNC] ${game.name} - Pushed to Craft`, "success");
+    
+    processed++;
+    if (processed % 4 === 0) {
+      onLog(`Progress: ${processed}/${games.length}`, "info");
+    }
+  }
+  
+  onLog("Craft Sync complete!", "success");
+}

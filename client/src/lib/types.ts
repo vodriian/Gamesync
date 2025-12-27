@@ -33,6 +33,8 @@ export interface AppConfig {
   steamId: string;
   notionToken: string;
   notionDbId: string;
+  craftUrl?: string;
+  craftToken?: string;
 }
 
 export interface LogEntry {
