@@ -192,11 +192,25 @@ export default function Dashboard() {
              </div>
              
              <div className="flex gap-3">
+               <AnimatePresence mode="popLayout">
+                 {viewMode === 'table' && (
+                   <motion.div
+                    initial={{ opacity: 0, scale: 0.9, width: 0 }}
+                    animate={{ opacity: 1, scale: 1, width: 'auto' }}
+                    exit={{ opacity: 0, scale: 0.9, width: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                   >
+                     <ColumnManager columns={columns} onUpdateColumns={setColumns} />
+                   </motion.div>
+                 )}
+               </AnimatePresence>
+
                <div className="bg-muted/30 p-1 rounded-lg border border-border/50 flex items-center">
                  <Button 
                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'} 
                    size="icon" 
-                   className="h-8 w-8"
+                   className="h-8 w-8 transition-all"
                    onClick={() => setViewMode('grid')}
                  >
                    <LayoutGrid className="w-4 h-4" />
@@ -204,16 +218,12 @@ export default function Dashboard() {
                  <Button 
                    variant={viewMode === 'table' ? 'secondary' : 'ghost'} 
                    size="icon" 
-                   className="h-8 w-8"
+                   className="h-8 w-8 transition-all"
                    onClick={() => setViewMode('table')}
                  >
                    <TableIcon className="w-4 h-4" />
                  </Button>
                </div>
-               
-               {viewMode === 'table' && (
-                 <ColumnManager columns={columns} onUpdateColumns={setColumns} />
-               )}
 
                <Separator orientation="vertical" className="h-8 bg-border/50 mx-1" />
 
