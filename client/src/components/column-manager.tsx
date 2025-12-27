@@ -3,13 +3,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ColumnConfig } from "@/lib/types";
-import { Columns, Plus, Trash2, X, ChevronRight, Pencil } from "lucide-react";
+import { Columns, Plus, Trash2, X, ChevronRight, Pencil, GripVertical } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { Reorder, useDragControls } from "framer-motion";
 
 interface ColumnManagerProps {
   columns: ColumnConfig[];
@@ -141,55 +142,60 @@ export function ColumnManager({ columns, onUpdateColumns }: ColumnManagerProps) 
         <div className="h-[400px]">
           {!isFormOpen ? (
              <ScrollArea className="h-full p-2">
-               <div className="space-y-1">
+               <Reorder.Group axis="y" values={columns} onReorder={onUpdateColumns} className="space-y-1">
                  {columns.map(col => (
-                   <div key={col.id} className="flex items-center justify-between p-2 rounded hover:bg-muted/30 group transition-colors">
-                     <div className="flex items-center gap-3">
-                       <Checkbox 
-                         id={`col-${col.id}`} 
-                         checked={col.visible} 
-                         onCheckedChange={() => toggleColumn(col.id)}
-                         className="border-border/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                       />
-                       <div className="flex flex-col gap-0.5">
-                          <Label htmlFor={`col-${col.id}`} className="text-sm cursor-pointer font-medium leading-none">
-                            {col.label}
-                          </Label>
-                          <div className="flex items-center gap-2">
-                            <span className={cn("text-[9px] uppercase tracking-wider px-1 rounded border", getTypeColor(col.type))}>
-                              {col.type.replace('_', ' ')}
-                            </span>
-                            {col.options && col.options.length > 0 && (
-                              <span className="text-[9px] text-muted-foreground">{col.options.length} options</span>
-                            )}
-                          </div>
+                   <Reorder.Item key={col.id} value={col} className="bg-transparent">
+                     <div className="flex items-center justify-between p-2 rounded hover:bg-muted/30 group transition-colors cursor-default select-none">
+                       <div className="flex items-center gap-3">
+                         <div className="cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground transition-colors p-1">
+                           <GripVertical className="w-4 h-4" />
+                         </div>
+                         <Checkbox 
+                           id={`col-${col.id}`} 
+                           checked={col.visible} 
+                           onCheckedChange={() => toggleColumn(col.id)}
+                           className="border-border/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                         />
+                         <div className="flex flex-col gap-0.5">
+                            <Label htmlFor={`col-${col.id}`} className="text-sm cursor-pointer font-medium leading-none">
+                              {col.label}
+                            </Label>
+                            <div className="flex items-center gap-2">
+                              <span className={cn("text-[9px] uppercase tracking-wider px-1 rounded border", getTypeColor(col.type))}>
+                                {col.type.replace('_', ' ')}
+                              </span>
+                              {col.options && col.options.length > 0 && (
+                                <span className="text-[9px] text-muted-foreground">{col.options.length} options</span>
+                              )}
+                            </div>
+                         </div>
+                       </div>
+                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                          {!col.system && (
+                            <>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                onClick={() => startEditing(col)}
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => deleteColumn(col.id)}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </>
+                          )}
                        </div>
                      </div>
-                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                        {!col.system && (
-                          <>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                              onClick={() => startEditing(col)}
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                              onClick={() => deleteColumn(col.id)}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
-                          </>
-                        )}
-                     </div>
-                   </div>
+                   </Reorder.Item>
                  ))}
-               </div>
+               </Reorder.Group>
              </ScrollArea>
           ) : (
              <div className="h-full flex flex-col p-6 animate-in slide-in-from-right-4 duration-200">
