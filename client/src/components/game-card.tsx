@@ -28,9 +28,9 @@ export function GameCard({ game, index, enableAnimation = true }: GameCardProps)
   const content = (
     <Link href={`/game/${game.appid}`}>
       <Card className="group overflow-hidden border-border/50 bg-card/40 backdrop-blur-sm hover:border-primary/50 hover:bg-card/60 transition-all duration-300 cursor-pointer h-full">
-        <div className="relative aspect-video overflow-hidden">
+        <div className="relative aspect-[460/215] overflow-hidden">
           <img 
-            src={game.cover_url} 
+            src={game.header_url || game.cover_url} 
             alt={game.name}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
             loading="lazy"

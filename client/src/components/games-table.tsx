@@ -3,12 +3,18 @@ import { GameData, ColumnConfig } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Link } from "wouter";
+
+export type SortField = "name" | "rating" | "tier" | "playtime";
+export type SortOrder = "asc" | "desc";
 
 interface GamesTableProps {
   games: GameData[];
   columns: ColumnConfig[];
+  sortBy: SortField;
+  sortOrder: SortOrder;
+  onSort: (field: SortField) => void;
 }
 
 const TIER_COLORS: Record<string, string> = {
@@ -21,8 +27,38 @@ const TIER_COLORS: Record<string, string> = {
   unknown: "bg-slate-700/20 text-slate-400 border-slate-600/50",
 };
 
-export function GamesTable({ games, columns }: GamesTableProps) {
+export function GamesTable({ games, columns, sortBy, sortOrder, onSort }: GamesTableProps) {
   const visibleCols = columns.filter(c => c.visible);
+
+  const getSortIcon = (field: SortField) => {
+    if (sortBy !== field) return <ArrowUpDown className="w-3 h-3 ml-1 text-muted-foreground/30" />;
+    return sortOrder === 'asc' 
+      ? <ArrowUp className="w-3 h-3 ml-1 text-primary" />
+      : <ArrowDown className="w-3 h-3 ml-1 text-primary" />;
+  };
+
+  const renderHeader = (col: ColumnConfig) => {
+    let sortField: SortField | null = null;
+
+    if (col.id === 'name') sortField = 'name';
+    else if (col.id === 'playtime_forever') sortField = 'playtime';
+    else if (col.id === 'proton_tier') sortField = 'tier';
+    else if (col.id === 'steam_rating') sortField = 'rating';
+
+    if (sortField) {
+      return (
+        <div 
+          className="flex items-center cursor-pointer hover:text-primary transition-colors select-none"
+          onClick={() => onSort(sortField as SortField)}
+        >
+          {col.label}
+          {getSortIcon(sortField)}
+        </div>
+      );
+    }
+    
+    return col.label;
+  };
 
   const renderCell = (game: GameData, col: ColumnConfig) => {
     switch (col.id) {
@@ -97,7 +133,7 @@ export function GamesTable({ games, columns }: GamesTableProps) {
           <TableRow className="border-border/50 hover:bg-transparent">
             {visibleCols.map(col => (
               <TableHead key={col.id} className="text-xs font-display tracking-wider text-muted-foreground uppercase h-10">
-                {col.label}
+                {renderHeader(col)}
               </TableHead>
             ))}
           </TableRow>

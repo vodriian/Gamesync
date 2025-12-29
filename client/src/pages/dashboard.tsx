@@ -249,12 +249,21 @@ export default function Dashboard() {
     return sortOrder === 'asc' ? comparison : -comparison;
   });
 
+  const handleSort = (field: "name" | "rating" | "tier" | "playtime") => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-primary/30">
+    <div className="h-screen overflow-hidden bg-background text-foreground flex flex-col font-sans selection:bg-primary/30">
       {/* Header */}
       <header className="border-b border-border/40 bg-background/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="container mx-auto px-4 md:px-6 h-14 md:h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 md:gap-3">
+        <div className="container mx-auto px-4 md:px-6 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 md:gap-3 shrink-0">
             <div className="w-7 h-7 md:w-8 md:h-8 rounded bg-primary/20 border border-primary/50 flex items-center justify-center">
               <Database className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary animate-pulse" />
             </div>
@@ -263,40 +272,140 @@ export default function Dashboard() {
             </h1>
           </div>
 
-          <div className="flex items-center gap-1 md:gap-4">
-            <Dialog open={openLogs} onOpenChange={setOpenLogs}>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground h-9 w-9 md:h-auto md:w-auto md:px-3 md:gap-2">
-                  <ScrollText className="w-4 h-4" />
-                  <span className="hidden md:inline">Operations Log</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px] border-border/50 bg-card/95 backdrop-blur-xl max-h-[80vh] flex flex-col">
-                <DialogHeader>
-                  <DialogTitle className="font-display tracking-wide text-xl">Operations Log</DialogTitle>
-                  <DialogDescription>
-                    Real-time synchronization activity and system events.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="flex-1 overflow-hidden min-h-[300px] flex flex-col gap-4">
-                  <SyncLog logs={logs} className="flex-1 border border-border/50 rounded-md" />
-                </div>
-              </DialogContent>
-            </Dialog>
+          <div className="flex items-center gap-2 md:gap-3 overflow-x-auto no-scrollbar mask-gradient-right">
+             {/* View Toggle */}
+             <div className="bg-muted/30 p-1 rounded-lg border border-border/50 flex items-center shrink-0">
+               <Button 
+                 variant={viewMode === 'grid' ? 'secondary' : 'ghost'} 
+                 size="icon" 
+                 className="h-8 w-8"
+                 onClick={() => setViewMode('grid')}
+               >
+                 <LayoutGrid className="w-4 h-4" />
+               </Button>
+               <Button 
+                 variant={viewMode === 'table' ? 'secondary' : 'ghost'} 
+                 size="icon" 
+                 className="h-8 w-8"
+                 onClick={() => setViewMode('table')}
+               >
+                 <TableIcon className="w-4 h-4" />
+               </Button>
+             </div>
 
-            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-muted/30 border border-border/50 text-xs font-mono text-muted-foreground">
-               <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-               SYSTEM ONLINE
-            </div>
+             <AnimatePresence mode="popLayout">
+               {viewMode === 'table' && (
+                 <motion.div
+                  initial={{ opacity: 0, scale: 0.9, width: 0 }}
+                  animate={{ opacity: 1, scale: 1, width: 'auto' }}
+                  exit={{ opacity: 0, scale: 0.9, width: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden hidden md:block"
+                 >
+                   <ColumnManager columns={columns} onUpdateColumns={setColumns} />
+                 </motion.div>
+               )}
+             </AnimatePresence>
 
-            <Dialog open={openSettings} onOpenChange={setOpenSettings}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="icon" className="border-border/50 hover:bg-muted/50 h-9 w-9 md:h-auto md:w-auto md:px-3 md:gap-2">
-                  <Settings className="w-4 h-4" />
-                  <span className="hidden md:inline">Settings</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px] border-border/50 bg-card/95 backdrop-blur-xl">
+             <Separator orientation="vertical" className="h-6 bg-border/50 hidden md:block" />
+
+             {/* Sorting */}
+             <div className="flex items-center gap-1 shrink-0">
+               <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+                 <SelectTrigger className="w-[110px] h-9 text-xs bg-background/50">
+                    <SelectValue placeholder="Sort by" />
+                 </SelectTrigger>
+                 <SelectContent>
+                   <SelectItem value="name">Name</SelectItem>
+                   <SelectItem value="rating">Rating</SelectItem>
+                   <SelectItem value="tier">Tier</SelectItem>
+                   <SelectItem value="playtime">Playtime</SelectItem>
+                 </SelectContent>
+               </Select>
+               <Button
+                 variant="ghost"
+                 size="icon"
+                 className="h-9 w-9"
+                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+               >
+                 {sortOrder === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
+               </Button>
+             </div>
+
+             <Separator orientation="vertical" className="h-6 bg-border/50 hidden md:block" />
+
+             {/* CTAs */}
+             <div className="flex items-center gap-2 shrink-0">
+               <Button 
+                 variant="secondary" 
+                 onClick={loadGames} 
+                 disabled={refreshing}
+                 className="gap-2 text-xs h-9 bg-green-600 hover:bg-green-700 text-white border-green-700"
+               >
+                 <RefreshCw className={cn("w-3.5 h-3.5", refreshing && "animate-spin")} />
+                 <span className="hidden xl:inline">Refresh Library</span>
+                 <span className="xl:hidden">Refresh</span>
+               </Button>
+               
+               {config.craftCollectionId && (
+                 <Button 
+                   onClick={handleCraftSync} 
+                   disabled={syncingCraft}
+                   className="gap-2 bg-purple-600 hover:bg-purple-700 text-white shadow-[0_0_20px_rgba(147,51,234,0.3)] text-xs h-9"
+                 >
+                   {syncingCraft ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <PenTool className="w-3.5 h-3.5" />}
+                   <span className="hidden xl:inline">Sync to Craft</span>
+                   <span className="xl:hidden">Craft</span>
+                 </Button>
+               )}
+               
+               <Button 
+                 onClick={handleSync} 
+                 disabled={syncingNotion}
+                 className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(139,92,246,0.3)] text-xs h-9"
+               >
+                 {syncingNotion ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+                 <span className="hidden xl:inline">Sync to Notion</span>
+                 <span className="xl:hidden">Notion</span>
+               </Button>
+             </div>
+
+             <Separator orientation="vertical" className="h-6 bg-border/50 hidden md:block" />
+
+            {/* System Icons */}
+            <div className="flex items-center gap-1 shrink-0">
+              <Dialog open={openLogs} onOpenChange={setOpenLogs}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground h-9 w-9">
+                    <ScrollText className="w-4 h-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[600px] border-border/50 bg-card/95 backdrop-blur-xl max-h-[80vh] flex flex-col">
+                  <DialogHeader>
+                    <div className="flex items-center justify-between pr-8">
+                      <DialogTitle className="font-display tracking-wide text-xl">Operations Log</DialogTitle>
+                      <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-muted/30 border border-border/50 text-xs font-mono text-muted-foreground">
+                         <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+                         SYSTEM ONLINE
+                      </div>
+                    </div>
+                    <DialogDescription>
+                      Real-time synchronization activity and system events.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="flex-1 overflow-hidden min-h-[300px] flex flex-col gap-4">
+                    <SyncLog logs={logs} className="flex-1 border border-border/50 rounded-md" />
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={openSettings} onOpenChange={setOpenSettings}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground h-9 w-9">
+                    <Settings className="w-4 h-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px] border-border/50 bg-card/95 backdrop-blur-xl">
                 <DialogHeader>
                   <DialogTitle className="font-display tracking-wide text-xl">Configuration</DialogTitle>
                   <DialogDescription>
@@ -409,141 +518,17 @@ export default function Dashboard() {
               </DialogContent>
             </Dialog>
           </div>
+          </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 min-h-0 container mx-auto px-4 md:px-6 py-4 md:py-8 flex gap-4 md:gap-8 overflow-hidden">
+      <main className="flex-1 min-h-0 container mx-auto px-4 md:px-6 pb-4 md:pb-8 flex gap-4 md:gap-8 overflow-hidden">
         
         {/* Left Panel: Game Grid */}
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-          {/* Sticky Title Bar - outside scroll area */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0 pb-3">
-             <div className="flex items-center justify-between md:block">
-               <div>
-                 <h2 className="text-2xl md:text-3xl font-display font-bold">Library</h2>
-                 <p className="text-muted-foreground text-xs md:text-sm hidden md:block">Manage your Steam collection sync status.</p>
-               </div>
-               
-               {/* Mobile view toggle */}
-               <div className="bg-muted/30 p-1 rounded-lg border border-border/50 flex items-center md:hidden">
-                 <Button 
-                   variant={viewMode === 'grid' ? 'secondary' : 'ghost'} 
-                   size="icon" 
-                   className="h-8 w-8 transition-all"
-                   onClick={() => setViewMode('grid')}
-                 >
-                   <LayoutGrid className="w-4 h-4" />
-                 </Button>
-                 <Button 
-                   variant={viewMode === 'table' ? 'secondary' : 'ghost'} 
-                   size="icon" 
-                   className="h-8 w-8 transition-all"
-                   onClick={() => setViewMode('table')}
-                 >
-                   <TableIcon className="w-4 h-4" />
-                 </Button>
-               </div>
-             </div>
-             
-             <div className="flex flex-wrap gap-2 md:gap-3">
-               <AnimatePresence mode="popLayout">
-                 {viewMode === 'table' && (
-                   <motion.div
-                    initial={{ opacity: 0, scale: 0.9, width: 0 }}
-                    animate={{ opacity: 1, scale: 1, width: 'auto' }}
-                    exit={{ opacity: 0, scale: 0.9, width: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden hidden md:block"
-                   >
-                     <ColumnManager columns={columns} onUpdateColumns={setColumns} />
-                   </motion.div>
-                 )}
-               </AnimatePresence>
-
-               {/* Desktop view toggle */}
-               <div className="bg-muted/30 p-1 rounded-lg border border-border/50 hidden md:flex items-center">
-                 <Button 
-                   variant={viewMode === 'grid' ? 'secondary' : 'ghost'} 
-                   size="icon" 
-                   className="h-8 w-8 transition-all"
-                   onClick={() => setViewMode('grid')}
-                 >
-                   <LayoutGrid className="w-4 h-4" />
-                 </Button>
-                 <Button 
-                   variant={viewMode === 'table' ? 'secondary' : 'ghost'} 
-                   size="icon" 
-                   className="h-8 w-8 transition-all"
-                   onClick={() => setViewMode('table')}
-                 >
-                   <TableIcon className="w-4 h-4" />
-                 </Button>
-               </div>
-
-               <Separator orientation="vertical" className="h-8 bg-border/50 mx-1 hidden md:block" />
-
-               <div className="hidden md:flex items-center gap-1">
-                 <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
-                   <SelectTrigger className="w-[110px] h-8 text-xs">
-                      <SelectValue placeholder="Sort by" />
-                   </SelectTrigger>
-                   <SelectContent>
-                     <SelectItem value="name">Name</SelectItem>
-                     <SelectItem value="rating">Rating</SelectItem>
-                     <SelectItem value="tier">Tier</SelectItem>
-                     <SelectItem value="playtime">Playtime</SelectItem>
-                   </SelectContent>
-                 </Select>
-                 <Button
-                   variant="ghost"
-                   size="icon"
-                   className="h-8 w-8"
-                   onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                 >
-                   {sortOrder === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
-                 </Button>
-               </div>
-
-               <Separator orientation="vertical" className="h-8 bg-border/50 mx-1 hidden md:block" />
-
-               <Button 
-                 variant="secondary" 
-                 onClick={loadGames} 
-                 disabled={refreshing}
-                 className="gap-2 text-xs md:text-sm flex-1 md:flex-none"
-               >
-                 <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
-                 <span className="hidden sm:inline">Refresh Library</span>
-                 <span className="sm:hidden">Refresh</span>
-               </Button>
-               
-               {config.craftCollectionId && (
-                 <Button 
-                   onClick={handleCraftSync} 
-                   disabled={syncingCraft}
-                   className="gap-2 bg-purple-600 hover:bg-purple-700 text-white shadow-[0_0_20px_rgba(147,51,234,0.3)] text-xs md:text-sm"
-                 >
-                   {syncingCraft ? <RefreshCw className="w-4 h-4 animate-spin" /> : <PenTool className="w-4 h-4" />}
-                   <span className="hidden sm:inline">Sync to Craft</span>
-                   <span className="sm:hidden">Craft</span>
-                 </Button>
-               )}
-               
-               <Button 
-                 onClick={handleSync} 
-                 disabled={syncingNotion}
-                 className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(139,92,246,0.3)] text-xs md:text-sm flex-1 md:flex-none"
-               >
-                 {syncingNotion ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
-                 <span className="hidden sm:inline">Sync to Notion</span>
-                 <span className="sm:hidden">Notion</span>
-               </Button>
-             </div>
-          </div>
-
           {/* Scrollable Content Area */}
-          <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="flex-1 min-h-0 overflow-y-auto -mr-4 pr-4 pt-4 md:pt-6">
             {/* Stats Bar */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mb-4">
               <div className="p-3 md:p-4 rounded-lg bg-card/50 border border-border/50 backdrop-blur-sm">
@@ -589,7 +574,13 @@ export default function Dashboard() {
                </div>
              ) : (
                <div className="pb-10">
-                 <GamesTable games={sortedGames} columns={columns} />
+                 <GamesTable 
+                   games={sortedGames} 
+                   columns={columns} 
+                   sortBy={sortBy}
+                   sortOrder={sortOrder}
+                   onSort={handleSort}
+                 />
                </div>
              )}
           </div>
