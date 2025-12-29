@@ -34,6 +34,8 @@ export const games = pgTable("games", {
   coverImage: text("cover_image"),
   headerImage: text("header_image"),
   description: text("description"),
+  // Playtime from Steam (in minutes)
+  playtime: integer("playtime"),
   // ProtonDB data
   protonTier: text("proton_tier"),
   protonConfidence: text("proton_confidence"),
@@ -41,8 +43,6 @@ export const games = pgTable("games", {
   steamRating: text("steam_rating"),
   ratingTotal: integer("rating_total"),
   ratingPositivePct: integer("rating_positive_pct"),
-  // User status
-  status: text("status"),
   // Custom properties
   customProperties: jsonb("custom_properties"),
   lastSynced: timestamp("last_synced"),
@@ -139,20 +139,6 @@ export const DEFAULT_SYSTEM_COLUMNS = [
     type: "number",
     options: null,
     position: 4,
-    visible: 1,
-    isSystem: 1,
-  },
-  {
-    name: "Status",
-    type: "select",
-    options: [
-      "04 completed ✅",
-      "03 playing 🎮",
-      "02 backlog 📚",
-      "01 dropped 🧹",
-      "00 wishlist ⭐"
-    ],
-    position: 5,
     visible: 1,
     isSystem: 1,
   },

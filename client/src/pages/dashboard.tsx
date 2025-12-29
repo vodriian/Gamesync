@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { RefreshCw, Settings, Database, Play, LayoutGrid, Table as TableIcon, ScrollText, PenTool } from "lucide-react";
+import { RefreshCw, Settings, Database, Play, LayoutGrid, Table as TableIcon, ScrollText, PenTool, ArrowUp, ArrowDown } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -57,6 +58,8 @@ export default function Dashboard() {
   const [columns, setColumns] = useState<ColumnConfig[]>(DEFAULT_COLUMNS);
   const [openSettings, setOpenSettings] = useState(false);
   const [openLogs, setOpenLogs] = useState(false);
+  const [sortBy, setSortBy] = useState<"name" | "rating" | "tier" | "playtime">("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   // Load configuration on mount
   useEffect(() => {
@@ -111,8 +114,19 @@ export default function Dashboard() {
       await syncFromSteam((msg, level) => addLog(msg, level));
       // Refetch games from database after syncing
       await refetch();
+      toast({
+        title: "Library Refreshed",
+        description: "Steam library has been updated successfully.",
+        variant: "default",
+        className: "bg-green-600 text-white border-green-700"
+      });
     } catch (error) {
       addLog("Failed to sync from Steam.", "error");
+      toast({
+        title: "Refresh Failed",
+        description: "Failed to refresh Steam library. Check the logs for details.",
+        variant: "destructive"
+      });
     } finally {
       setRefreshing(false);
     }
@@ -142,6 +156,12 @@ export default function Dashboard() {
     try {
       await syncToNotion(games, config.notionToken, config.notionDbId, (msg, level) => {
         addLog(msg, level);
+      });
+      toast({
+        title: "Sync Complete",
+        description: "Successfully synced games to Notion.",
+        variant: "default",
+        className: "bg-green-600 text-white border-green-700"
       });
     } catch (error) {
       addLog("Failed to sync to Notion.", "error");
@@ -180,6 +200,12 @@ export default function Dashboard() {
       await syncToCraft(games, config.craftUrl, config.craftCollectionId, (msg, level) => {
         addLog(msg, level);
       });
+      toast({
+        title: "Sync Complete",
+        description: "Successfully synced games to Craft.",
+        variant: "default",
+        className: "bg-green-600 text-white border-green-700"
+      });
     } catch (error) {
       addLog("Failed to sync to Craft.", "error");
       toast({
@@ -191,6 +217,37 @@ export default function Dashboard() {
       setSyncingCraft(false);
     }
   };
+
+  const getTierWeight = (tier?: string) => {
+    switch (tier) {
+      case 'native': return 6;
+      case 'platinum': return 5;
+      case 'gold': return 4;
+      case 'silver': return 3;
+      case 'bronze': return 2;
+      case 'borked': return 1;
+      default: return 0;
+    }
+  };
+
+  const sortedGames = [...games].sort((a, b) => {
+    let comparison = 0;
+    switch (sortBy) {
+      case 'name':
+        comparison = a.name.localeCompare(b.name);
+        break;
+      case 'rating':
+        comparison = (a.review_score || 0) - (b.review_score || 0);
+        break;
+      case 'tier':
+        comparison = getTierWeight(a.proton?.tier) - getTierWeight(b.proton?.tier);
+        break;
+      case 'playtime':
+        comparison = a.playtime_forever - b.playtime_forever;
+        break;
+    }
+    return sortOrder === 'asc' ? comparison : -comparison;
+  });
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-primary/30">
@@ -426,6 +483,30 @@ export default function Dashboard() {
 
                <Separator orientation="vertical" className="h-8 bg-border/50 mx-1 hidden md:block" />
 
+               <div className="hidden md:flex items-center gap-1">
+                 <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+                   <SelectTrigger className="w-[110px] h-8 text-xs">
+                      <SelectValue placeholder="Sort by" />
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="name">Name</SelectItem>
+                     <SelectItem value="rating">Rating</SelectItem>
+                     <SelectItem value="tier">Tier</SelectItem>
+                     <SelectItem value="playtime">Playtime</SelectItem>
+                   </SelectContent>
+                 </Select>
+                 <Button
+                   variant="ghost"
+                   size="icon"
+                   className="h-8 w-8"
+                   onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                 >
+                   {sortOrder === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
+                 </Button>
+               </div>
+
+               <Separator orientation="vertical" className="h-8 bg-border/50 mx-1 hidden md:block" />
+
                <Button 
                  variant="secondary" 
                  onClick={loadGames} 
@@ -496,7 +577,7 @@ export default function Dashboard() {
             {viewMode === 'grid' ? (
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-10">
                  <AnimatePresence>
-                   {games.map((game, i) => (
+                   {sortedGames.map((game, i) => (
                      <GameCard 
                        key={game.appid} 
                        game={game} 
@@ -508,7 +589,7 @@ export default function Dashboard() {
                </div>
              ) : (
                <div className="pb-10">
-                 <GamesTable games={games} columns={columns} />
+                 <GamesTable games={sortedGames} columns={columns} />
                </div>
              )}
           </div>

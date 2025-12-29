@@ -169,11 +169,8 @@ export default function GameDetails() {
             <div className="lg:col-span-2 space-y-8">
               <div className="space-y-4">
                 <h2 className="text-xl font-display font-bold text-white/90">About This Game</h2>
-                <p className="text-muted-foreground leading-relaxed text-base">
+                <p className="text-muted-foreground leading-relaxed text-base whitespace-pre-wrap">
                   {game.description || "No description available for this game."}
-                </p>
-                <p className="text-sm text-muted-foreground/70 italic">
-                  Sync this game to Notion to keep track of your progress, rating, and personal notes!
                 </p>
               </div>
             </div>
@@ -192,15 +189,6 @@ export default function GameDetails() {
                     <span className="font-mono text-right">{game.appid}</span>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <span className="text-muted-foreground">Status</span>
-                    <div className="text-right">
-                      <Badge variant="secondary" className="text-xs">
-                        {game.customProperties?.status || "02 backlog 📚"}
-                      </Badge>
-                    </div>
-                  </div>
-
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <span className="text-muted-foreground">Rating</span>
                     <div className="text-right">

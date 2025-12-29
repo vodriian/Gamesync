@@ -25,7 +25,6 @@ export class CraftService {
       steamRating?: string | null;
       ratingTotal?: number | null;
       ratingPositivePct?: number | null;
-      status?: string | null;
       customProperties?: any;
     },
     customColumns: CustomColumn[]
@@ -70,9 +69,6 @@ export class CraftService {
       }
       if (game.ratingPositivePct !== undefined && game.ratingPositivePct !== null) {
         content += `**Positive %**: ${game.ratingPositivePct}%\n`;
-      }
-      if (game.status) {
-        content += `**Status**: ${game.status}\n`;
       }
       content += `\n`;
       
@@ -139,7 +135,6 @@ export class CraftService {
       steamRating?: string | null;
       ratingTotal?: number | null;
       ratingPositivePct?: number | null;
-      status?: string | null;
       customProperties?: any;
     }>,
     customColumns: CustomColumn[]

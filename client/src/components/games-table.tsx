@@ -69,14 +69,6 @@ export function GamesTable({ games, columns }: GamesTableProps) {
           <span className="text-xs whitespace-nowrap">{rating}</span>
         );
       }
-      case "status": {
-        const status = game.customProperties?.status || "02 backlog 📚";
-        return (
-          <Badge variant="secondary" className="text-[10px] h-5 px-1.5 whitespace-nowrap">
-            {status}
-          </Badge>
-        );
-      }
       case "notion_status":
         return (
           <div className="flex items-center gap-1.5">

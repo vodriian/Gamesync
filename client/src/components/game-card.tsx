@@ -71,10 +71,9 @@ export function GameCard({ game, index, enableAnimation = true }: GameCardProps)
             </div>
           </div>
 
-          <div className="flex items-center gap-2 pt-1">
-             <div className={`h-1.5 w-1.5 rounded-full ${game.notion_status === 'synced' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : game.notion_status === 'error' ? 'bg-red-500' : 'bg-yellow-500'}`} />
-             <span className="text-[10px] uppercase tracking-widest text-muted-foreground/80">
-               {game.notion_status === 'synced' ? 'Synced' : 'Pending'}
+          <div className="flex items-center gap-2 pt-2 border-t border-border/30">
+             <span className="text-xs font-medium text-muted-foreground/80 truncate w-full" title={game.customProperties?.rating || "No Rating"}>
+               {game.customProperties?.rating || "No Rating"}
              </span>
           </div>
         </CardContent>

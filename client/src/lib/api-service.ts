@@ -234,11 +234,12 @@ export function gameToGameData(game: Game): GameData {
   return {
     appid: parseInt(game.id),
     name: game.name,
-    playtime_forever: 0,
+    playtime_forever: game.playtime || 0,
     cover_url: game.coverImage || "",
     header_url: game.headerImage || "",
     store_url: `https://store.steampowered.com/app/${game.id}/`,
     description: game.description || "",
+    review_score: game.ratingPositivePct || 0,
     proton: {
       tier,
       score: game.ratingPositivePct || undefined,
@@ -249,7 +250,6 @@ export function gameToGameData(game: Game): GameData {
       tier: game.protonTier || undefined,
       confidence: game.protonConfidence || undefined,
       rating: game.steamRating || undefined,
-      status: game.status || undefined,
       ...(game.customProperties && typeof game.customProperties === 'object' ? game.customProperties : {}),
     },
   };

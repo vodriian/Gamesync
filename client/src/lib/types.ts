@@ -72,8 +72,5 @@ export const DEFAULT_COLUMNS: ColumnConfig[] = [
     "06 mostly positive 🙂‍↕️", "05 mixed 😐", "04 mostly negative 👎",
     "03 negative 😕", "02 very negative 😬", "01 overwhelmingly negative 💣", "00 no reviews 0️⃣"
   ]},
-  { id: "status", label: "Status", type: "select", visible: true, system: true, options: [
-    "04 completed ✅", "03 playing 🎮", "02 backlog 📚", "01 dropped 🧹", "00 wishlist ⭐"
-  ]},
   { id: "notion_status", label: "Sync", type: "status", visible: true, system: true },
 ];

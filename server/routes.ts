@@ -170,6 +170,7 @@ export async function registerRoutes(
           coverImage: game.coverImage,
           headerImage: game.headerImage,
           description: game.description,
+          playtime: game.playtime,
           protonTier: game.protonTier,
           protonConfidence: game.protonConfidence,
           steamRating: game.steamRating,
