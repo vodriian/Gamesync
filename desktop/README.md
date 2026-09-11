@@ -30,6 +30,19 @@ All ratings, statuses, descriptions, and playtime are sample data. This build
 does not connect to Steam, edit a personal library, or save preferences.
 Table, kanban, durable edits, imports, and AI come in later milestones.
 
+## Storage foundation
+
+`src/storage.rs` writes a complete immutable JSON revision, then atomically
+replaces the current file. It flushes file data and directory entries. A failed
+current-file save leaves the revision available for recovery by an exact retry.
+It uses `tempfile`, already present in Eagle's dependency lock, for safe staging.
+
+This is a file layer only. It is not connected to the demo. Callers must validate
+the schema, supply safe paths in existing library directories, and check revision
+parents. Versioned records, conflict detection, and recovery UI come next.
+Never use an old revision retry to resolve a conflict. Local publication does not
+confirm Dropbox upload. Only macOS has been tested; Windows writes are disabled.
+
 ## Checks
 
 ```sh

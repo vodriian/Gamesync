@@ -23,6 +23,10 @@ The source grid and inspector had local video-related edits at port time;
 those branches are not used here. Cache and theme files had no local edits.
 No video, password lock, Eagle parser, or watcher code is included in this milestone.
 
+The storage file layer is new: Eagle's source has no matching revision writer.
+It uses the existing locked `tempfile` version instead of custom temporary-file
+naming and rename code. This adds a direct dependency, not a new locked package.
+
 ## Demo artwork
 
 Covers came from Steam's public asset CDN on 2026-09-11:

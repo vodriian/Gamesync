@@ -1,6 +1,7 @@
 # GameSync desktop plan
 
 Status: milestone 1 implemented and checked on macOS. Linux runtime checks pending.
+Milestone 2 started with file publication. Schema and reconciliation remain pending.
 
 ## Product
 
