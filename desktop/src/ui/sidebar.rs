@@ -1,6 +1,6 @@
 //! Eagle's sidebar row geometry, with game statuses in place of asset folders.
 
-use crate::model::{Library, Scope, Status};
+use crate::model::{Library, Scope};
 use gpui::{div, prelude::*, px, Entity, Window};
 use gpui_component::{h_flex, v_flex, ActiveTheme as _, Icon, IconName, StyledExt as _};
 
@@ -16,10 +16,12 @@ impl LibrarySidebar {
 
     fn row(&self, scope: Scope, icon: IconName, cx: &mut Context<Self>) -> impl IntoElement {
         let active = self.library.read(cx).scope == scope;
-        let count = self.library.read(cx).count(scope);
+        let count = self.library.read(cx).count(&scope);
+        let label = self.library.read(cx).scope_label(&scope);
         h_flex()
-            .id(scope.label())
+            .id(gpui::SharedString::from(format!("scope-{scope:?}")))
             .h_8()
+            .flex_shrink_0()
             .px_2()
             .py_1()
             .gap_x_2()
@@ -36,12 +38,12 @@ impl LibrarySidebar {
             })
             .on_click(cx.listener(move |this, _, _, cx| {
                 this.library.update(cx, |lib, cx| {
-                    lib.set_scope(scope);
+                    lib.set_scope(scope.clone());
                     cx.notify();
                 });
             }))
             .child(Icon::new(icon).size_4())
-            .child(div().flex_1().child(scope.label()))
+            .child(div().flex_1().child(label))
             .child(div().text_xs().child(count.to_string()))
     }
 }
@@ -85,26 +87,40 @@ impl Render for LibrarySidebar {
             )
             .child(
                 v_flex()
+                    .id("status-list")
+                    .flex_1()
+                    .min_h_0()
+                    .overflow_y_scroll()
                     .px_2()
                     .gap_1()
-                    .children(Status::ALL.into_iter().map(|status| {
-                        let icon = match status {
-                            Status::Completed => IconName::CircleCheck,
-                            Status::Dropped => IconName::CircleX,
-                            _ => IconName::Folder,
-                        };
-                        self.row(Scope::Status(status), icon, cx)
-                    })),
+                    .children(
+                        self.library
+                            .read(cx)
+                            .statuses
+                            .clone()
+                            .into_iter()
+                            .map(|status| {
+                                let icon = match status.key.as_str() {
+                                    "completed" => IconName::CircleCheck,
+                                    "dropped" => IconName::CircleX,
+                                    _ => IconName::Folder,
+                                };
+                                self.row(Scope::Status(status.key), icon, cx)
+                            }),
+                    ),
             )
-            .child(div().flex_1())
             .child(
                 v_flex()
                     .p_4()
                     .gap_1()
                     .text_xs()
                     .text_color(cx.theme().muted_foreground)
-                    .child("Demo library")
-                    .child("Sample games. No account connected."),
+                    .child(self.library.read(cx).name.clone())
+                    .child(if self.library.read(cx).demo {
+                        "Sample games. No account connected."
+                    } else {
+                        "Local library"
+                    }),
             )
     }
 }

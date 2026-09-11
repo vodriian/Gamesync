@@ -27,6 +27,11 @@ The storage file layer is new: Eagle's source has no matching revision writer.
 It uses the existing locked `tempfile` version instead of custom temporary-file
 naming and rename code. This adds a direct dependency, not a new locked package.
 
+Folder loading also adapts Eagle's native path prompt, background rescan flow,
+watcher filtering, cache clearing, and device-local settings pattern. The watcher
+uses a bounded queue and a periodic fallback. The SQLite last-valid index and
+game discovery are new. `rusqlite` adds SQLite; `notify` reuses Eagle's locked version.
+
 ## Demo artwork
 
 Covers came from Steam's public asset CDN on 2026-09-11:
@@ -37,3 +42,7 @@ owners; the project's code license does not grant rights to that artwork.
 
 Descriptions and personal values are illustrative fixtures, not imported
 Steam data or statements about the user's library.
+
+Inspector editing keeps Eagle's detail panel and reuses its GPUI Input and
+DropdownMenu patterns. `ui/editor.rs` owns one draft and calls the existing
+revision services. No editor framework or dependency was added.

@@ -231,7 +231,7 @@ impl Render for GameGrid {
                             .text_sm()
                             .text_color(cx.theme().muted_foreground)
                             .child(if library.read(cx).games.is_empty() {
-                                "This demo library is empty."
+                                "This library is empty."
                             } else {
                                 "Try another search or status."
                             }),
@@ -295,20 +295,25 @@ fn cell(
                 .active(|style| style.border_color(cx.theme().primary))
                 .bg(cx.theme().secondary)
                 .child(
-                    img(data.game.cover.clone())
-                        .size_full()
-                        .object_fit(ObjectFit::Cover)
-                        .with_fallback(move || {
-                            v_flex()
-                                .size_full()
-                                .items_center()
-                                .justify_center()
-                                .gap_2()
-                                .text_color(muted)
-                                .child(gpui_component::Icon::new(gpui_component::IconName::File))
-                                .child(div().text_xs().child("Cover unavailable"))
-                                .into_any_element()
-                        }),
+                    img(data
+                        .game
+                        .cover_path
+                        .clone()
+                        .map(gpui::ImageSource::from)
+                        .unwrap_or_else(|| data.game.cover.clone().into()))
+                    .size_full()
+                    .object_fit(ObjectFit::Cover)
+                    .with_fallback(move || {
+                        v_flex()
+                            .size_full()
+                            .items_center()
+                            .justify_center()
+                            .gap_2()
+                            .text_color(muted)
+                            .child(gpui_component::Icon::new(gpui_component::IconName::File))
+                            .child(div().text_xs().child("Cover unavailable"))
+                            .into_any_element()
+                    }),
                 ),
         )
         .child(
@@ -329,7 +334,7 @@ fn cell(
                         .justify_between()
                         .text_xs()
                         .text_color(muted)
-                        .child(data.game.status.label())
+                        .child(data.game.status_label.clone())
                         .child(data.game.rating.map_or(String::new(), |rating| {
                             format!("{:.1}", f32::from(rating) / 2.)
                         })),

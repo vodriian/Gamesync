@@ -14,13 +14,14 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 | [Foundation log](logs/2026-09-11.md) | Initial decisions, changes, checks, and next task |
 | [Desktop demo](../desktop/README.md) | Run commands and current native features |
 | [Source notes](../desktop/SOURCE-NOTES.md) | Eagle code reuse and demo artwork sources |
+| [Record format](storage-format.md) | Versioned game records and conflict rules |
 
 ## Current state
 
 - Documentation foundation: added.
-- Desktop implementation: native demo built and checked on macOS.
+- Desktop implementation: native grid and inspector load real library folders on macOS.
 - Milestone 1: Linux runtime verification remains pending.
-- Milestone 2: revision file publication and recovery tests added. Editor integration is pending.
+- Milestone 2: file records, definitions, folder loading, and a local index are in place. Inspector draft edits and guarded saves are implemented.
 - Working branch: `codex/desktop-foundation`.
 - Runtime targets: macOS and Linux. Windows follows later.
 - Existing React/Express app: retained as a reference.
@@ -28,9 +29,8 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 ## Next task
 
 Verify the native demo on Linux before adding more screens. Storage work
-can proceed separately: add versioned records and revision conflict checks
-before connecting the file layer to personal edits. The current demo uses
-read-only sample data; it does not save game edits or preferences.
+can proceed separately. Next, add a small conflict review inside the inspector. It must show the saved alternatives and keep
+both branches in history. No automatic merge or overwrite.
 
 ## Maintain these documents
 

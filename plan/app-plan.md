@@ -1,7 +1,7 @@
 # GameSync desktop plan
 
 Status: milestone 1 implemented and checked on macOS. Linux runtime checks pending.
-Milestone 2 started with file publication. Schema and reconciliation remain pending.
+Milestone 2: records, definitions, revision checks, folder loading, and local indexing implemented. Inspector saves remain pending.
 
 ## Product
 
@@ -73,6 +73,8 @@ job queues, and window state outside Dropbox too. Store credentials in the
 OS credential store; request them per session if that store is unavailable.
 
 ### Writes and conflicts
+
+See [the current record format](storage-format.md) for implemented rules and limits.
 
 - Retain an immutable revision with parent revision IDs before atomically replacing a current record.
 - Detect divergent revisions and Dropbox conflict copies. Preserve both versions and show a comparison.

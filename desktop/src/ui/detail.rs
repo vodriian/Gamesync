@@ -1,13 +1,19 @@
 //! Eagle's inspector layout adapted to game metadata.
 
+use super::editor::{EditorEvent, InspectorEditor};
 use crate::{model::Library, ui::thumb_cache::LruImageCache};
 use gpui::{div, image_cache, img, prelude::*, px, App, Entity, ObjectFit, Window};
-use gpui_component::{h_flex, v_flex, ActiveTheme as _, Icon, IconName, StyledExt as _};
+use gpui_component::{
+    button::{Button, ButtonVariants as _},
+    h_flex, v_flex, ActiveTheme as _, Icon, IconName, StyledExt as _,
+};
 
 pub struct DetailPanel {
     library: Entity<Library>,
     cache: Entity<LruImageCache>,
+    editor: Option<Entity<InspectorEditor>>,
 }
+impl gpui::EventEmitter<EditorEvent> for DetailPanel {}
 
 impl DetailPanel {
     pub fn new(
@@ -16,7 +22,48 @@ impl DetailPanel {
         cx: &mut Context<Self>,
     ) -> Self {
         cx.observe(&library, |_, _, cx| cx.notify()).detach();
-        Self { library, cache }
+        Self {
+            library,
+            cache,
+            editor: None,
+        }
+    }
+}
+
+impl DetailPanel {
+    pub fn clear(&mut self, cx: &mut Context<Self>) {
+        if !self.busy(cx) {
+            self.editor = None;
+            cx.notify();
+        }
+    }
+
+    pub fn busy(&self, cx: &App) -> bool {
+        self.editor
+            .as_ref()
+            .is_some_and(|editor| editor.read(cx).busy(cx))
+    }
+
+    fn edit(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let library = self.library.read(cx);
+        let Some((root, manifest)) = library.source.clone() else {
+            return;
+        };
+        let Some(base) = library.selected_game().and_then(|game| game.record.clone()) else {
+            return;
+        };
+        let editor = cx
+            .new(|cx| InspectorEditor::new(self.library.clone(), root, manifest, base, window, cx));
+        cx.subscribe(&editor, |this, _, event, cx| {
+            match event {
+                EditorEvent::Closed => this.editor = None,
+                EditorEvent::Saved => cx.emit(EditorEvent::Saved),
+            }
+            cx.notify();
+        })
+        .detach();
+        self.editor = Some(editor);
+        cx.notify();
     }
 }
 
@@ -30,6 +77,9 @@ impl Render for DetailPanel {
             .border_l_1()
             .border_color(cx.theme().border)
             .bg(cx.theme().sidebar);
+        if let Some(editor) = &self.editor {
+            return panel.child(editor.clone()).into_any_element();
+        }
         let Some(game) = self.library.read(cx).selected_game().cloned() else {
             return panel
                 .items_center()
@@ -56,12 +106,16 @@ impl Render for DetailPanel {
                             .justify_center()
                             .bg(cx.theme().secondary)
                             .child(
-                                img(game.cover.clone())
-                                    .h_full()
-                                    .object_fit(ObjectFit::Contain)
-                                    .with_fallback(|| {
-                                        div().p_4().child("Cover unavailable").into_any_element()
-                                    }),
+                                img(game
+                                    .cover_path
+                                    .clone()
+                                    .map(gpui::ImageSource::from)
+                                    .unwrap_or_else(|| game.cover.clone().into()))
+                                .h_full()
+                                .object_fit(ObjectFit::Contain)
+                                .with_fallback(|| {
+                                    div().p_4().child("Cover unavailable").into_any_element()
+                                }),
                             ),
                     ),
             )
@@ -77,7 +131,7 @@ impl Render for DetailPanel {
                     .child(
                         h_flex()
                             .gap_4()
-                            .child(field("Status", game.status.label(), cx))
+                            .child(field("Status", game.status_label.clone(), cx))
                             .child(field("Your rating", game.rating_label(), cx)),
                     )
                     .child(field(
@@ -85,7 +139,25 @@ impl Render for DetailPanel {
                         format!("{:.1} hours", game.playtime_minutes as f32 / 60.),
                         cx,
                     ))
+                    .when(game.favorite, |column| {
+                        column.child(field("Favorite", "Yes", cx))
+                    })
                     .child(field("About", game.description.clone(), cx))
+                    .when(
+                        game.record
+                            .as_ref()
+                            .is_some_and(|record| !record.game.personal.notes.is_empty()),
+                        |column| {
+                            column.child(field(
+                                "Notes",
+                                game.record
+                                    .as_ref()
+                                    .map(|record| record.game.personal.notes.clone())
+                                    .unwrap_or_default(),
+                                cx,
+                            ))
+                        },
+                    )
                     .child(
                         v_flex().gap_2().child(label("Tags", cx)).child(
                             h_flex()
@@ -102,14 +174,17 @@ impl Render for DetailPanel {
                                 })),
                         ),
                     )
-                    .child(
-                        div()
-                            .text_xs()
-                            .text_color(cx.theme().muted_foreground)
-                            .child(
-                                "Sample details. Editing and saving arrive in the next milestone.",
-                            ),
-                    ),
+                    .when(!self.library.read(cx).demo, |column| {
+                        column.child(
+                            Button::new("edit-details")
+                                .primary()
+                                .label("Edit details")
+                                .on_click(cx.listener(|this, _, window, cx| this.edit(window, cx))),
+                        )
+                    })
+                    .when(self.library.read(cx).demo, |column| {
+                        column.child(div().text_xs().child("Open a library to edit details."))
+                    }),
             )
             .into_any_element()
     }

@@ -11,8 +11,10 @@ import sys
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--build-only", action="store_true")
 parser.add_argument("--empty", action="store_true")
+parser.add_argument("--demo", action="store_true")
 parser.add_argument("--stress", action="store_true")
 parser.add_argument("--missing-covers", action="store_true")
+parser.add_argument("--library", type=Path)
 args = parser.parse_args()
 root = Path(__file__).resolve().parents[1]
 subprocess.run(["cargo", "build", "--manifest-path", str(root / "Cargo.toml"), "--target-dir", str(root / "target")], check=True)
@@ -37,5 +39,7 @@ if sys.platform == "darwin":
 
 print(f"Built: {binary}", flush=True)
 if not args.build_only:
-    flags = [f"--{name.replace('_', '-')}" for name in ("empty", "stress", "missing_covers") if getattr(args, name)]
+    flags = [f"--{name.replace('_', '-')}" for name in ("demo", "empty", "stress", "missing_covers") if getattr(args, name)]
+    if args.library:
+        flags.extend(["--library", str(args.library.resolve())])
     os.execv(str(binary), [str(binary), *flags])

@@ -64,6 +64,13 @@ fn publish_revision(path: &Path, bytes: &[u8]) -> Result<()> {
     sync_parent(path).context("Could not confirm revision directory")
 }
 
+/// Retain an imported branch without changing the current record.
+pub(crate) fn retain_revision<T: Serialize>(path: &Path, record: &T) -> Result<()> {
+    let mut bytes = serde_json::to_vec_pretty(record)?;
+    bytes.push(b'\n');
+    publish_revision(path, &bytes)
+}
+
 fn replace_current(path: &Path, bytes: &[u8]) -> Result<()> {
     stage(path, bytes)?
         .persist(path)

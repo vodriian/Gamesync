@@ -75,6 +75,17 @@ impl LruImageCache {
         }
     }
 
+    /// Reused from Eagle: release stale images when local cover files change.
+    pub fn clear(&mut self, cx: &mut App) {
+        for (_, mut entry) in std::mem::take(&mut self.entries) {
+            if let Some(Ok(image)) = entry.item.get() {
+                cx.drop_image(image, None);
+            }
+        }
+        self.lru.clear();
+        self.bytes = 0;
+    }
+
     /// Evict least-recently-used loaded entries until back under budget.
     ///
     /// `protect` is the key just handed to the renderer this frame; evicting it

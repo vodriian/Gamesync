@@ -1,4 +1,5 @@
-//! Eagle's three-pane shell with a shared game model. Demo preferences stay in memory.
+mod loading;
+// Eagle's three-pane shell with a shared game model. Appearance stays in memory.
 
 use crate::{
     model::Library,
@@ -10,14 +11,18 @@ use crate::{
         thumb_cache::{LruImageCache, DEFAULT_BUDGET_BYTES},
     },
 };
+use futures::channel::mpsc;
+use gpui::Task;
 use gpui::{div, prelude::*, px, Entity, Focusable, Subscription, Window};
 use gpui_component::{
     button::{Button, ButtonVariants as _},
     h_flex,
     input::{Input, InputEvent, InputState},
     menu::{DropdownMenu as _, PopupMenuItem},
-    v_flex, ActiveTheme as _, IconName, Selectable as _, Sizable as _, StyledExt as _,
+    v_flex, ActiveTheme as _, Disableable as _, IconName, Selectable as _, Sizable as _,
+    StyledExt as _,
 };
+use std::path::PathBuf;
 
 pub struct GameSyncApp {
     library: Entity<Library>,
@@ -30,15 +35,32 @@ pub struct GameSyncApp {
     compact: bool,
     theme: String,
     _subscriptions: Vec<Subscription>,
+    cache: Entity<LruImageCache>,
+    load_task: Option<Task<()>>,
+    watch_task: Option<Task<()>>,
+    clear_search: bool,
+    window_title: String,
+    refresh: Option<mpsc::Sender<Result<(), String>>>,
+    folder: Option<PathBuf>,
+    loading: bool,
+    refreshing: bool,
+    refreshed: bool,
+    notice: String,
+    last_issues: Vec<String>,
 }
 
 impl GameSyncApp {
-    pub fn new(library: Library, window: &mut Window, cx: &mut Context<Self>) -> Self {
+    pub fn new(
+        library: Library,
+        initial_path: Option<PathBuf>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Self {
         let library = cx.new(|_| library);
         let cache = LruImageCache::new(DEFAULT_BUDGET_BYTES, cx);
         let grid = cx.new(|cx| GameGrid::new(library.clone(), cache.clone(), cx));
         let sidebar = cx.new(|cx| LibrarySidebar::new(library.clone(), cx));
-        let detail = cx.new(|cx| DetailPanel::new(library.clone(), cache, cx));
+        let detail = cx.new(|cx| DetailPanel::new(library.clone(), cache.clone(), cx));
         let search = cx.new(|cx| InputState::new(window, cx).placeholder("Search games or tags…"));
         let search_subscription = cx.subscribe(&search, |this, search, event, cx| {
             if matches!(event, InputEvent::Change) {
@@ -49,9 +71,16 @@ impl GameSyncApp {
                 });
             }
         });
+        let editor_subscription = cx.subscribe(&detail, |this, _, event, _| {
+            if matches!(event, super::editor::EditorEvent::Saved) {
+                if let Some(sender) = &mut this.refresh {
+                    let _ = sender.try_send(Ok(()));
+                }
+            }
+        });
         let library_subscription = cx.observe(&library, |_, _, cx| cx.notify());
         window.focus(&grid.focus_handle(cx));
-        Self {
+        let mut app = Self {
             library,
             grid,
             sidebar,
@@ -61,7 +90,56 @@ impl GameSyncApp {
             detail_shown: true,
             compact: false,
             theme: theme::SYSTEM_THEME.into(),
-            _subscriptions: vec![search_subscription, library_subscription],
+            _subscriptions: vec![
+                search_subscription,
+                library_subscription,
+                editor_subscription,
+            ],
+            cache,
+            load_task: None,
+            watch_task: None,
+            clear_search: false,
+            window_title: String::new(),
+            refresh: None,
+            folder: None,
+            loading: false,
+            refreshing: false,
+            refreshed: false,
+            notice: String::new(),
+            last_issues: Vec::new(),
+        };
+        if let Some(path) = initial_path {
+            app.open_folder(path, cx);
+        }
+        app
+    }
+
+    pub fn refresh_library(&mut self, cx: &mut Context<Self>) {
+        if self.loading || self.refreshing {
+            return;
+        }
+        let Some(sender) = &mut self.refresh else {
+            return;
+        };
+        match sender.try_send(Ok(())) {
+            Ok(()) => self.refreshing = true,
+            // A pending scan also satisfies this request. Do not grow the queue.
+            Err(error) if error.is_full() => self.refreshing = true,
+            Err(_) => self.notice = "Refresh is unavailable. Open the library again.".into(),
+        }
+        self.refreshed = false;
+        cx.notify();
+    }
+
+    pub fn can_close(&mut self, cx: &mut Context<Self>) -> bool {
+        if self.detail.read(cx).busy(cx) {
+            self.detail_shown = true;
+            self.notice =
+                "Save or discard your draft before closing or opening another library.".into();
+            cx.notify();
+            false
+        } else {
+            true
         }
     }
 
@@ -95,12 +173,30 @@ impl GameSyncApp {
                     })),
             )
             .child(
-                div()
-                    .font_medium()
-                    .text_sm()
-                    .child(self.library.read(cx).scope.label()),
+                div().font_medium().text_sm().child(
+                    self.library
+                        .read(cx)
+                        .scope_label(&self.library.read(cx).scope),
+                ),
             )
             .child(div().flex_1())
+            .child(
+                Button::new("open-library")
+                    .ghost()
+                    .small()
+                    .icon(IconName::Folder)
+                    .tooltip("Open library (⌘/Ctrl O)")
+                    .on_click(cx.listener(|this, _, _, cx| this.choose_folder(cx))),
+            )
+            .child(
+                Button::new("refresh-library")
+                    .ghost()
+                    .small()
+                    .label("Refresh")
+                    .tooltip("Refresh library (⌘/Ctrl R)")
+                    .disabled(self.loading || self.refreshing || self.refresh.is_none())
+                    .on_click(cx.listener(|this, _, _, cx| this.refresh_library(cx))),
+            )
             .child(
                 div()
                     .flex_1()
@@ -164,11 +260,22 @@ impl GameSyncApp {
 }
 
 impl Render for GameSyncApp {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        if self.clear_search {
+            self.clear_search = false;
+            self.search
+                .update(cx, |search, cx| search.set_value("", window, cx));
+        }
+        let title = format!("GameSync — {}", self.library.read(cx).name);
+        if self.window_title != title {
+            window.set_window_title(&title);
+            self.window_title = title;
+        }
         v_flex()
             .on_action(cx.listener(|this, _: &crate::FocusSearch, window, cx| {
                 window.focus(&this.search.focus_handle(cx));
             }))
+            .on_action(cx.listener(|this, _: &crate::OpenLibrary, _, cx| this.choose_folder(cx)))
             .size_full()
             .bg(cx.theme().background)
             .text_color(cx.theme().foreground)
@@ -183,6 +290,16 @@ impl Render for GameSyncApp {
                             .min_w_0()
                             .h_full()
                             .child(self.toolbar(cx))
+                            .when(!self.notice.is_empty(), |column| {
+                                column.child(
+                                    div()
+                                        .px_3()
+                                        .py_2()
+                                        .text_xs()
+                                        .bg(cx.theme().sidebar)
+                                        .child(self.notice.clone()),
+                                )
+                            })
                             .child(div().flex_1().min_h_0().p_2().child(self.grid.clone())),
                     )
                     .when(self.detail_shown, |row| row.child(self.detail.clone())),
@@ -203,7 +320,17 @@ impl Render for GameSyncApp {
                         self.library.read(cx).visible.len(),
                         self.library.read(cx).games.len()
                     ))
-                    .child("Demo library · Browse with arrow keys"),
+                    .child(if self.loading {
+                        "Opening library…"
+                    } else if self.refreshing {
+                        "Refreshing library…"
+                    } else if self.refreshed {
+                        "Library refreshed · ⌘/Ctrl R to refresh"
+                    } else if self.library.read(cx).demo {
+                        "Demo library · Browse with arrow keys"
+                    } else {
+                        "Library · ⌘/Ctrl R to refresh"
+                    }),
             )
     }
 }

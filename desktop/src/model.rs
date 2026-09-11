@@ -3,50 +3,40 @@
 use serde::Deserialize;
 use std::sync::Arc;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-pub enum Status {
-    Backlog,
-    Wanted,
-    Playing,
-    Paused,
-    Completed,
-    Dropped,
+use gamesync_desktop::{
+    library::{LibraryDefinitions, StatusDefinition},
+    library_reader::LoadedLibrary,
+};
+use std::path::PathBuf;
+use uuid::Uuid;
+
+fn demo_id<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<Uuid, D::Error> {
+    u32::deserialize(deserializer).map(|id| Uuid::from_u128(id as u128))
 }
-
-impl Status {
-    pub const ALL: [Self; 6] = [
-        Self::Backlog,
-        Self::Wanted,
-        Self::Playing,
-        Self::Paused,
-        Self::Completed,
-        Self::Dropped,
-    ];
-
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Backlog => "Backlog",
-            Self::Wanted => "Want to play",
-            Self::Playing => "Playing",
-            Self::Paused => "Paused",
-            Self::Completed => "Completed",
-            Self::Dropped => "Dropped",
-        }
-    }
+fn status_key<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<String, D::Error> {
+    String::deserialize(deserializer).map(|status| status.to_lowercase())
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Game {
-    pub id: u32,
+    #[serde(deserialize_with = "demo_id")]
+    pub id: Uuid,
     pub title: String,
     pub cover: String,
     pub description: String,
-    pub status: Status,
+    #[serde(deserialize_with = "status_key")]
+    pub status: String,
+    #[serde(skip)]
+    pub status_label: String,
+    #[serde(skip)]
+    pub cover_path: Option<PathBuf>,
     /// Half-star units, from 1 to 10. None means unrated.
     pub rating: Option<u8>,
     pub tags: Vec<String>,
     pub playtime_minutes: u32,
     pub favorite: bool,
+    #[serde(skip)]
+    pub record: Option<gamesync_desktop::records::GameRevision>,
 }
 
 impl Game {
@@ -58,27 +48,18 @@ impl Game {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Scope {
     All,
     Favorites,
-    Status(Status),
+    Status(String),
 }
-
 impl Scope {
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::All => "All games",
-            Self::Favorites => "Favorites",
-            Self::Status(status) => status.label(),
-        }
-    }
-
-    fn contains(self, game: &Game) -> bool {
+    fn contains(&self, game: &Game) -> bool {
         match self {
             Self::All => true,
             Self::Favorites => game.favorite,
-            Self::Status(status) => game.status == status,
+            Self::Status(status) => game.status == *status,
         }
     }
 }
@@ -87,7 +68,13 @@ impl Scope {
 pub struct Library {
     pub games: Vec<Game>,
     pub visible: Arc<Vec<usize>>,
-    pub selected: Option<u32>,
+    pub selected: Option<Uuid>,
+    pub name: String,
+    pub statuses: Vec<StatusDefinition>,
+    pub demo: bool,
+    pub source: Option<(PathBuf, gamesync_desktop::library::LibraryRevision)>,
+    pub write_issue: Option<String>,
+    pub media_version: u64,
     pub scope: Scope,
     query: String,
     search_keys: Vec<String>,
@@ -95,6 +82,16 @@ pub struct Library {
 
 impl Library {
     pub fn new(mut games: Vec<Game>) -> Self {
+        let statuses = LibraryDefinitions::new("Demo library").statuses;
+        for game in &mut games {
+            if game.status_label.is_empty() {
+                game.status_label = statuses
+                    .iter()
+                    .find(|status| status.key == game.status)
+                    .map(|status| status.label.clone())
+                    .unwrap_or_else(|| game.status.clone());
+            }
+        }
         games.sort_by_key(|game| game.title.to_lowercase());
         let search_keys = games
             .iter()
@@ -104,11 +101,96 @@ impl Library {
         Self {
             games,
             visible,
+            name: "Demo library".into(),
+            statuses,
+            demo: true,
+            source: None,
+            write_issue: None,
+            media_version: 0,
             selected: None,
             scope: Scope::All,
             query: String::new(),
             search_keys,
         }
+    }
+
+    pub fn from_loaded(loaded: &LoadedLibrary) -> Self {
+        let games = loaded
+            .games
+            .iter()
+            .map(|record| {
+                let personal = &record.game.personal;
+                Game {
+                    id: record.game_id,
+                    record: Some(record.clone()),
+                    title: record.game.title.clone(),
+                    cover: "covers/missing.jpg".into(),
+                    cover_path: loaded.covers.get(&record.game_id).cloned(),
+                    description: record.game.description().unwrap_or("").into(),
+                    status: personal.status.clone(),
+                    status_label: loaded
+                        .manifest
+                        .definitions
+                        .status(&personal.status)
+                        .map(|status| status.label.clone())
+                        .unwrap_or_else(|| personal.status.clone()),
+                    rating: personal.rating,
+                    tags: personal.tags.clone(),
+                    favorite: personal.favorite,
+                    playtime_minutes: record
+                        .game
+                        .steam
+                        .as_ref()
+                        .map_or(0, |steam| steam.playtime_minutes),
+                }
+            })
+            .collect();
+        let mut library = Self::new(games);
+        library.statuses = loaded.manifest.definitions.statuses.clone();
+        library.name = loaded.manifest.definitions.name.clone();
+        library.demo = false;
+        library.source = Some((loaded.root.clone(), loaded.manifest.clone()));
+        library.write_issue = loaded.write_issue.clone();
+        library.media_version = loaded.media_version;
+        library
+    }
+
+    pub fn scope_label(&self, scope: &Scope) -> String {
+        match scope {
+            Scope::All => "All games".into(),
+            Scope::Favorites => "Favorites".into(),
+            Scope::Status(key) => self
+                .statuses
+                .iter()
+                .find(|status| status.key == *key)
+                .map(|status| status.label.clone())
+                .unwrap_or_else(|| key.clone()),
+        }
+    }
+
+    /// Preserve selection and viewport when a refresh only changes metadata.
+    pub fn replace(&mut self, mut next: Self, same_folder: bool) {
+        if same_folder {
+            next.query = self.query.clone();
+            next.scope = self.scope.clone();
+            next.selected = self.selected;
+            if let Scope::Status(key) = &next.scope {
+                if !next.statuses.iter().any(|status| status.key == *key) {
+                    next.scope = Scope::All;
+                }
+            }
+            next.recompute();
+            if next
+                .games
+                .iter()
+                .map(|game| game.id)
+                .eq(self.games.iter().map(|game| game.id))
+                && next.visible == self.visible
+            {
+                next.visible = self.visible.clone();
+            }
+        }
+        *self = next;
     }
 
     pub fn set_scope(&mut self, scope: Scope) {
@@ -121,7 +203,7 @@ impl Library {
         self.recompute();
     }
 
-    pub fn count(&self, scope: Scope) -> usize {
+    pub fn count(&self, scope: &Scope) -> usize {
         self.games
             .iter()
             .filter(|game| scope.contains(game))
@@ -186,8 +268,8 @@ mod tests {
         lib.set_query("hAdEs");
         assert_eq!(lib.visible.len(), 1);
         lib.select_slot(0);
-        assert_eq!(lib.selected, Some(1145360));
-        lib.set_scope(Scope::Status(Status::Completed));
+        assert_eq!(lib.selected, Some(Uuid::from_u128(1145360)));
+        lib.set_scope(Scope::Status("completed".into()));
         assert!(lib.visible.is_empty());
         assert!(lib.selected_game().is_none());
     }
@@ -214,10 +296,47 @@ mod tests {
     #[test]
     fn search_includes_tags_and_counts_are_scope_totals() {
         let mut lib = library();
-        let total = lib.count(Scope::All);
+        let total = lib.count(&Scope::All);
         lib.set_query("puzzle");
         assert!(!lib.visible.is_empty());
         assert!(lib.visible.len() < total);
-        assert_eq!(lib.count(Scope::All), total);
+        assert_eq!(lib.count(&Scope::All), total);
+    }
+
+    #[test]
+    fn refresh_keeps_selection_search_and_viewport_identity() {
+        let mut lib = library();
+        lib.set_query("hades");
+        lib.select_slot(0);
+        let visible = lib.visible.clone();
+        let mut refreshed = library();
+        let hades = refreshed
+            .games
+            .iter_mut()
+            .find(|game| game.title == "Hades")
+            .unwrap();
+        hades.rating = Some(7);
+        lib.replace(refreshed, true);
+        assert_eq!(lib.visible.len(), 1);
+        assert_eq!(lib.selected_game().unwrap().rating, Some(7));
+        assert!(Arc::ptr_eq(&visible, &lib.visible));
+        lib.replace(library(), false);
+        assert_eq!(lib.visible.len(), 12);
+        assert!(lib.selected.is_none());
+    }
+
+    #[test]
+    fn custom_status_filters_use_keys_and_display_manifest_labels() {
+        let mut lib = library();
+        lib.statuses.push(StatusDefinition {
+            key: "weekend".into(),
+            label: "For the weekend".into(),
+            recommendation_eligible: true,
+            extra: Default::default(),
+        });
+        lib.games[0].status = "weekend".into();
+        lib.set_scope(Scope::Status("weekend".into()));
+        assert_eq!(lib.visible.len(), 1);
+        assert_eq!(lib.scope_label(&lib.scope), "For the weekend");
     }
 }
