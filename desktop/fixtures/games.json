@@ -1,0 +1,170 @@
+[
+  {
+    "id": 1145360,
+    "title": "Hades",
+    "description": "Fight your way out of the underworld, one run at a time. A demo entry for testing the game inspector.",
+    "status": "Playing",
+    "rating": 10,
+    "tags": [
+      "Action",
+      "Roguelike"
+    ],
+    "playtime_minutes": 1830,
+    "favorite": true,
+    "cover": "covers/1145360.jpg"
+  },
+  {
+    "id": 413150,
+    "title": "Stardew Valley",
+    "description": "Build a farm, meet your neighbors, and take each day at your own pace.",
+    "status": "Playing",
+    "rating": 9,
+    "tags": [
+      "Cozy",
+      "Farming"
+    ],
+    "playtime_minutes": 4200,
+    "favorite": true,
+    "cover": "covers/413150.jpg"
+  },
+  {
+    "id": 367520,
+    "title": "Hollow Knight",
+    "description": "Explore a fallen kingdom of insects, hidden paths, and demanding encounters.",
+    "status": "Paused",
+    "rating": 9,
+    "tags": [
+      "Exploration",
+      "Platformer"
+    ],
+    "playtime_minutes": 1240,
+    "favorite": false,
+    "cover": "covers/367520.jpg"
+  },
+  {
+    "id": 620,
+    "title": "Portal 2",
+    "description": "Solve spatial puzzles with portals. Bring a friend for the separate cooperative campaign.",
+    "status": "Completed",
+    "rating": 10,
+    "tags": [
+      "Puzzle",
+      "Co-op"
+    ],
+    "playtime_minutes": 720,
+    "favorite": true,
+    "cover": "covers/620.jpg"
+  },
+  {
+    "id": 1091500,
+    "title": "Cyberpunk 2077",
+    "description": "Find your way through Night City in a story-driven role-playing game.",
+    "status": "Backlog",
+    "rating": null,
+    "tags": [
+      "RPG",
+      "Open world"
+    ],
+    "playtime_minutes": 0,
+    "favorite": false,
+    "cover": "covers/1091500.jpg"
+  },
+  {
+    "id": 990080,
+    "title": "Hogwarts Legacy",
+    "description": "Explore Hogwarts and the surrounding countryside in an open-world adventure.",
+    "status": "Wanted",
+    "rating": null,
+    "tags": [
+      "Adventure",
+      "Fantasy"
+    ],
+    "playtime_minutes": 0,
+    "favorite": false,
+    "cover": "covers/990080.jpg"
+  },
+  {
+    "id": 646570,
+    "title": "Slay the Spire",
+    "description": "Build a deck as you climb. Each encounter asks you to balance risk and reward.",
+    "status": "Playing",
+    "rating": 9,
+    "tags": [
+      "Strategy",
+      "Cards"
+    ],
+    "playtime_minutes": 2870,
+    "favorite": true,
+    "cover": "covers/646570.jpg"
+  },
+  {
+    "id": 753640,
+    "title": "Outer Wilds",
+    "description": "Explore a small solar system and piece together its mysteries through observation.",
+    "status": "Wanted",
+    "rating": null,
+    "tags": [
+      "Exploration",
+      "Puzzle"
+    ],
+    "playtime_minutes": 0,
+    "favorite": false,
+    "cover": "covers/753640.jpg"
+  },
+  {
+    "id": 2379780,
+    "title": "Balatro",
+    "description": "Combine poker hands and unusual jokers to build a powerful scoring engine.",
+    "status": "Playing",
+    "rating": 9,
+    "tags": [
+      "Cards",
+      "Roguelike"
+    ],
+    "playtime_minutes": 980,
+    "favorite": false,
+    "cover": "covers/2379780.jpg"
+  },
+  {
+    "id": 1055540,
+    "title": "A Short Hike",
+    "description": "Walk, climb, and glide around an island park. Take a small adventure at your own pace.",
+    "status": "Completed",
+    "rating": 9,
+    "tags": [
+      "Cozy",
+      "Exploration"
+    ],
+    "playtime_minutes": 180,
+    "favorite": true,
+    "cover": "covers/1055540.jpg"
+  },
+  {
+    "id": 632360,
+    "title": "Risk of Rain 2",
+    "description": "Fight escalating waves of enemies and combine items into powerful builds.",
+    "status": "Dropped",
+    "rating": 6,
+    "tags": [
+      "Action",
+      "Co-op"
+    ],
+    "playtime_minutes": 240,
+    "favorite": false,
+    "cover": "covers/632360.jpg"
+  },
+  {
+    "id": 1245620,
+    "title": "Elden Ring",
+    "description": "Explore the Lands Between and find your own path through a vast action role-playing game.",
+    "status": "Backlog",
+    "rating": null,
+    "tags": [
+      "RPG",
+      "Exploration"
+    ],
+    "playtime_minutes": 0,
+    "favorite": false,
+    "cover": "covers/1245620.jpg"
+  }
+]

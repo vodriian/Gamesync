@@ -1,0 +1,40 @@
+{
+  "name": "Solarized Light",
+  "author": "Ethan Schoonover",
+  "url": "https://ethanschoonover.com/solarized",
+  "themes": [
+    {
+      "name": "Solarized Light",
+      "mode": "light",
+      "colors": {
+        "background": "#fdf6e3",
+        "foreground": "#657b83",
+        "border": "#d8d2c0",
+        "muted.background": "#eee8d5",
+        "muted.foreground": "#93a1a1",
+        "primary.background": "#268bd2",
+        "primary.foreground": "#fdf6e3",
+        "secondary.background": "#eee8d5",
+        "secondary.foreground": "#657b83",
+        "sidebar.background": "#eee8d5",
+        "sidebar.foreground": "#657b83",
+        "sidebar.border": "#d8d2c0",
+        "sidebar.accent.background": "#e3ddcb",
+        "sidebar.accent.foreground": "#657b83",
+        "title_bar.background": "#eee8d5",
+        "title_bar.border": "#d8d2c0",
+        "overlay": "#0000001a",
+        "base.red": "#dc322f",
+        "base.green": "#859900",
+        "base.blue": "#268bd2",
+        "base.yellow": "#b58900",
+        "base.magenta": "#d33682",
+        "base.cyan": "#2aa198",
+        "popover.background": "#eee8d5",
+        "popover.foreground": "#657b83",
+        "accent.background": "#e3ddcb",
+        "accent.foreground": "#657b83"
+      }
+    }
+  ]
+}

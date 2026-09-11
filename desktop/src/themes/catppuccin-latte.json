@@ -1,0 +1,40 @@
+{
+  "name": "Catppuccin Latte",
+  "author": "Catppuccin",
+  "url": "https://catppuccin.com",
+  "themes": [
+    {
+      "name": "Catppuccin Latte",
+      "mode": "light",
+      "colors": {
+        "background": "#eff1f5",
+        "foreground": "#4c4f69",
+        "border": "#bcc0cc",
+        "muted.background": "#ccd0da",
+        "muted.foreground": "#6c6f85",
+        "primary.background": "#8839ef",
+        "primary.foreground": "#eff1f5",
+        "secondary.background": "#ccd0da",
+        "secondary.foreground": "#4c4f69",
+        "sidebar.background": "#e6e9ef",
+        "sidebar.foreground": "#4c4f69",
+        "sidebar.border": "#bcc0cc",
+        "sidebar.accent.background": "#dce0e8",
+        "sidebar.accent.foreground": "#4c4f69",
+        "title_bar.background": "#e6e9ef",
+        "title_bar.border": "#bcc0cc",
+        "overlay": "#0000001a",
+        "base.red": "#d20f39",
+        "base.green": "#40a02b",
+        "base.blue": "#1e66f5",
+        "base.yellow": "#df8e1d",
+        "base.magenta": "#ea76cb",
+        "base.cyan": "#179299",
+        "popover.background": "#e6e9ef",
+        "popover.foreground": "#4c4f69",
+        "accent.background": "#dce0e8",
+        "accent.foreground": "#4c4f69"
+      }
+    }
+  ]
+}

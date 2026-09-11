@@ -1,0 +1,40 @@
+{
+  "name": "Tokyo Night",
+  "author": "enkia",
+  "url": "https://github.com/enkia/tokyo-night-vscode-theme",
+  "themes": [
+    {
+      "name": "Tokyo Night",
+      "mode": "dark",
+      "colors": {
+        "background": "#1a1b26",
+        "foreground": "#c0caf5",
+        "border": "#3b4261",
+        "muted.background": "#292e42",
+        "muted.foreground": "#565f89",
+        "primary.background": "#7aa2f7",
+        "primary.foreground": "#1a1b26",
+        "secondary.background": "#292e42",
+        "secondary.foreground": "#c0caf5",
+        "sidebar.background": "#16161e",
+        "sidebar.foreground": "#c0caf5",
+        "sidebar.border": "#3b4261",
+        "sidebar.accent.background": "#292e42",
+        "sidebar.accent.foreground": "#c0caf5",
+        "title_bar.background": "#16161e",
+        "title_bar.border": "#3b4261",
+        "overlay": "#ffffff14",
+        "base.red": "#f7768e",
+        "base.green": "#9ece6a",
+        "base.blue": "#7aa2f7",
+        "base.yellow": "#e0af68",
+        "base.magenta": "#bb9af7",
+        "base.cyan": "#7dcfff",
+        "popover.background": "#16161e",
+        "popover.foreground": "#c0caf5",
+        "accent.background": "#292e42",
+        "accent.foreground": "#c0caf5"
+      }
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "name": "Gruvbox Dark",
+  "author": "Pavel Pertsev",
+  "url": "https://github.com/morhetz/gruvbox",
+  "themes": [
+    {
+      "name": "Gruvbox Dark",
+      "mode": "dark",
+      "colors": {
+        "background": "#282828",
+        "foreground": "#ebdbb2",
+        "border": "#504945",
+        "muted.background": "#3c3836",
+        "muted.foreground": "#928374",
+        "primary.background": "#fabd2f",
+        "primary.foreground": "#282828",
+        "secondary.background": "#3c3836",
+        "secondary.foreground": "#ebdbb2",
+        "sidebar.background": "#1d2021",
+        "sidebar.foreground": "#ebdbb2",
+        "sidebar.border": "#504945",
+        "sidebar.accent.background": "#504945",
+        "sidebar.accent.foreground": "#ebdbb2",
+        "title_bar.background": "#1d2021",
+        "title_bar.border": "#504945",
+        "overlay": "#ffffff14",
+        "base.red": "#fb4934",
+        "base.green": "#b8bb26",
+        "base.blue": "#83a598",
+        "base.yellow": "#fabd2f",
+        "base.magenta": "#d3869b",
+        "base.cyan": "#8ec07c",
+        "popover.background": "#1d2021",
+        "popover.foreground": "#ebdbb2",
+        "accent.background": "#504945",
+        "accent.foreground": "#ebdbb2"
+      }
+    }
+  ]
+}
