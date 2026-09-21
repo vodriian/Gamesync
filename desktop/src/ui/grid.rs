@@ -10,8 +10,10 @@ use gpui::{
     ObjectFit, Pixels, ScrollStrategy, Size, Window,
 };
 use gpui_component::{
-    h_flex, scroll::ScrollableElement as _, v_flex, v_virtual_list, ActiveTheme as _,
-    StyledExt as _, VirtualListScrollHandle,
+    button::{Button, ButtonVariants as _},
+    h_flex,
+    scroll::ScrollableElement as _,
+    v_flex, v_virtual_list, ActiveTheme as _, StyledExt as _, VirtualListScrollHandle,
 };
 use std::{rc::Rc, sync::Arc};
 
@@ -417,6 +419,18 @@ impl Render for GameGrid {
                                 "Try another search or status."
                             }),
                     )
+                    .when(library.read(cx).games.is_empty(), |column| {
+                        column.child(
+                            div().pt_2().child(
+                                Button::new("connect-steam")
+                                    .primary()
+                                    .label("Connect Steam")
+                                    .on_click(|_, window, cx| {
+                                        window.dispatch_action(Box::new(crate::ConnectSteam), cx)
+                                    }),
+                            ),
+                        )
+                    })
                     .into_any_element()
             } else {
                 self.render_grid(&library, cx)

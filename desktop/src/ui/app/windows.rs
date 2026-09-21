@@ -75,6 +75,12 @@ impl GameSyncApp {
         .detach();
         cx.notify();
     }
+    pub fn open_steam_settings(&mut self, cx: &mut Context<Self>) {
+        self.open_settings(cx);
+        if let Some(view) = &self.settings_view {
+            view.update(cx, |view, cx| view.show_general(cx));
+        }
+    }
     pub fn open_settings(&mut self, cx: &mut Context<Self>) {
         if let Some(handle) = self.settings_window {
             if handle

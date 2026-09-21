@@ -111,6 +111,10 @@ impl SettingsView {
         .detach();
         input
     }
+    pub fn show_general(&mut self, cx: &mut Context<Self>) {
+        self.section = Section::General;
+        cx.notify();
+    }
     pub fn busy(&self) -> bool {
         self.busy
     }

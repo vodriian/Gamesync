@@ -22,7 +22,8 @@ gpui::actions!(
         RefreshLibrary,
         SaveDetails,
         ManageCollections,
-        OpenSettings
+        OpenSettings,
+        ConnectSteam
     ]
 );
 
@@ -148,6 +149,10 @@ fn main() -> anyhow::Result<()> {
                     let settings_view = view.downgrade();
                     cx.on_action(move |_: &OpenSettings, cx| {
                         let _ = settings_view.update(cx, |app, cx| app.open_settings(cx));
+                    });
+                    let connect_view = view.downgrade();
+                    cx.on_action(move |_: &ConnectSteam, cx| {
+                        let _ = connect_view.update(cx, |app, cx| app.open_steam_settings(cx));
                     });
                     let refresh_view = view.downgrade();
                     cx.on_action(move |_: &RefreshLibrary, cx| {
