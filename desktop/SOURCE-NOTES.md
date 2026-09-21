@@ -46,3 +46,12 @@ Steam data or statements about the user's library.
 Inspector editing keeps Eagle's detail panel and reuses its GPUI Input and
 DropdownMenu patterns. `ui/editor.rs` owns one draft and calls the existing
 revision services. No editor framework or dependency was added.
+
+## Viewer filmstrip follow-up — 2026-09-22
+
+Adapted `viewer.rs::render_strip` and `sync_strip` from Eagle's current working
+copy at base `d1fc38f` into `src/ui/filmstrip.rs`. Retained its 80 px cells,
+6 px spacing, horizontal virtual list, shared image cache, active frame and
+instant hover feedback. Game records replace asset thumbnails; selection emits
+an event so the focused game's existing pending-save guard remains authoritative.
+Eagle itself was not changed.

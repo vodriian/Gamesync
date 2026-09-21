@@ -1,4 +1,5 @@
 //! Library identity and ordered status definitions. Game values stay in game files.
+mod steam;
 
 use crate::{
     records::{check_extra, ExtraFields, SCHEMA_VERSION},
@@ -23,11 +24,25 @@ pub struct StatusDefinition {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CollectionDefinition {
+    pub id: Uuid,
+    pub name: String,
+    #[serde(default)]
+    pub archived: bool,
+    #[serde(flatten)]
+    pub extra: ExtraFields,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LibraryDefinitions {
     pub name: String,
     pub default_status: String,
     /// Array order is the display order. Keys remain stable when labels change.
     pub statuses: Vec<StatusDefinition>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub collections: Vec<CollectionDefinition>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub steam_account: Option<String>,
     #[serde(flatten)]
     pub extra: ExtraFields,
 }
@@ -54,6 +69,8 @@ impl LibraryDefinitions {
             name: name.into(),
             default_status: "backlog".into(),
             statuses,
+            collections: Vec::new(),
+            steam_account: None,
             extra: ExtraFields::new(),
         }
     }
@@ -63,8 +80,40 @@ impl LibraryDefinitions {
     }
 
     pub fn validate(&self) -> Result<()> {
-        check_extra(&self.extra, &["name", "default_status", "statuses"])?;
+        check_extra(
+            &self.extra,
+            &[
+                "name",
+                "default_status",
+                "statuses",
+                "collections",
+                "steam_account",
+            ],
+        )?;
         ensure!(!self.name.trim().is_empty(), "Library name is empty");
+        let mut ids = BTreeSet::new();
+        let mut names = BTreeSet::new();
+        for collection in &self.collections {
+            ensure!(
+                !collection.id.is_nil() && ids.insert(collection.id),
+                "Invalid or duplicate collection ID"
+            );
+            ensure!(
+                !collection.name.trim().is_empty() && collection.name.len() <= 120,
+                "Use a collection name of 1–120 bytes"
+            );
+            ensure!(
+                collection.archived || names.insert(collection.name.trim().to_lowercase()),
+                "A collection has this name already"
+            );
+            check_extra(&collection.extra, &["id", "name", "archived"])?;
+        }
+        if let Some(account) = &self.steam_account {
+            ensure!(
+                account.len() == 17 && account.bytes().all(|b| b.is_ascii_digit()),
+                "Invalid Steam account ID"
+            );
+        }
         let mut keys = BTreeSet::new();
         for status in &self.statuses {
             check_extra(&status.extra, &["key", "label", "recommendation_eligible"])?;
@@ -238,11 +287,58 @@ impl LibraryStore {
             current.definitions.status(&personal.status).is_some(),
             "Choose a status in this library"
         );
+        let previous = crate::record_store::RecordStore::open(&self.root)?.inspect(game_id)?;
+        let previous = previous
+            .current()
+            .context("Game changed or has a conflict")?;
+        for id in &personal.collections {
+            ensure!(
+                current
+                    .definitions
+                    .collections
+                    .iter()
+                    .any(|c| c.id == *id && !c.archived)
+                    || previous.game.personal.collections.contains(id),
+                "Collection is unavailable"
+            );
+        }
         crate::record_store::RecordStore::open(&self.root)?.edit_personal(
             game_id,
             expected_game,
             personal,
         )
+    }
+
+    /// Resolve only the saved alternatives the user reviewed, within this library.
+    pub fn resolve_game(
+        &self,
+        manifest: &LibraryRevision,
+        game_id: Uuid,
+        expected: &BTreeSet<Uuid>,
+        chosen: Uuid,
+    ) -> Result<crate::records::GameRevision> {
+        let files = self.files();
+        let _lock = files.lock()?;
+        let definitions =
+            files.checked::<LibraryRevision>(&BTreeSet::from([manifest.revision_id]))?;
+        ensure!(
+            definitions.revisions[&manifest.revision_id] == *manifest,
+            "Library changed. Review its latest definitions"
+        );
+        let store = crate::record_store::RecordStore::open(&self.root)?;
+        let snapshot = store.inspect(game_id)?;
+        let record = snapshot
+            .revisions
+            .get(&chosen)
+            .context("Selected version is unavailable")?;
+        ensure!(
+            manifest
+                .definitions
+                .status(&record.game.personal.status)
+                .is_some(),
+            "Selected version uses an unknown status"
+        );
+        store.resolve(game_id, expected, chosen)
     }
 
     /// Update name, default status, labels, order, or eligibility. Existing keys
@@ -292,6 +388,21 @@ impl LibraryStore {
         // No cross-file status migration exists yet. Even a resolution must keep
         // keys from both branches so synced games do not lose their definitions.
         for previous in snapshot.revisions.values() {
+            if let Some(account) = &previous.definitions.steam_account {
+                ensure!(
+                    definitions.steam_account.as_ref() == Some(account),
+                    "This library belongs to another Steam account"
+                );
+            }
+            for collection in &previous.definitions.collections {
+                ensure!(
+                    definitions
+                        .collections
+                        .iter()
+                        .any(|c| c.id == collection.id),
+                    "Archive collections instead of removing their definitions"
+                );
+            }
             for status in &previous.definitions.statuses {
                 ensure!(
                     definitions.status(&status.key).is_some(),

@@ -2,17 +2,30 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::{
+    collections::BTreeMap,
     fs,
     io::Write,
     path::{Path, PathBuf},
+    sync::Mutex,
 };
 
-#[derive(Default, Deserialize, Serialize)]
-struct Settings {
-    library_path: Option<PathBuf>,
+#[derive(Deserialize, Serialize)]
+pub struct Settings {
+    pub library_path: Option<PathBuf>,
+    #[serde(default = "system_theme")]
+    pub theme: String,
+    #[serde(default)]
+    pub reduce_motion: bool,
+    #[serde(default)]
+    pub last_sync: BTreeMap<String, u64>,
     #[serde(flatten)]
     extra: std::collections::BTreeMap<String, serde_json::Value>,
 }
+
+fn system_theme() -> String {
+    "system".into()
+}
+static SETTINGS_LOCK: Mutex<()> = Mutex::new(());
 
 fn path() -> Result<PathBuf> {
     Ok(
@@ -23,7 +36,7 @@ fn path() -> Result<PathBuf> {
     )
 }
 
-fn load() -> Result<Settings> {
+pub fn load() -> Result<Settings> {
     match fs::read(path()?) {
         Ok(bytes) => Ok(serde_json::from_slice(&bytes)?),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(Settings::default()),
@@ -37,8 +50,16 @@ pub fn last_library() -> Result<Option<PathBuf>> {
 
 /// Save after a successful open. Never replace unreadable settings with defaults.
 pub fn remember_library(library: &Path) -> Result<()> {
+    update(|settings| settings.library_path = Some(library.into()))
+}
+
+/// Serialize read-modify-write operations so appearance and sync timestamps cannot race.
+pub fn update(change: impl FnOnce(&mut Settings)) -> Result<()> {
+    let _guard = SETTINGS_LOCK
+        .lock()
+        .map_err(|_| anyhow::anyhow!("Settings are unavailable"))?;
     let mut settings = load()?;
-    settings.library_path = Some(library.into());
+    change(&mut settings);
     let path = path()?;
     let parent = path.parent().context("Settings have no directory")?;
     fs::create_dir_all(parent)?;
@@ -47,4 +68,35 @@ pub fn remember_library(library: &Path) -> Result<()> {
     file.as_file().sync_all()?;
     file.persist(path).map_err(|error| error.error)?;
     Ok(())
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            library_path: None,
+            theme: system_theme(),
+            reduce_motion: false,
+            last_sync: Default::default(),
+            extra: Default::default(),
+        }
+    }
+}
+
+/// Shared footer and Settings wording for the last completed Steam sync.
+pub fn sync_label(time: Option<u64>) -> String {
+    time.map(|time| {
+        let age = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs().saturating_sub(time));
+        if age < 60 {
+            "Last Steam sync: just now".into()
+        } else if age < 3600 {
+            format!("Last Steam sync: {} min ago", age / 60)
+        } else if age < 86400 {
+            format!("Last Steam sync: {} hours ago", age / 3600)
+        } else {
+            format!("Last Steam sync: {} days ago", age / 86400)
+        }
+    })
+    .unwrap_or_else(|| "No Steam sync time recorded".into())
 }

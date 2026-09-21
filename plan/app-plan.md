@@ -1,12 +1,12 @@
 # GameSync desktop plan
 
 Status: milestone 1 implemented and checked on macOS. Linux runtime checks pending.
-Milestone 2: records, definitions, revision checks, folder loading, and local indexing implemented. Inspector saves remain pending.
+Milestone 2: records, definitions, revision checks, guarded editor saves and local indexing implemented.
 
 ## Product
 
 Track games already played, currently playing, and wanted next. Browse the
-library in a grid, table, or kanban board. Use saved analysis to choose games
+library as physical cards, a compact grid, or a table. Use saved analysis to choose games
 that fit the user's mood, time, and energy.
 
 ## Confirmed choices
@@ -15,8 +15,10 @@ that fit the user's mood, time, and energy.
 - Retain the existing web app as a reference until its removal is requested.
 - Support macOS and Linux first. Windows follows later.
 - Open into the library. Keep Choose and Analysis as dedicated areas.
-- Store portable structured files and covers in a Dropbox folder.
-- Import Obsidian Markdown and covers; provide Markdown and JSON export.
+- Use app-managed local storage for Steam sync. Remove folder opening from the
+  product. Retain existing readable stores internally; do not move or delete user data.
+- Keep sample games in a separate persistent store with editable collections.
+- External library import is outside the current Steam-only product flow.
 - Support custom statuses and typed fields.
 - Support cloud AI with user keys and a local OpenAI-compatible endpoint.
 - Let selected custom fields opt into AI analysis.
@@ -70,7 +72,7 @@ from library data. Names are display values; do not use them as identity.
 Use a rebuildable SQLite index outside Dropbox when implementing durable
 storage. It is not the source of truth. Keep thumbnails, device settings,
 job queues, and window state outside Dropbox too. Store credentials in the
-OS credential store; request them per session if that store is unavailable.
+OS credential store; ask the user to unlock it if that store is unavailable.
 
 ### Writes and conflicts
 
@@ -82,7 +84,7 @@ See [the current record format](storage-format.md) for implemented rules and lim
 - Pause background writes to unresolved records. Apply the same rules to library definitions.
 - Retry partial or unreadable files and keep the last valid indexed state.
 - Use explicit archive/tombstone records. A missing file or incomplete Steam response is not a deletion command.
-- Require the library folder to be available offline. Report local save state without claiming Dropbox upload completion.
+- Keep game data available offline. Report local save state without implying remote upload.
 - Version the format. Preserve unknown fields where safe; open unsupported newer formats read-only.
 - Keep recovery explicit. Do not build a CRDT framework or general event bus for this app.
 
@@ -93,9 +95,10 @@ Dropbox moves files; it does not resolve application-level edits. See
 
 ### Views
 
-- **Grid:** portrait covers, adjustable density, title, status, rating, multiselect, and context actions.
+- **Cards:** large framed game cards. Front: artwork and title. Back: personal edits and game details.
+- **Grid:** compact portrait covers, title, status, and rating. Multiselect and context actions follow later.
 - **Table:** sortable, resizable, reorderable columns; inline edits; bulk status, tag, and rating changes.
-- **Kanban:** status columns; drag to change status; persist order within columns; provide a keyboard/menu alternative.
+- **Kanban (deferred):** status columns; drag to change status; persist order within columns; provide a keyboard/menu alternative.
 
 Share search, filters, selected game IDs, and saved views across presentations.
 Keep the selected game and useful scroll state when changing views.
@@ -106,21 +109,23 @@ Start with Backlog, Want to play, Playing, Paused, Completed, and Dropped.
 Allow status creation, renaming, and reordering. Removing a populated status
 requires a replacement. Each status sets recommendation eligibility.
 
-Include personal rating (0.5–5 stars), favorite, tags, notes, description,
+Include personal rating (five whole-star choices; retain existing half-star values), favorite, tags, notes, description,
 cover override, and provider links. Custom fields support text, number,
 checkbox, select, multiselect, date, and URL.
 
 Show store information, personal values, and AI suggestions as distinct
-sections in the inspector. Personal overrides take precedence. Sync and
+sections on the card back. Personal overrides take precedence. Sync and
 analysis never overwrite them.
 
 ## Choose
 
-Take mood, energy, and available minutes: 15, 30, 60, 120, or a custom value.
+Take feeling and available minutes: 15, 30, 60, 120, or a custom value.
+Reuse Glaze Picked's feeling-to-energy and mood mapping. Keep mood and energy
+as editable game properties; they are not separate picker inputs.
 Return three candidates with short reasons and actions to open details,
 skip, or launch through Steam. Choosing uses saved data and works offline.
 
-Port Picked's mood, rating, favorite, and repetition scoring into a pure Rust
+Port Picked's feeling, mood, rating, favorite, and repetition scoring into a pure Rust
 function. Use one documented scale: energy low/medium/high and decompression
 1–5. Test known ranking cases. Record recommendation and skip history for
 repetition control. Keep identical inputs deterministic.
@@ -222,3 +227,17 @@ Windows, mobile, Steam wishlist sync, other store sync, automatic session
 tracking, social features, live Obsidian sync, and automatic conflict merging.
 Default audience: one person using several computers. Do not add team or
 multi-account infrastructure in v1.
+
+
+## Current implementation order
+
+The user moved collections, core Settings, and Steam sync ahead of tuning and
+the picker. These features are implemented; live account sync and Linux checks
+remain. See [implementation and limits](collections-settings-steam.md).
+
+## Physical card UI
+
+The September 21 direction replaces permanent sidebars with a Library menu
+and focused card details. Cards, Grid, and a basic read-only Table share
+selection and filters. Editing stays on the card back. Advanced table controls
+remain planned. See [scope and rendering limits](physical-cards.md).

@@ -18,6 +18,7 @@ fn personal_edits_survive_reload_and_keep_provider_and_extension_fields() {
     let records = RecordStore::open(library.root()).unwrap();
     let mut game = GameData::new("Hades");
     game.steam = Some(SteamData {
+        metadata: None,
         app_id: 1145360,
         description: Some("Steam text".into()),
         playtime_minutes: 42,

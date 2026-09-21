@@ -2,16 +2,29 @@
 
 use crate::model::{Library, Scope};
 use gpui::{div, prelude::*, px, Entity, Window};
-use gpui_component::{h_flex, v_flex, ActiveTheme as _, Icon, IconName, StyledExt as _};
+use gpui_component::{
+    button::{Button, ButtonVariants as _},
+    h_flex, v_flex, ActiveTheme as _, Icon, IconName, Sizable as _, StyledExt as _,
+};
 
 pub struct LibrarySidebar {
     library: Entity<Library>,
+    status_open: bool,
+    collections_open: bool,
+    status_motion: super::motion::Motion,
+    collections_motion: super::motion::Motion,
 }
 
 impl LibrarySidebar {
     pub fn new(library: Entity<Library>, cx: &mut Context<Self>) -> Self {
         cx.observe(&library, |_, _, cx| cx.notify()).detach();
-        Self { library }
+        Self {
+            library,
+            status_open: true,
+            collections_open: true,
+            status_motion: super::motion::Motion::new(1.),
+            collections_motion: super::motion::Motion::new(1.),
+        }
     }
 
     fn row(&self, scope: Scope, icon: IconName, cx: &mut Context<Self>) -> impl IntoElement {
@@ -61,7 +74,21 @@ impl Render for LibrarySidebar {
                 v_flex()
                     .p_4()
                     .gap_1()
-                    .child(div().font_semibold().child("GameSync"))
+                    .child(
+                        h_flex()
+                            .justify_between()
+                            .child(div().font_semibold().child("GameSync"))
+                            .child(
+                                Button::new("settings")
+                                    .ghost()
+                                    .small()
+                                    .icon(IconName::Settings)
+                                    .tooltip("Settings")
+                                    .on_click(|_, window, cx| {
+                                        window.dispatch_action(Box::new(crate::OpenSettings), cx)
+                                    }),
+                            ),
+                    )
                     .child(
                         div()
                             .text_xs()
@@ -77,50 +104,113 @@ impl Render for LibrarySidebar {
                     .child(self.row(Scope::Favorites, IconName::Star, cx)),
             )
             .child(
-                div()
-                    .px_4()
-                    .pt_5()
-                    .pb_2()
-                    .text_xs()
-                    .text_color(cx.theme().muted_foreground)
-                    .child("Status"),
-            )
-            .child(
                 v_flex()
-                    .id("status-list")
+                    .id("sidebar-sections")
+                    .mt_6()
                     .flex_1()
                     .min_h_0()
                     .overflow_y_scroll()
                     .px_2()
                     .gap_1()
-                    .children(
-                        self.library
-                            .read(cx)
-                            .statuses
-                            .clone()
-                            .into_iter()
-                            .map(|status| {
-                                let icon = match status.key.as_str() {
-                                    "completed" => IconName::CircleCheck,
-                                    "dropped" => IconName::CircleX,
-                                    _ => IconName::Folder,
-                                };
-                                self.row(Scope::Status(status.key), icon, cx)
-                            }),
+                    .child(
+                        h_flex().child(
+                            Button::new("status-section")
+                                .ghost()
+                                .small()
+                                .label("Status")
+                                .icon(if self.status_open {
+                                    IconName::ChevronDown
+                                } else {
+                                    IconName::ChevronRight
+                                })
+                                .on_click(cx.listener(|this, _, _, cx| {
+                                    this.status_open = !this.status_open;
+                                    this.status_motion
+                                        .set(if this.status_open { 1. } else { 0. }, cx);
+                                })),
+                        ),
+                    )
+                    .child(
+                        v_flex()
+                            .h(px(self.library.read(cx).statuses.len() as f32
+                                * 36.
+                                * self.status_motion.value()))
+                            .overflow_hidden()
+                            .gap_1()
+                            .flex_shrink_0()
+                            .children(self.library.read(cx).statuses.clone().into_iter().map(
+                                |status| {
+                                    let icon = match status.key.as_str() {
+                                        "completed" => IconName::CircleCheck,
+                                        "dropped" => IconName::CircleX,
+                                        _ => IconName::Folder,
+                                    };
+                                    self.row(Scope::Status(status.key), icon, cx)
+                                },
+                            )),
+                    )
+                    .child(
+                        h_flex()
+                            .pt_4()
+                            .gap_1()
+                            .child(
+                                Button::new("collections-section")
+                                    .ghost()
+                                    .small()
+                                    .label("Collections")
+                                    .icon(if self.collections_open {
+                                        IconName::ChevronDown
+                                    } else {
+                                        IconName::ChevronRight
+                                    })
+                                    .on_click(cx.listener(|this, _, _, cx| {
+                                        this.collections_open = !this.collections_open;
+                                        this.collections_motion
+                                            .set(if this.collections_open { 1. } else { 0. }, cx);
+                                    })),
+                            )
+                            .child(div().flex_1())
+                            .child(
+                                Button::new("add-collection")
+                                    .ghost()
+                                    .small()
+                                    .icon(IconName::Plus)
+                                    .tooltip("Add or manage collections")
+                                    .on_click(|_, window, cx| {
+                                        window
+                                            .dispatch_action(Box::new(crate::ManageCollections), cx)
+                                    }),
+                            ),
+                    )
+                    .child(
+                        v_flex()
+                            .h(px(
+                                self.library.read(cx).source.as_ref().map_or(0, |(_, m)| {
+                                    m.definitions
+                                        .collections
+                                        .iter()
+                                        .filter(|c| !c.archived)
+                                        .count()
+                                }) as f32
+                                    * 36.
+                                    * self.collections_motion.value(),
+                            ))
+                            .overflow_hidden()
+                            .gap_1()
+                            .flex_shrink_0()
+                            .children(
+                                self.library
+                                    .read(cx)
+                                    .source
+                                    .clone()
+                                    .into_iter()
+                                    .flat_map(|(_, m)| m.definitions.collections)
+                                    .filter(|c| !c.archived)
+                                    .map(|c| {
+                                        self.row(Scope::Collection(c.id), IconName::Folder, cx)
+                                    }),
+                            ),
                     ),
-            )
-            .child(
-                v_flex()
-                    .p_4()
-                    .gap_1()
-                    .text_xs()
-                    .text_color(cx.theme().muted_foreground)
-                    .child(self.library.read(cx).name.clone())
-                    .child(if self.library.read(cx).demo {
-                        "Sample games. No account connected."
-                    } else {
-                        "Local library"
-                    }),
             )
     }
 }

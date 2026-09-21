@@ -1,7 +1,8 @@
 mod assets;
 mod fixtures;
+mod managed_storage;
 mod model;
-mod settings;
+use gamesync_desktop::settings;
 mod theme;
 mod ui;
 mod watcher;
@@ -15,39 +16,48 @@ use ui::app::GameSyncApp;
 
 gpui::actions!(
     gamesync,
-    [Quit, FocusSearch, OpenLibrary, RefreshLibrary, SaveDetails]
+    [
+        Quit,
+        FocusSearch,
+        RefreshLibrary,
+        SaveDetails,
+        ManageCollections,
+        OpenSettings
+    ]
 );
 
 fn main() -> anyhow::Result<()> {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))
+        .filter_module("reqwest", log::LevelFilter::Off)
+        .filter_module("hyper", log::LevelFilter::Off)
+        .filter_module("hyper_util", log::LevelFilter::Off)
+        .init();
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let explicit_path = args
+    if args.iter().any(|arg| arg == "--card-proof") {
+        return ui::card_proof::run();
+    }
+    anyhow::ensure!(
+        !args.iter().any(|arg| arg == "--library"),
+        "Folder opening has been removed. GameSync manages storage for Steam sync."
+    );
+    let preview = args
         .iter()
-        .position(|arg| arg == "--library")
-        .map(|index| {
-            args.get(index + 1)
-                .map(std::path::PathBuf::from)
-                .ok_or_else(|| anyhow::anyhow!("--library requires a folder path"))
-        })
-        .transpose()?;
-    let initial_path = if explicit_path.is_some()
-        || args.iter().any(|arg| {
-            matches!(
-                arg.as_str(),
-                "--demo" | "--empty" | "--stress" | "--missing-covers"
-            )
-        }) {
-        explicit_path
+        .any(|arg| matches!(arg.as_str(), "--stress" | "--missing-covers" | "--empty"));
+    let sample = args.iter().any(|arg| arg == "--demo");
+    let initial_path = if preview {
+        None
     } else {
-        match settings::last_library() {
-            Ok(path) => path,
-            Err(error) => {
-                log::warn!("Could not load last library: {error:#}");
-                None
-            }
-        }
+        Some(managed_storage::path(sample)?)
     };
-    let mut games = fixtures::games()?;
+    // Demo data is opt-in. A normal first launch must not look like a real library.
+    let demo_requested = args
+        .iter()
+        .any(|arg| matches!(arg.as_str(), "--demo" | "--stress" | "--missing-covers"));
+    let mut games = if demo_requested {
+        fixtures::games()?
+    } else {
+        Vec::new()
+    };
     if args.iter().any(|arg| arg == "--empty") {
         games.clear();
     }
@@ -69,7 +79,15 @@ fn main() -> anyhow::Result<()> {
             game.cover = "covers/missing.jpg".into();
         }
     }
-    let library = model::Library::new(games);
+    let small_window = args.iter().any(|arg| arg == "--small-window");
+    let mut library = model::Library::new(games);
+    if !demo_requested {
+        library.name = "My games".into();
+        library.demo = false;
+    }
+    let initial_theme = settings::load()
+        .map(|s| s.theme)
+        .unwrap_or_else(|_| theme::SYSTEM_THEME.into());
 
     Application::new()
         .with_assets(assets::Assets)
@@ -84,14 +102,14 @@ fn main() -> anyhow::Result<()> {
             cx.bind_keys([
                 KeyBinding::new("secondary-q", Quit, None),
                 KeyBinding::new("secondary-f", FocusSearch, None),
-                KeyBinding::new("secondary-o", OpenLibrary, None),
                 KeyBinding::new("secondary-r", RefreshLibrary, None),
                 KeyBinding::new("secondary-s", SaveDetails, None),
+                KeyBinding::new("secondary-,", OpenSettings, None),
             ]);
             cx.set_menus(vec![Menu {
                 name: "GameSync".into(),
                 items: vec![
-                    MenuItem::action("Open Library…", OpenLibrary),
+                    MenuItem::action("Settings…", OpenSettings),
                     MenuItem::action("Refresh Library", RefreshLibrary),
                     MenuItem::action("Quit GameSync", Quit),
                 ],
@@ -105,15 +123,21 @@ fn main() -> anyhow::Result<()> {
                     }),
                     window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
                         None,
-                        size(px(1280.), px(820.)),
+                        if small_window {
+                            size(px(960.), px(600.))
+                        } else {
+                            size(px(1280.), px(820.))
+                        },
                         cx,
                     ))),
                     window_min_size: Some(size(px(960.), px(600.))),
                     ..Default::default()
                 },
                 move |window, cx| {
-                    theme::apply_choice(theme::SYSTEM_THEME, window, cx);
-                    let view = cx.new(|cx| GameSyncApp::new(library, initial_path, window, cx));
+                    theme::apply_choice(&initial_theme, window, cx);
+                    let view = cx.new(|cx| {
+                        GameSyncApp::new(library, initial_path, initial_theme, window, cx)
+                    });
                     let close_view = view.downgrade();
                     window.on_window_should_close(cx, move |_, cx| {
                         close_view
@@ -121,6 +145,10 @@ fn main() -> anyhow::Result<()> {
                             .unwrap_or(true)
                     });
                     // App commands stay available when a popup owns keyboard focus.
+                    let settings_view = view.downgrade();
+                    cx.on_action(move |_: &OpenSettings, cx| {
+                        let _ = settings_view.update(cx, |app, cx| app.open_settings(cx));
+                    });
                     let refresh_view = view.downgrade();
                     cx.on_action(move |_: &RefreshLibrary, cx| {
                         let _ = refresh_view.update(cx, |app, cx| app.refresh_library(cx));

@@ -1,57 +1,35 @@
-//! Folder selection and bounded background refresh, based on Eagle's app flow.
+//! App-managed storage initialization and bounded background refresh.
 use super::GameSyncApp;
 use crate::model::Library;
 use anyhow::Context as _;
 use futures::{channel::mpsc, StreamExt};
 use gamesync_desktop::library_reader::LibraryReader;
-use gpui::{prelude::*, Context, PathPromptOptions};
+use gpui::{prelude::*, Context};
 use std::{path::PathBuf, time::Duration};
 
 impl GameSyncApp {
-    pub(super) fn choose_folder(&mut self, cx: &mut Context<Self>) {
-        if self.loading || !self.can_close(cx) {
-            return;
-        }
-        let paths = cx.prompt_for_paths(PathPromptOptions {
-            files: false,
-            directories: true,
-            multiple: false,
-            prompt: Some("Open Library".into()),
-        });
-        cx.spawn(async move |this, cx| {
-            if let Ok(Ok(Some(paths))) = paths.await {
-                if let Some(path) = paths.into_iter().next() {
-                    let _ = this.update(cx, |this, cx| this.open_folder(path, cx));
-                }
-            }
-        })
-        .detach();
-    }
-
     pub(super) fn open_folder(&mut self, path: PathBuf, cx: &mut Context<Self>) {
         self.loading = true;
         self.refreshing = false;
-        self.refreshed = false;
-        self.notice = "Opening library…".into();
+        self.notice = "Preparing your games…".into();
+        let samples = self.library.read(cx).games.clone();
+        let sample_mode = !samples.is_empty();
         let (sender, events) = mpsc::channel(1);
         let refresh = sender.clone();
         self.load_task = Some(cx.spawn(async move |this, cx| {
             let root = path.clone();
             let opened = cx
                 .background_spawn(async move {
+                    crate::managed_storage::prepare(&root, &samples)?;
                     let cache = directories::ProjectDirs::from("app", "GameSync", "GameSync")
                         .context("Local cache directory is unavailable")?
                         .cache_dir()
                         .to_owned();
                     std::fs::create_dir_all(&cache)?;
                     let mut reader = LibraryReader::open(&root, &cache)?;
-                    let mut loaded = reader.refresh()?;
-                    if let Err(error) = crate::settings::remember_library(reader.root()) {
-                        loaded.issues.push(format!(
-                            "Opened library, but could not remember its location: {error:#}"
-                        ));
-                    }
-                    let model = Library::from_loaded(&loaded);
+                    let loaded = reader.refresh()?;
+                    let mut model = Library::from_loaded(&loaded);
+                    model.demo = sample_mode;
                     let (watcher, warning) = match crate::watcher::watch(&root, sender) {
                         Ok(watcher) => (Some(watcher), None),
                         Err(error) => (
@@ -61,15 +39,17 @@ impl GameSyncApp {
                             )),
                         ),
                     };
-                    Ok::<_, anyhow::Error>((reader, model, loaded.issues, watcher, warning))
+                    let last_sync = crate::settings::load()?.last_sync.get(&loaded.manifest.library_id.to_string()).copied();
+                    Ok::<_, anyhow::Error>((reader, model, loaded.issues, watcher, warning, last_sync))
                 })
                 .await;
-            let (reader, model, mut issues, watcher, watch_warning) = match opened {
+            let (reader, model, mut issues, watcher, watch_warning, last_sync) = match opened {
                 Ok(opened) => opened,
                 Err(error) => {
                     let _ = this.update(cx, |this, cx| {
                         this.loading = false;
-                        this.notice = format!("Could not open library: {error:#}");
+                        this.review_folder = Some(path);
+                        this.notice = format!("Could not load your games: {error:#}. Use Manage collections to review library definitions.");
                         cx.notify();
                     });
                     return;
@@ -81,11 +61,18 @@ impl GameSyncApp {
             }
             let _ = this.update(cx, |this, cx| {
                 let same = this.folder.as_ref() == Some(&path);
+                if !same {
+                    if let Some(handle) = this.collections_window.take() { let _ = handle.update(cx, |_, window, _| window.remove_window()); }
+                    this.collections_view = None;
+                    this.collection_root = None;
+                }
+                this.last_sync = last_sync;
                 this.apply_library(model, &issues, same, cx);
                 this.folder = Some(path);
+                this.review_folder = None;
                 this.loading = false;
                 this.refresh = Some(refresh);
-                this.start_refresh(reader, events, watcher, watch_warning, cx);
+                this.start_refresh(reader, events, watcher, watch_warning, sample_mode, cx);
             });
         }));
         cx.notify();
@@ -97,6 +84,7 @@ impl GameSyncApp {
         mut events: mpsc::Receiver<Result<(), String>>,
         watcher: Option<notify::RecommendedWatcher>,
         mut watch_warning: Option<String>,
+        sample_mode: bool,
         cx: &mut Context<Self>,
     ) {
         self.watch_task = Some(cx.spawn(async move |this, cx| {
@@ -122,9 +110,11 @@ impl GameSyncApp {
                 }
                 let (returned, result) = cx
                     .background_spawn(async move {
-                        let result = reader
-                            .refresh()
-                            .map(|loaded| (Library::from_loaded(&loaded), loaded.issues));
+                        let result = reader.refresh().map(|loaded| {
+                            let mut model = Library::from_loaded(&loaded);
+                            model.demo = sample_mode;
+                            (model, loaded.issues)
+                        });
                         (reader, result)
                     })
                     .await;
@@ -136,14 +126,12 @@ impl GameSyncApp {
                                 issues.push(warning.clone());
                             }
                             if this.refreshing {
-                                this.refreshed = true;
                                 this.refreshing = false;
                             }
                             this.apply_library(model, &issues, true, cx);
                         }
                         Err(error) => {
                             this.refreshing = false;
-                            this.refreshed = false;
                             this.notice =
                                 format!("Could not refresh: {error:#}. Showing last valid data.");
                             cx.notify();
@@ -165,6 +153,8 @@ impl GameSyncApp {
         cx: &mut Context<Self>,
     ) {
         if !same {
+            self.detail_shown = false;
+            self.restore_grid_focus = true;
             self.clear_search = true;
             self.detail.update(cx, |detail, cx| detail.clear(cx));
         }

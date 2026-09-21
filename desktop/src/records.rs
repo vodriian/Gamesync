@@ -40,6 +40,23 @@ pub struct SteamData {
     pub description: Option<String>,
     pub playtime_minutes: u32,
     pub owned: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<SteamMetadata>,
+    #[serde(flatten)]
+    pub extra: ExtraFields,
+}
+
+/// Provider metadata and stage completion. Failed stages remain eligible for retry.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct SteamMetadata {
+    pub genres: Vec<String>,
+    pub release_year: Option<String>,
+    pub review_label: Option<String>,
+    pub review_percent: Option<u8>,
+    pub cover: Option<String>,
+    pub details_complete: bool,
+    pub reviews_complete: bool,
+    pub cover_complete: bool,
     #[serde(flatten)]
     pub extra: ExtraFields,
 }
@@ -51,6 +68,8 @@ pub struct PersonalData {
     /// Half-star units, 1 through 10. None means unrated.
     pub rating: Option<u8>,
     pub favorite: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub collections: Vec<Uuid>,
     pub tags: Vec<String>,
     pub notes: String,
     /// None uses provider text. Some("") is an intentional blank override.
@@ -67,6 +86,7 @@ impl Default for PersonalData {
             status: "backlog".into(),
             rating: None,
             favorite: false,
+            collections: Vec::new(),
             tags: Vec::new(),
             notes: String::new(),
             description: None,
@@ -84,6 +104,13 @@ impl GameData {
             personal: PersonalData::default(),
             extra: ExtraFields::new(),
         }
+    }
+
+    pub fn cover(&self) -> Option<&String> {
+        self.personal
+            .cover
+            .as_ref()
+            .or_else(|| self.steam.as_ref()?.metadata.as_ref()?.cover.as_ref())
     }
 
     pub fn description(&self) -> Option<&str> {
@@ -115,6 +142,7 @@ impl GameRevision {
                 "status",
                 "rating",
                 "favorite",
+                "collections",
                 "tags",
                 "notes",
                 "description",
@@ -122,9 +150,42 @@ impl GameRevision {
             ],
         )?;
         if let Some(steam) = &self.game.steam {
+            if let Some(metadata) = &steam.metadata {
+                check_extra(
+                    &metadata.extra,
+                    &[
+                        "genres",
+                        "release_year",
+                        "review_label",
+                        "review_percent",
+                        "cover",
+                        "details_complete",
+                        "reviews_complete",
+                        "cover_complete",
+                    ],
+                )?;
+                ensure!(
+                    metadata.review_percent.is_none_or(|p| p <= 100),
+                    "Review percent must be at most 100"
+                );
+                ensure!(
+                    !metadata.cover_complete || metadata.cover.is_some(),
+                    "Completed cover stage needs a cover"
+                );
+                ensure!(
+                    !metadata.details_complete || steam.description.is_some(),
+                    "Completed details stage needs a description"
+                );
+            }
             check_extra(
                 &steam.extra,
-                &["app_id", "description", "playtime_minutes", "owned"],
+                &[
+                    "app_id",
+                    "description",
+                    "playtime_minutes",
+                    "owned",
+                    "metadata",
+                ],
             )?;
         }
         ensure!(
@@ -166,7 +227,20 @@ impl GameRevision {
                 .is_none_or(|steam| steam.app_id != 0),
             "Steam App ID must be positive"
         );
-        if let Some(cover) = &self.game.personal.cover {
+        let collection_ids: std::collections::BTreeSet<_> =
+            self.game.personal.collections.iter().collect();
+        ensure!(
+            collection_ids.len() == self.game.personal.collections.len()
+                && collection_ids.iter().all(|id| !id.is_nil()),
+            "Invalid collection membership"
+        );
+        for cover in self.game.personal.cover.iter().chain(
+            self.game
+                .steam
+                .as_ref()
+                .and_then(|s| s.metadata.as_ref())
+                .and_then(|m| m.cover.as_ref()),
+        ) {
             // Check portable separators, including Windows paths on a Mac.
             ensure!(
                 !cover.contains(['\\', ':'])

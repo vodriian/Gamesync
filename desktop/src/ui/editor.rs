@@ -1,4 +1,4 @@
-//! One explicit inspector draft. Disk writes run on the background executor.
+//! Inline personal fields. Debounced writes keep drafts until revision checks succeed.
 use crate::model::Library;
 use gamesync_desktop::{
     library::{LibraryRevision, LibraryStore},
@@ -11,7 +11,7 @@ use gpui_component::{
     h_flex,
     input::{Input, InputEvent, InputState},
     menu::{DropdownMenu as _, PopupMenuItem},
-    v_flex, ActiveTheme as _, Disableable as _, Sizable as _, StyledExt as _,
+    v_flex, ActiveTheme as _, Disableable as _, Selectable as _, Sizable as _, StyledExt as _,
 };
 use std::path::PathBuf;
 
@@ -28,8 +28,10 @@ pub struct InspectorEditor {
     personal: PersonalData,
     tags: Entity<InputState>,
     notes: Entity<InputState>,
-    description: Entity<InputState>,
+    scroll: gpui::ScrollHandle,
     saving: bool,
+    pending: Option<gpui::Task<()>>,
+    failed: bool,
     published_from: Option<uuid::Uuid>,
     message: String,
     _subscriptions: Vec<Subscription>,
@@ -58,16 +60,14 @@ impl InspectorEditor {
                 .rows(3)
                 .default_value(personal.notes.clone())
         });
-        let description = cx.new(|cx| {
-            InputState::new(window, cx)
-                .multi_line(true)
-                .rows(4)
-                .default_value(personal.description.clone().unwrap_or_default())
-        });
-        let mut subscriptions = vec![cx.observe(&library, |_, _, cx| cx.notify())];
-        for input in [&tags, &notes, &description] {
-            subscriptions.push(cx.subscribe(input, |_, _, event, cx| {
+        let mut subscriptions = vec![cx.observe(&library, |this, _, cx| {
+            this.reconcile(cx);
+            cx.notify();
+        })];
+        for input in [&tags, &notes] {
+            subscriptions.push(cx.subscribe(input, |this, _, event, cx| {
                 if matches!(event, InputEvent::Change) {
+                    this.changed(cx);
                     cx.notify();
                 }
             }));
@@ -80,12 +80,79 @@ impl InspectorEditor {
             personal,
             tags,
             notes,
-            description,
+            scroll: gpui::ScrollHandle::new(),
             saving: false,
+            pending: None,
+            failed: false,
             published_from: None,
             message: String::new(),
             _subscriptions: subscriptions,
         }
+    }
+
+    pub fn game_id(&self) -> uuid::Uuid {
+        self.base.game_id
+    }
+
+    fn reconcile(&mut self, cx: &mut Context<Self>) {
+        if self.saving {
+            return;
+        }
+        let lib = self.library.read(cx);
+        if let Some(latest) = lib
+            .games
+            .iter()
+            .find(|g| g.id == self.base.game_id)
+            .and_then(|g| g.record.clone())
+        {
+            // A provider refresh can advance the revision while the user types.
+            // Rebase only when personal data is unchanged; otherwise retain the draft.
+            if latest.revision_id != self.base.revision_id
+                && Some(latest.revision_id) != self.published_from
+                && latest.game.personal == self.base.game.personal
+            {
+                self.base = latest;
+                self.published_from = None;
+            }
+        }
+        if !self.failed && self.value(cx) != self.base.game.personal {
+            self.schedule(cx);
+        }
+    }
+    pub fn needs_reload(
+        &self,
+        record: &GameRevision,
+        manifest: &LibraryRevision,
+        cx: &App,
+    ) -> bool {
+        !self.busy(cx)
+            && (&self.manifest != manifest
+                || (record.revision_id != self.base.revision_id
+                    && Some(record.revision_id) != self.published_from))
+    }
+    fn change_now(&mut self, cx: &mut Context<Self>) {
+        self.changed(cx);
+        self.save(cx);
+    }
+    fn changed(&mut self, cx: &mut Context<Self>) {
+        self.failed = false;
+        if !self.saving && self.value(cx) == self.base.game.personal {
+            self.pending = None;
+            self.message = "Saved.".into();
+            cx.notify();
+            return;
+        }
+        self.message = "Unsaved changes…".into();
+        self.schedule(cx);
+        cx.notify();
+    }
+    fn schedule(&mut self, cx: &mut Context<Self>) {
+        self.pending = Some(cx.spawn(async move |this, cx| {
+            cx.background_executor()
+                .timer(std::time::Duration::from_millis(450))
+                .await;
+            let _ = this.update(cx, |this, cx| this.save(cx));
+        }));
     }
 
     fn value(&self, cx: &App) -> PersonalData {
@@ -98,9 +165,6 @@ impl InspectorEditor {
             .map(str::to_owned)
             .collect();
         value.notes = self.notes.read(cx).value().to_string();
-        if value.description.is_some() {
-            value.description = Some(self.description.read(cx).value().to_string());
-        }
         value
     }
 
@@ -114,9 +178,7 @@ impl InspectorEditor {
             return Some(issue.clone());
         }
         if library.source.as_ref() != Some(&(self.root.clone(), self.manifest.clone())) {
-            return Some(
-                "Library changed. Discard this draft to review the latest definitions.".into(),
-            );
+            return Some("Collections or statuses changed. Your unsaved changes are kept.".into());
         }
         let latest = library
             .games
@@ -131,9 +193,7 @@ impl InspectorEditor {
             return Some("Waiting for library refresh.".into());
         }
         if latest.is_none_or(|game| game.revision_id != self.base.revision_id) {
-            return Some(
-                "Game changed. Your draft is kept. Discard it to review the latest details.".into(),
-            );
+            return Some("This game changed elsewhere. Your unsaved changes are kept.".into());
         }
         None
     }
@@ -147,6 +207,7 @@ impl InspectorEditor {
             return;
         }
         self.saving = true;
+        let submitted = personal.clone();
         self.message = "Saving…".into();
         let root = self.root.clone();
         let manifest = self.manifest.clone();
@@ -166,13 +227,20 @@ impl InspectorEditor {
                 this.saving = false;
                 match result {
                     Ok(record) => {
-                        this.personal = record.game.personal.clone();
+                        if this.value(cx) == submitted {
+                            this.personal = record.game.personal.clone();
+                        }
+                        this.failed = false;
                         this.published_from = Some(this.base.revision_id);
                         this.base = record;
                         this.message = "Saved.".into();
                         cx.emit(EditorEvent::Saved);
+                        if this.value(cx) != this.base.game.personal {
+                            this.schedule(cx);
+                        }
                     }
                     Err(error) => {
+                        this.failed = true;
                         this.message = format!("Save failed: {error:#}. Your draft is kept.")
                     }
                 }
@@ -187,7 +255,6 @@ impl InspectorEditor {
 impl Render for InspectorEditor {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let blocked = self.blocked(cx);
-        let dirty = self.value(cx) != self.base.game.personal;
         let saving = self.saving;
         let selected = self.personal.status.clone();
         let statuses = self.manifest.definitions.statuses.clone();
@@ -209,6 +276,7 @@ impl Render for InspectorEditor {
                     .flex_1()
                     .min_h_0()
                     .overflow_y_scroll()
+                    .track_scroll(&self.scroll)
                     .p_4()
                     .gap_3()
                     .child(
@@ -217,12 +285,32 @@ impl Render for InspectorEditor {
                             .font_semibold()
                             .child(self.base.game.title.clone()),
                     )
-                    .child(hint("Finish this edit to browse other details.", cx))
+                    .child(hint(
+                        &format!(
+                            "{:.1} hours played",
+                            self.base
+                                .game
+                                .steam
+                                .as_ref()
+                                .map_or(0, |s| s.playtime_minutes)
+                                as f32
+                                / 60.
+                        ),
+                        cx,
+                    ))
+                    .children(self.base.game.steam.as_ref().map(|steam| {
+                        let id = steam.app_id;
+                        Button::new("inline-store")
+                            .ghost()
+                            .label("View store page")
+                            .on_click(move |_, _, cx| {
+                                cx.open_url(&format!("https://store.steampowered.com/app/{id}/"))
+                            })
+                    }))
                     .child(hint("Status", cx))
                     .child(
                         Button::new("edit-status")
                             .label(status_label)
-                            .disabled(saving)
                             .dropdown_menu(move |mut menu, _, _| {
                                 for status in &statuses {
                                     let target = target.clone();
@@ -232,10 +320,8 @@ impl Render for InspectorEditor {
                                             .checked(key == selected)
                                             .on_click(move |_, _, cx| {
                                                 target.update(cx, |this, cx| {
-                                                    if !this.saving {
-                                                        this.personal.status = key.clone();
-                                                        cx.notify();
-                                                    }
+                                                    this.personal.status = key.clone();
+                                                    this.change_now(cx);
                                                 })
                                             }),
                                     );
@@ -253,7 +339,6 @@ impl Render for InspectorEditor {
                             .w(px(36.))
                             .h(px(36.))
                             .p_0()
-                            .disabled(saving)
                             .tooltip(if rating == Some(value) {
                                 "Clear rating".to_owned()
                             } else {
@@ -284,19 +369,43 @@ impl Render for InspectorEditor {
                             .on_click(cx.listener(move |this, _, _, cx| {
                                 this.personal.rating =
                                     (this.personal.rating != Some(value)).then_some(value);
-                                this.message.clear();
-                                cx.notify();
+                                this.change_now(cx);
                             }))
                     })))
                     .child(
                         Checkbox::new("edit-favorite")
                             .label("Favorite")
                             .checked(self.personal.favorite)
-                            .disabled(saving)
                             .on_click(cx.listener(|this, value: &bool, _, cx| {
                                 this.personal.favorite = *value;
-                                cx.notify();
+                                this.change_now(cx);
                             })),
+                    )
+                    .child(hint("Collections", cx))
+                    .child(
+                        h_flex().flex_wrap().gap_2().children(
+                            self.manifest
+                                .definitions
+                                .collections
+                                .clone()
+                                .into_iter()
+                                .filter(|c| !c.archived)
+                                .map(|collection| {
+                                    let id = collection.id;
+                                    Button::new(gpui::SharedString::from(format!("member-{id}")))
+                                        .small()
+                                        .label(collection.name)
+                                        .selected(self.personal.collections.contains(&id))
+                                        .on_click(cx.listener(move |this, _, _, cx| {
+                                            if this.personal.collections.contains(&id) {
+                                                this.personal.collections.retain(|v| *v != id);
+                                            } else {
+                                                this.personal.collections.push(id);
+                                            }
+                                            this.change_now(cx);
+                                        }))
+                                }),
+                        ),
                     )
                     .child(hint("Tags · one per line", cx))
                     .child(
@@ -304,7 +413,7 @@ impl Render for InspectorEditor {
                             .h(px(64.))
                             .flex_shrink_0()
                             .small()
-                            .disabled(saving),
+                            .disabled(false),
                     )
                     .child(hint("Notes", cx))
                     .child(
@@ -312,39 +421,35 @@ impl Render for InspectorEditor {
                             .h(px(88.))
                             .flex_shrink_0()
                             .small()
-                            .disabled(saving),
+                            .disabled(false),
                     )
+                    .children(
+                        self.base
+                            .game
+                            .steam
+                            .as_ref()
+                            .and_then(|s| s.metadata.as_ref())
+                            .map(|metadata| {
+                                let mut facts = Vec::new();
+                                facts.extend(metadata.release_year.clone());
+                                facts.extend(metadata.review_label.clone());
+                                if let Some(percent) = metadata.review_percent {
+                                    facts.push(format!("{percent}% positive"));
+                                }
+                                facts.extend(metadata.genres.clone());
+                                hint(&facts.join(" · "), cx)
+                            }),
+                    )
+                    .child(hint("Description", cx))
                     .child(
-                        Checkbox::new("edit-description-override")
-                            .label("Use my description")
-                            .checked(self.personal.description.is_some())
-                            .disabled(saving)
-                            .on_click(cx.listener(|this, value: &bool, _, cx| {
-                                this.personal.description = value.then(String::new);
-                                cx.notify();
-                            })),
-                    )
-                    .when(self.personal.description.is_some(), |column| {
-                        column.child(
-                            Input::new(&self.description)
-                                .h(px(112.))
-                                .flex_shrink_0()
-                                .small()
-                                .disabled(saving),
-                        )
-                    })
-                    .when(self.personal.description.is_none(), |column| {
-                        column.child(
-                            div().text_sm().child(
-                                self.base
-                                    .game
-                                    .steam
-                                    .as_ref()
-                                    .and_then(|s| s.description.clone())
-                                    .unwrap_or_else(|| "No Steam description.".into()),
-                            ),
-                        )
-                    }),
+                        div().text_sm().child(
+                            self.base
+                                .game
+                                .description()
+                                .unwrap_or("No Steam description.")
+                                .to_owned(),
+                        ),
+                    ),
             )
             .child(
                 v_flex()
@@ -359,26 +464,26 @@ impl Render for InspectorEditor {
                     .when(!self.message.is_empty(), |column| {
                         column.child(hint(&self.message, cx))
                     })
-                    .child(
-                        h_flex()
-                            .gap_2()
-                            .child(
-                                Button::new("save-details")
-                                    .primary()
-                                    .label("Save")
-                                    .tooltip("Save details (⌘/Ctrl S)")
-                                    .disabled(saving || !dirty || blocked.is_some())
-                                    .on_click(cx.listener(|this, _, _, cx| this.save(cx))),
-                            )
-                            .child(
-                                Button::new("discard-details")
-                                    .label(if dirty { "Discard" } else { "Done" })
-                                    .disabled(saving)
-                                    .on_click(
-                                        cx.listener(|_, _, _, cx| cx.emit(EditorEvent::Closed)),
-                                    ),
-                            ),
-                    ),
+                    .when(self.failed || blocked.is_some(), |column| {
+                        column.child(
+                            h_flex()
+                                .gap_2()
+                                .child(
+                                    Button::new("retry-save")
+                                        .label("Retry save")
+                                        .disabled(saving || blocked.is_some())
+                                        .on_click(cx.listener(|this, _, _, cx| this.save(cx))),
+                                )
+                                .child(
+                                    Button::new("reload-details")
+                                        .label("Discard unsaved changes")
+                                        .disabled(saving)
+                                        .on_click(
+                                            cx.listener(|_, _, _, cx| cx.emit(EditorEvent::Closed)),
+                                        ),
+                                ),
+                        )
+                    }),
             )
     }
 }

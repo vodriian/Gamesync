@@ -29,6 +29,8 @@ pub struct Game {
     #[serde(skip)]
     pub status_label: String,
     #[serde(skip)]
+    pub collections: Vec<String>,
+    #[serde(skip)]
     pub cover_path: Option<PathBuf>,
     /// Half-star units, from 1 to 10. None means unrated.
     pub rating: Option<u8>,
@@ -53,10 +55,15 @@ pub enum Scope {
     All,
     Favorites,
     Status(String),
+    Collection(Uuid),
 }
 impl Scope {
     fn contains(&self, game: &Game) -> bool {
         match self {
+            Self::Collection(id) => game
+                .record
+                .as_ref()
+                .is_some_and(|r| r.game.personal.collections.contains(id)),
             Self::All => true,
             Self::Favorites => game.favorite,
             Self::Status(status) => game.status == *status,
@@ -74,6 +81,7 @@ pub struct Library {
     pub demo: bool,
     pub source: Option<(PathBuf, gamesync_desktop::library::LibraryRevision)>,
     pub write_issue: Option<String>,
+    pub conflicts: std::collections::BTreeMap<Uuid, String>,
     pub media_version: u64,
     pub scope: Scope,
     query: String,
@@ -106,6 +114,7 @@ impl Library {
             demo: true,
             source: None,
             write_issue: None,
+            conflicts: Default::default(),
             media_version: 0,
             selected: None,
             scope: Scope::All,
@@ -134,6 +143,16 @@ impl Library {
                         .status(&personal.status)
                         .map(|status| status.label.clone())
                         .unwrap_or_else(|| personal.status.clone()),
+                    collections: loaded
+                        .manifest
+                        .definitions
+                        .collections
+                        .iter()
+                        .filter(|collection| {
+                            !collection.archived && personal.collections.contains(&collection.id)
+                        })
+                        .map(|collection| collection.name.clone())
+                        .collect(),
                     rating: personal.rating,
                     tags: personal.tags.clone(),
                     favorite: personal.favorite,
@@ -151,12 +170,19 @@ impl Library {
         library.demo = false;
         library.source = Some((loaded.root.clone(), loaded.manifest.clone()));
         library.write_issue = loaded.write_issue.clone();
+        library.conflicts = loaded.conflicts.clone();
         library.media_version = loaded.media_version;
         library
     }
 
     pub fn scope_label(&self, scope: &Scope) -> String {
         match scope {
+            Scope::Collection(id) => self
+                .source
+                .as_ref()
+                .and_then(|(_, m)| m.definitions.collections.iter().find(|c| c.id == *id))
+                .map(|c| c.name.clone())
+                .unwrap_or_else(|| "Collection".into()),
             Scope::All => "All games".into(),
             Scope::Favorites => "Favorites".into(),
             Scope::Status(key) => self
@@ -176,6 +202,16 @@ impl Library {
             next.selected = self.selected;
             if let Scope::Status(key) = &next.scope {
                 if !next.statuses.iter().any(|status| status.key == *key) {
+                    next.scope = Scope::All;
+                }
+            }
+            if let Scope::Collection(id) = &next.scope {
+                if !next.source.as_ref().is_some_and(|(_, m)| {
+                    m.definitions
+                        .collections
+                        .iter()
+                        .any(|c| c.id == *id && !c.archived)
+                }) {
                     next.scope = Scope::All;
                 }
             }

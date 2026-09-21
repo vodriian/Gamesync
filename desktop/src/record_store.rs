@@ -13,7 +13,8 @@ use std::{
 use uuid::Uuid;
 pub type RecordSnapshot = RevisionSnapshot<GameRevision>;
 /// The games/ and history/ folders must already exist in an offline library.
-/// This service neither creates a library manifest nor scans other game IDs.
+/// This service does not create a manifest. Inspection scans current filenames
+/// to detect renamed conflict copies before a write.
 pub struct RecordStore {
     root: PathBuf,
 }
@@ -33,9 +34,13 @@ impl RecordStore {
     }
 
     pub fn create(&self, game: GameData) -> Result<GameRevision> {
+        self.create_identified(Uuid::new_v4(), game)
+    }
+
+    pub(crate) fn create_identified(&self, id: Uuid, game: GameData) -> Result<GameRevision> {
         let record = GameRevision {
             schema_version: SCHEMA_VERSION,
-            game_id: Uuid::new_v4(),
+            game_id: id,
             revision_id: Uuid::new_v4(),
             parents: Vec::new(),
             deleted: false,
@@ -91,6 +96,35 @@ impl RecordStore {
                 .or_insert_with(|| value.clone());
         }
         record.game.personal = personal;
+        files.publish_child(record, snapshot)
+    }
+
+    /// Apply provider data to the latest personal state under the same game lock.
+    pub(crate) fn update_steam(
+        &self,
+        id: Uuid,
+        app_id: u32,
+        update: impl FnOnce(&mut crate::records::SteamData),
+    ) -> Result<GameRevision> {
+        let files = self.files(id);
+        let _lock = files.lock()?;
+        let snapshot = self.inspect(id)?;
+        ensure!(snapshot.issues.is_empty(), "Game files need attention");
+        let mut record = snapshot
+            .current()
+            .context("Game has conflicting versions")?
+            .clone();
+        let previous = record.clone();
+        let steam = record
+            .game
+            .steam
+            .as_mut()
+            .context("Game has no Steam identity")?;
+        ensure!(steam.app_id == app_id, "Steam identity changed");
+        update(steam);
+        if record == previous {
+            return Ok(record);
+        }
         files.publish_child(record, snapshot)
     }
 

@@ -32,6 +32,7 @@ fn main() -> Result<()> {
     for demo in demos {
         let mut game = GameData::new(demo.title);
         game.steam = Some(SteamData {
+            metadata: None,
             app_id: demo.id,
             description: Some(demo.description),
             playtime_minutes: demo.playtime_minutes,

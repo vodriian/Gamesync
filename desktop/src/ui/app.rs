@@ -1,12 +1,13 @@
 mod loading;
-// Eagle's three-pane shell with a shared game model. Appearance stays in memory.
+mod windows;
+// A shared library model with three presentations and a focused game card.
 
 use crate::{
     model::Library,
     theme,
     ui::{
         detail::DetailPanel,
-        grid::GameGrid,
+        grid::{GameGrid, LibraryView, OpenGame},
         sidebar::LibrarySidebar,
         thumb_cache::{LruImageCache, DEFAULT_BUDGET_BYTES},
     },
@@ -18,21 +19,28 @@ use gpui_component::{
     button::{Button, ButtonVariants as _},
     h_flex,
     input::{Input, InputEvent, InputState},
-    menu::{DropdownMenu as _, PopupMenuItem},
-    v_flex, ActiveTheme as _, Disableable as _, IconName, Selectable as _, Sizable as _,
-    StyledExt as _,
+    v_flex, ActiveTheme as _, Icon, IconName, Selectable as _, Sizable as _, StyledExt as _,
 };
 use std::path::PathBuf;
 
 pub struct GameSyncApp {
     library: Entity<Library>,
+    collections_view: Option<Entity<super::collections::Collections>>,
+    collection_root: Option<PathBuf>,
+    review_folder: Option<PathBuf>,
+    collections_window: Option<gpui::AnyWindowHandle>,
+    settings_window: Option<gpui::AnyWindowHandle>,
+    settings_view: Option<Entity<super::settings::SettingsView>>,
     grid: Entity<GameGrid>,
     sidebar: Entity<LibrarySidebar>,
+    sidebar_shown: bool,
+    sidebar_motion: super::motion::Motion,
     detail: Entity<DetailPanel>,
     search: Entity<InputState>,
-    sidebar_shown: bool,
     detail_shown: bool,
-    compact: bool,
+    view: LibraryView,
+    restore_grid_focus: bool,
+    last_sync: Option<u64>,
     theme: String,
     _subscriptions: Vec<Subscription>,
     cache: Entity<LruImageCache>,
@@ -44,7 +52,6 @@ pub struct GameSyncApp {
     folder: Option<PathBuf>,
     loading: bool,
     refreshing: bool,
-    refreshed: bool,
     notice: String,
     last_issues: Vec<String>,
 }
@@ -53,9 +60,13 @@ impl GameSyncApp {
     pub fn new(
         library: Library,
         initial_path: Option<PathBuf>,
+        initial_theme: String,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
+        cx.set_global(super::motion::MotionPreferences {
+            reduced: crate::settings::load().is_ok_and(|s| s.reduce_motion),
+        });
         let library = cx.new(|_| library);
         let cache = LruImageCache::new(DEFAULT_BUDGET_BYTES, cx);
         let grid = cx.new(|cx| GameGrid::new(library.clone(), cache.clone(), cx));
@@ -71,26 +82,49 @@ impl GameSyncApp {
                 });
             }
         });
-        let editor_subscription = cx.subscribe(&detail, |this, _, event, _| {
+        let editor_subscription = cx.subscribe(&detail, |this, _, event, cx| {
+            if matches!(event, super::editor::EditorEvent::Closed) {
+                this.detail_shown = false;
+                this.grid
+                    .update(cx, |grid, _| grid.preserve_viewport(false));
+                this.restore_grid_focus = true;
+                cx.notify();
+            }
             if matches!(event, super::editor::EditorEvent::Saved) {
                 if let Some(sender) = &mut this.refresh {
                     let _ = sender.try_send(Ok(()));
                 }
             }
         });
+        let grid_subscription = cx.subscribe(&grid, |this, _, _: &OpenGame, cx| {
+            this.detail_shown = true;
+            this.grid.update(cx, |grid, _| grid.preserve_viewport(true));
+            this.detail.update(cx, |detail, cx| detail.present(cx));
+            cx.notify();
+        });
         let library_subscription = cx.observe(&library, |_, _, cx| cx.notify());
         window.focus(&grid.focus_handle(cx));
         let mut app = Self {
             library,
+            collections_window: None,
+            collections_view: None,
+            collection_root: None,
+            review_folder: None,
+            settings_window: None,
+            settings_view: None,
             grid,
             sidebar,
+            sidebar_shown: true,
+            sidebar_motion: super::motion::Motion::new(1.),
             detail,
             search,
-            sidebar_shown: true,
-            detail_shown: true,
-            compact: false,
-            theme: theme::SYSTEM_THEME.into(),
+            detail_shown: false,
+            last_sync: None,
+            view: LibraryView::Cards,
+            restore_grid_focus: false,
+            theme: initial_theme,
             _subscriptions: vec![
+                grid_subscription,
                 search_subscription,
                 library_subscription,
                 editor_subscription,
@@ -104,7 +138,6 @@ impl GameSyncApp {
             folder: None,
             loading: false,
             refreshing: false,
-            refreshed: false,
             notice: String::new(),
             last_issues: Vec::new(),
         };
@@ -125,17 +158,39 @@ impl GameSyncApp {
             Ok(()) => self.refreshing = true,
             // A pending scan also satisfies this request. Do not grow the queue.
             Err(error) if error.is_full() => self.refreshing = true,
-            Err(_) => self.notice = "Refresh is unavailable. Open the library again.".into(),
+            Err(_) => self.notice = "Refresh is unavailable. Restart GameSync to retry.".into(),
         }
-        self.refreshed = false;
         cx.notify();
     }
 
     pub fn can_close(&mut self, cx: &mut Context<Self>) -> bool {
+        if self
+            .collections_view
+            .as_ref()
+            .is_some_and(|v| v.read(cx).busy())
+        {
+            self.notice = "Wait for the collection save to finish.".into();
+            cx.notify();
+            return false;
+        }
+        if self
+            .settings_view
+            .as_ref()
+            .is_some_and(|view| view.read(cx).busy())
+        {
+            self.notice =
+                "Wait for Steam or cancel sync in Settings before closing or switching libraries."
+                    .into();
+            cx.notify();
+            return false;
+        }
         if self.detail.read(cx).busy(cx) {
             self.detail_shown = true;
+            self.grid.update(cx, |grid, _| grid.preserve_viewport(true));
+            self.detail.update(cx, |detail, cx| detail.present(cx));
             self.notice =
-                "Save or discard your draft before closing or opening another library.".into();
+                "Changes are still saving. If a save failed, resolve it in details before closing."
+                    .into();
             cx.notify();
             false
         } else {
@@ -150,117 +205,88 @@ impl GameSyncApp {
     }
 
     fn toolbar(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        let entity = cx.entity();
-        let selected_theme = self.theme.clone();
         h_flex()
-            .h(px(48.))
-            .px_3()
-            .gap_2()
-            .flex_shrink_0()
-            .border_b_1()
-            .border_color(cx.theme().border)
-            .bg(cx.theme().sidebar)
+            .h(px(68.))
+            .px_5()
+            .gap_3()
             .child(
                 Button::new("sidebar-toggle")
                     .ghost()
                     .small()
                     .icon(IconName::PanelLeft)
                     .tooltip("Toggle sidebar")
-                    .selected(self.sidebar_shown)
                     .on_click(cx.listener(|this, _, _, cx| {
                         this.sidebar_shown = !this.sidebar_shown;
+                        this.sidebar_motion
+                            .set(if this.sidebar_shown { 1. } else { 0. }, cx);
                         cx.notify();
                     })),
             )
             .child(
-                div().font_medium().text_sm().child(
+                div().flex_1().min_w_0().truncate().font_medium().child(
                     self.library
                         .read(cx)
                         .scope_label(&self.library.read(cx).scope),
                 ),
             )
-            .child(div().flex_1())
             .child(
-                Button::new("open-library")
-                    .ghost()
-                    .small()
-                    .icon(IconName::Folder)
-                    .tooltip("Open library (⌘/Ctrl O)")
-                    .on_click(cx.listener(|this, _, _, cx| this.choose_folder(cx))),
+                h_flex()
+                    .h(px(38.))
+                    .p_1()
+                    .gap_1()
+                    .rounded_full()
+                    .bg(cx.theme().secondary.opacity(0.70))
+                    .children(
+                        [
+                            (LibraryView::Cards, "Cards", IconName::GalleryVerticalEnd),
+                            (LibraryView::Grid, "Grid", IconName::LayoutDashboard),
+                            (LibraryView::Table, "Table", IconName::Menu),
+                        ]
+                        .into_iter()
+                        .map(|(view, label, icon)| {
+                            Button::new(label)
+                                .ghost()
+                                .small()
+                                .icon(icon)
+                                .tooltip(label)
+                                .rounded_full()
+                                .w(px(36.))
+                                .h(px(30.))
+                                .selected(self.view == view)
+                                .on_click(cx.listener(move |this, _, window, cx| {
+                                    this.view = view;
+                                    this.grid.update(cx, |grid, cx| grid.set_view(view, cx));
+                                    window.focus(&this.grid.focus_handle(cx));
+                                    cx.notify();
+                                }))
+                        }),
+                    ),
             )
             .child(
-                Button::new("refresh-library")
-                    .ghost()
-                    .small()
-                    .label("Refresh")
-                    .tooltip("Refresh library (⌘/Ctrl R)")
-                    .disabled(self.loading || self.refreshing || self.refresh.is_none())
-                    .on_click(cx.listener(|this, _, _, cx| this.refresh_library(cx))),
-            )
-            .child(
-                div()
-                    .flex_1()
-                    .min_w(px(80.))
-                    .max_w(px(220.))
-                    .child(Input::new(&self.search).small()),
-            )
-            .child(
-                Button::new("density-toggle")
-                    .ghost()
-                    .small()
-                    .icon(IconName::LayoutDashboard)
-                    .tooltip("Toggle compact covers")
-                    .selected(self.compact)
-                    .on_click(cx.listener(|this, _, _, cx| {
-                        this.compact = !this.compact;
-                        this.grid
-                            .update(cx, |grid, cx| grid.set_density(this.compact, cx));
-                    })),
-            )
-            .child(
-                Button::new("theme-menu")
-                    .ghost()
-                    .small()
-                    .icon(IconName::Sun)
-                    .tooltip("Appearance")
-                    .dropdown_menu(move |mut menu, _, _| {
-                        let choices = ["system".to_owned(), "light".to_owned(), "dark".to_owned()]
-                            .into_iter()
-                            .chain(theme::bundled_names());
-                        for choice in choices {
-                            let target = entity.clone();
-                            menu = menu.item(
-                                PopupMenuItem::new(choice.clone())
-                                    .checked(choice == selected_theme)
-                                    .on_click(move |_, window, cx| {
-                                        target.update(cx, |this, cx| {
-                                            this.theme = choice.clone();
-                                            theme::apply_choice(&choice, window, cx);
-                                            cx.notify();
-                                        })
-                                    }),
-                            );
-                        }
-                        menu
-                    }),
-            )
-            .child(
-                Button::new("detail-toggle")
-                    .ghost()
-                    .small()
-                    .icon(IconName::PanelRight)
-                    .tooltip("Toggle details")
-                    .selected(self.detail_shown)
-                    .on_click(cx.listener(|this, _, _, cx| {
-                        this.detail_shown = !this.detail_shown;
-                        cx.notify();
-                    })),
+                h_flex()
+                    .w(px(220.))
+                    .h(px(38.))
+                    .px_2()
+                    .rounded_full()
+                    .border_1()
+                    .border_color(cx.theme().border.opacity(0.5))
+                    .bg(cx.theme().background.opacity(0.75))
+                    .child(
+                        Input::new(&self.search)
+                            .small()
+                            .appearance(false)
+                            .prefix(Icon::new(IconName::Search).size_4()),
+                    ),
             )
     }
 }
 
 impl Render for GameSyncApp {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        if self.restore_grid_focus {
+            self.restore_grid_focus = false;
+            window.focus(&self.grid.focus_handle(cx));
+        }
         if self.clear_search {
             self.clear_search = false;
             self.search
@@ -271,66 +297,164 @@ impl Render for GameSyncApp {
             window.set_window_title(&title);
             self.window_title = title;
         }
-        v_flex()
+        if self.detail_shown {
+            return div()
+                .size_full()
+                .child(self.detail.clone())
+                .into_any_element();
+        }
+        let sidebar_progress = if super::motion::reduced(cx) {
+            if self.sidebar_shown {
+                1.
+            } else {
+                0.
+            }
+        } else {
+            self.sidebar_motion.value()
+        };
+        let sidebar_width = px(255. * sidebar_progress);
+        let toolbar_height = if self.view == LibraryView::Table {
+            98.
+        } else {
+            68.
+        };
+        let dimensions = gpui::size(
+            window.viewport_size().width - sidebar_width,
+            window.viewport_size().height,
+        );
+        let library_surface = div().size_full().px_5().child(self.grid.clone());
+        // Bound the optional chrome capture at large window/display sizes. Flat
+        // translucency is the fallback; card textures keep their existing budget.
+        let capture_bytes = f32::from(dimensions.width)
+            * f32::from(dimensions.height)
+            * window.scale_factor().powi(2)
+            * 4.;
+        let library_surface =
+            if !self.sidebar_motion.active() && capture_bytes < 24. * 1024. * 1024. {
+                gpui::card_layer(
+                    u64::MAX,
+                    dimensions,
+                    gpui::CardPose {
+                        material: true,
+                        frosted_top: toolbar_height / f32::from(dimensions.height).max(1.),
+                        ..Default::default()
+                    },
+                    px(0.),
+                    library_surface,
+                )
+            } else {
+                library_surface.into_any_element()
+            };
+        let sync_status = if self.loading {
+            "Opening library…".to_owned()
+        } else {
+            crate::settings::sync_label(self.last_sync)
+        };
+        let content = div()
+            .relative()
             .on_action(cx.listener(|this, _: &crate::FocusSearch, window, cx| {
                 window.focus(&this.search.focus_handle(cx));
             }))
-            .on_action(cx.listener(|this, _: &crate::OpenLibrary, _, cx| this.choose_folder(cx)))
-            .size_full()
-            .bg(cx.theme().background)
-            .text_color(cx.theme().foreground)
-            .child(
-                h_flex()
-                    .flex_1()
-                    .min_h_0()
-                    .when(self.sidebar_shown, |row| row.child(self.sidebar.clone()))
-                    .child(
-                        v_flex()
-                            .flex_1()
-                            .min_w_0()
-                            .h_full()
-                            .child(self.toolbar(cx))
-                            .when(!self.notice.is_empty(), |column| {
-                                column.child(
-                                    div()
-                                        .px_3()
-                                        .py_2()
-                                        .text_xs()
-                                        .bg(cx.theme().sidebar)
-                                        .child(self.notice.clone()),
-                                )
-                            })
-                            .child(div().flex_1().min_h_0().p_2().child(self.grid.clone())),
-                    )
-                    .when(self.detail_shown, |row| row.child(self.detail.clone())),
+            .on_action(
+                cx.listener(|this, _: &crate::ManageCollections, _, cx| this.open_collections(cx)),
             )
+            .size_full()
+            .bg(super::card::tabletop(cx))
+            .text_color(cx.theme().foreground)
+            .child(library_surface)
             .child(
-                h_flex()
-                    .h(px(28.))
-                    .px_3()
-                    .justify_between()
-                    .flex_shrink_0()
-                    .border_t_1()
-                    .border_color(cx.theme().border)
-                    .bg(cx.theme().sidebar)
-                    .text_xs()
-                    .text_color(cx.theme().muted_foreground)
-                    .child(format!(
-                        "{} of {} games",
-                        self.library.read(cx).visible.len(),
-                        self.library.read(cx).games.len()
-                    ))
-                    .child(if self.loading {
-                        "Opening library…"
-                    } else if self.refreshing {
-                        "Refreshing library…"
-                    } else if self.refreshed {
-                        "Library refreshed · ⌘/Ctrl R to refresh"
-                    } else if self.library.read(cx).demo {
-                        "Demo library · Browse with arrow keys"
-                    } else {
-                        "Library · ⌘/Ctrl R to refresh"
+                v_flex()
+                    .absolute()
+                    .top_0()
+                    .left_0()
+                    .right_0()
+                    .occlude()
+                    .bg(super::card::tabletop(cx).opacity(0.76))
+                    .border_b_1()
+                    .border_color(cx.theme().border.opacity(0.25))
+                    .child(self.toolbar(cx))
+                    .when(self.view == LibraryView::Table, |header| {
+                        header.child(
+                            h_flex()
+                                .h(px(30.))
+                                .px_5()
+                                .gap_4()
+                                .text_xs()
+                                .text_color(cx.theme().muted_foreground)
+                                .child(div().w(px(42.)))
+                                .child(div().flex_1().child("Title"))
+                                .child(div().w(px(140.)).child("Status"))
+                                .child(div().w(px(100.)).child("Rating"))
+                                .child(div().w(px(112.)).child("Playtime")),
+                        )
+                    })
+                    .when(!self.notice.is_empty(), |header| {
+                        header.child(
+                            div()
+                                .px_5()
+                                .py_2()
+                                .text_xs()
+                                .bg(cx.theme().sidebar)
+                                .child(self.notice.clone()),
+                        )
+                    })
+                    .when(!self.library.read(cx).conflicts.is_empty(), |header| {
+                        header.child(
+                            Button::new("review-conflicts")
+                                .small()
+                                .label("Review conflicts")
+                                .on_click(cx.listener(|this, _, _, cx| {
+                                    this.detail_shown = true;
+                                    this.grid.update(cx, |grid, _| grid.preserve_viewport(true));
+                                    this.detail
+                                        .update(cx, |detail, cx| detail.review_conflicts(cx));
+                                    cx.notify();
+                                })),
+                        )
                     }),
             )
+            .child(
+                div()
+                    .absolute()
+                    .bottom_0()
+                    .right_0()
+                    .occlude()
+                    .rounded_tl(px(12.))
+                    .bg(super::card::tabletop(cx).opacity(0.94))
+                    .child(
+                        Button::new("library-status")
+                            .ghost()
+                            .small()
+                            .label(format!("{} games · ⓘ", self.library.read(cx).visible.len()))
+                            .tooltip(format!(
+                                "Arrow keys to browse · Enter to open\n{}",
+                                sync_status
+                            )),
+                    ),
+            );
+        h_flex()
+            .relative()
+            .size_full()
+            .on_action(
+                cx.listener(|this, _: &crate::ManageCollections, _, cx| this.open_collections(cx)),
+            )
+            .when(sidebar_progress > 0., |shell| {
+                shell.child(
+                    div()
+                        .w(sidebar_width)
+                        .h_full()
+                        .flex_shrink_0()
+                        .overflow_hidden()
+                        .child(
+                            div()
+                                .w(px(255.))
+                                .h_full()
+                                .ml(sidebar_width - px(255.))
+                                .child(self.sidebar.clone()),
+                        ),
+                )
+            })
+            .child(div().flex_1().min_w_0().h_full().child(content))
+            .into_any_element()
     }
 }

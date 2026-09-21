@@ -17,9 +17,12 @@ futures = "0.3"
 log = "0.4"
 env_logger = "0.11"
 tempfile = "=3.27.0"
-uuid = { version = "=1.26.0", features = ["v4", "serde"] }
+uuid = { version = "=1.26.0", features = ["v4", "v5", "serde"] }
 rusqlite = { version = "=0.40.2", features = ["bundled"] }
 notify = "=7.0.0"
+image = { version = "=0.25.10", default-features = false, features = ["jpeg"] }
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+keyring = { version = "3.6", features = ["apple-native", "sync-secret-service", "crypto-rust"] }
 
 # Use system Metal on startup; do not require Apple's separate Metal Toolchain.
 [target.'cfg(target_os = "macos")'.dependencies]
@@ -30,3 +33,7 @@ opt-level = 2
 
 [profile.release]
 opt-level = 3
+
+# GameSync card compositing extension; base version remains 0.2.2.
+[patch.crates-io]
+gpui = { path = "vendor/gpui" }

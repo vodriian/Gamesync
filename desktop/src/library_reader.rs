@@ -21,6 +21,7 @@ pub struct LoadedLibrary {
     pub write_issue: Option<String>,
     pub manifest: LibraryRevision,
     pub games: Vec<GameRevision>,
+    pub conflicts: BTreeMap<Uuid, String>,
     pub covers: BTreeMap<Uuid, PathBuf>,
     pub media_version: u64,
     pub issues: Vec<String>,
@@ -31,6 +32,7 @@ pub struct LibraryReader {
     index: Connection,
     manifest: Option<LibraryRevision>,
     games: BTreeMap<Uuid, GameRevision>,
+    conflicts: BTreeMap<Uuid, String>,
 }
 
 impl LibraryReader {
@@ -93,10 +95,12 @@ impl LibraryReader {
             index,
             manifest,
             games,
+            conflicts: BTreeMap::new(),
         })
     }
 
     pub fn refresh(&mut self) -> Result<LoadedLibrary> {
+        self.conflicts.clear();
         let mut issues = Vec::new();
         let manifest = match LibraryStore::open(&self.root).and_then(|store| store.inspect()) {
             Ok(snapshot) => {
@@ -163,7 +167,23 @@ impl LibraryReader {
                             .games
                             .get(&id)
                             .map(|game| game.game.title.clone())
+                            .or_else(|| {
+                                snapshot
+                                    .heads
+                                    .first()
+                                    .and_then(|head| snapshot.revisions.get(head))
+                                    .map(|record| record.game.title.clone())
+                            })
                             .unwrap_or_else(|| id.to_string());
+                        if snapshot.has_conflict() {
+                            let name = snapshot
+                                .heads
+                                .first()
+                                .and_then(|head| snapshot.revisions.get(head))
+                                .map(|record| record.game.title.clone())
+                                .unwrap_or_else(|| title.clone());
+                            self.conflicts.insert(id, name);
+                        }
                         let reason = if snapshot.has_conflict() {
                             "conflicting edits"
                         } else if snapshot.revisions.is_empty() {
@@ -171,7 +191,14 @@ impl LibraryReader {
                         } else {
                             "incomplete history"
                         };
-                        issues.push(format!("{title}: {reason}; keeping last valid data."));
+                        let action = if self.games.contains_key(&id) {
+                            "keeping last valid data"
+                        } else if snapshot.has_conflict() {
+                            "open Conflicts to review"
+                        } else {
+                            "waiting for valid files"
+                        };
+                        issues.push(format!("{title}: {reason}; {action}."));
                         issues.extend(snapshot.issues);
                     }
                 }
@@ -205,7 +232,7 @@ impl LibraryReader {
             .cloned()
             .collect();
         for game in &games {
-            if let Some(relative) = &game.game.personal.cover {
+            if let Some(relative) = game.game.cover() {
                 let path = self.root.join(relative);
                 // Never follow an imported cover symlink outside media/.
                 match path.canonicalize() {
@@ -226,6 +253,7 @@ impl LibraryReader {
         }
         Ok(LoadedLibrary {
             root: self.root.clone(),
+            conflicts: self.conflicts.clone(),
             write_issue,
             manifest,
             games,

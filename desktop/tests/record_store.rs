@@ -30,6 +30,7 @@ impl Library {
         let store = RecordStore::open(root.path()).unwrap();
         let mut game = GameData::new("Hades");
         game.steam = Some(SteamData {
+            metadata: None,
             app_id: 1145360,
             description: Some("Store description".into()),
             playtime_minutes: 90,

@@ -6,10 +6,18 @@ A cozy game library for geeks who like to play games. The app should help the
 user browse, track, and choose. Keep common actions easy to find.
 
 Use calm surfaces, clear text, and game covers as the main source of color.
-Keep advanced options one level deeper. Avoid decorative dashboards, neon
-effects, AI mascots, and motion that delays work.
+Keep advanced options one level deeper. Use tactile edges, shadows, and responsive light where they make the cards
+feel physical. Avoid motion that delays work.
 
-## Primary reference
+## Current direction
+
+The September 21 card references replace the inspector with a focused card.
+Keep the useful left navigation sidebar while browsing. Treat games as physical cards: artwork and title on the front, personal
+and provider details on the back. Use Cards, Grid, and Table presentations.
+See [physical cards](physical-cards.md) for scope and native rendering limits.
+Eagle remains a source for infrastructure, not the visual target for this UI.
+
+## Foundation reference
 
 The user's Eagle GUI template is the existing `eagle-linux` project at
 `/Users/vova/Developer/Github/eagle-linux/`.
@@ -54,8 +62,7 @@ Use system fonts and platform conventions. Keep controls readable in light
 and dark themes. Use a shared spacing and color scale from Eagle before adding
 new values. Give icons accessible labels and visible focus states.
 
-Keep view selection and search near the library. Open game details in the
-inspector without losing scroll position. Keep one selection model across
+Keep view selection and search near the library. Open game details on the back of a focused card without losing library scroll position. Keep one selection model across
 the grid, table, and board. For game behavior, use the app plan.
 
 ## Motion and input
@@ -86,7 +93,7 @@ hierarchy and remains readable and fast on both target platforms.
 
 ## GUI checks
 
-Compare Eagle and the new native screen at the same window size and state.
+Compare the native screen with the supplied physical-card references.
 Check alignment, cover crop, text truncation, contrast, focus, keyboard use,
 resizing, and scroll stability. Test loading, missing covers, empty libraries,
 and errors. Keep controls usable while background work runs.

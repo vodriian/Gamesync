@@ -6,3 +6,7 @@ pub mod record_store;
 pub mod records;
 mod revision_store;
 pub mod storage;
+
+pub mod credentials;
+pub mod settings;
+pub mod steam;

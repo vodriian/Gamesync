@@ -75,3 +75,29 @@ Creation requires a new directory with an existing parent. It creates `games/`,
 `media/`, and `history/`. Failed initialization leaves its partial directory for
 inspection. Opening and inspecting do not repair or rewrite files. A missing
 current manifest can be read from valid history and republished by a guarded edit.
+
+## Collections and Steam additions
+
+These additive schema-1 fields have defaults. Older records remain readable and
+are not rewritten merely to add empty fields. Preserve extension properties.
+
+- Library definitions: `collections` contains stable UUIDs, names, and an
+  `archived` flag. Names are unique among active collections. Removed definitions
+  stay archived; game membership is not rewritten.
+- Personal game data: `collections` is a list of collection UUIDs. Membership
+  uses the inspector's guarded personal-data write. Archived membership remains
+  recoverable but is hidden from browsing.
+- Library definitions: optional `steam_account` binds one Steam account. Device
+  disconnect does not change this binding. Use another library for another account.
+- Steam data: optional `metadata` stores genres, release year, review label and
+  percent, provider cover path, and separate completion flags for details, reviews,
+  and covers. Personal descriptions and covers take priority.
+- New Steam records use a UUID derived from library UUID and Steam App ID.
+  Existing matching game IDs remain unchanged. Ambiguous matches block that import.
+- Provider writes keep the latest personal state and archived flag under the
+  existing record lock. Missing Steam results do not remove or un-own games.
+- A local sync lock prevents two processes from syncing the same folder at once.
+  Remote Dropbox writers can still create branches; retain them for review.
+
+Credentials, appearance, and last successful sync times stay on the device.
+Keys use macOS Keychain or Linux Secret Service. They never enter library files.
