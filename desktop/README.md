@@ -165,3 +165,13 @@ desktop/target/GameSync.app/Contents/MacOS/gamesync-desktop --demo --small-windo
 ```
 
 `--small-window` starts at 960 × 600.
+
+## macOS release build
+
+Run `python3 desktop/scripts/package_macos.py` on macOS (Python 3.11 or newer).
+It builds the locked release profile for the host architecture, copies the
+executable and icon into a standalone bundle, applies an ad-hoc signature, and
+creates a ZIP under `desktop/target/macos/`. The app does not depend on the
+checkout or development executable. Its minimum macOS version comes from the
+linked binary. This is a local test build, not a universal or notarized release.
+Developer ID signing and notarization remain required for public distribution.
