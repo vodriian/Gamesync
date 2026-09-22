@@ -1,6 +1,5 @@
 //! Fixed feedback above Glaze-style groups keeps errors and progress in view.
 use super::*;
-use crate::theme;
 use gpui::{div, px};
 use gpui_component::{
     button::{Button, ButtonVariants as _},
@@ -39,60 +38,34 @@ impl Render for SettingsView {
             }
         }
         let has_library = source.is_some() && !self.library.read(cx).demo;
-        let group = || v_flex().p_5().gap_4().rounded_lg().bg(cx.theme().secondary);
-        let appearance = group()
-            .child(div().font_semibold().child("Theme"))
-            .child(
-                h_flex().flex_wrap().gap_2().children(
-                    ["system".to_owned(), "light".into(), "dark".into()]
-                        .into_iter()
-                        .chain(theme::bundled_names())
-                        .map(|value| {
-                            let label = if value == "system" {
-                                "Auto".into()
-                            } else {
-                                value.clone()
-                            };
-                            Button::new(gpui::SharedString::from(format!("theme-{value}")))
-                                .ghost()
-                                .label(label)
-                                .selected(self.theme == value)
-                                .on_click(cx.listener(move |this, _, window, cx| {
-                                    this.theme = value.clone();
-                                    theme::apply_choice(&value, window, cx);
-                                    cx.emit(SettingsEvent::Theme(value.clone()));
-                                    cx.notify();
-                                }))
-                        }),
-                ),
-            )
-            .child(
-                Checkbox::new("reduce-motion")
-                    .label("Reduce motion")
-                    .checked(self.reduce_motion)
-                    .on_click(cx.listener(|this, checked: &bool, _, cx| {
-                        this.reduce_motion = *checked;
-                        cx.global_mut::<super::super::motion::MotionPreferences>()
-                            .reduced = *checked;
-                        let value = *checked;
-                        cx.spawn(async move |this, cx| {
-                            let result = cx
-                                .background_spawn(async move {
-                                    settings::update(|s| s.reduce_motion = value)
-                                })
-                                .await;
-                            if let Err(error) = result {
-                                let _ = this.update(cx, |this, cx| {
-                                    this.message =
-                                        format!("Could not save motion preference: {error}");
-                                    cx.notify();
-                                });
-                            }
-                        })
-                        .detach();
-                        cx.notify();
-                    })),
-            );
+        let surface = cx.theme().secondary;
+        let group = || v_flex().p_5().gap_4().rounded_lg().bg(surface);
+        let appearance = group().child(self.appearance_controls(cx)).child(
+            Checkbox::new("reduce-motion")
+                .label("Reduce motion")
+                .checked(self.reduce_motion)
+                .on_click(cx.listener(|this, checked: &bool, _, cx| {
+                    this.reduce_motion = *checked;
+                    cx.global_mut::<super::super::motion::MotionPreferences>()
+                        .reduced = *checked;
+                    let value = *checked;
+                    cx.spawn(async move |this, cx| {
+                        let result = cx
+                            .background_spawn(async move {
+                                settings::update(|s| s.reduce_motion = value)
+                            })
+                            .await;
+                        if let Err(error) = result {
+                            let _ = this.update(cx, |this, cx| {
+                                this.message = format!("Could not save motion preference: {error}");
+                                cx.notify();
+                            });
+                        }
+                    })
+                    .detach();
+                    cx.notify();
+                })),
+        );
         let connection = group()
             .child("Steam profile or ID")
             .child(Input::new(&self.profile).disabled(self.busy || !has_library))
@@ -166,6 +139,7 @@ impl Render for SettingsView {
             .size_full()
             .bg(cx.theme().background)
             .text_color(cx.theme().foreground)
+            .child(gpui_component::TitleBar::new().border_b_0())
             .child(
                 v_flex()
                     .p_6()

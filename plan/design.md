@@ -100,3 +100,14 @@ and errors. Keep controls usable while background work runs.
 
 When reviewing UI code under the Emil skill, use a `Before | After | Why`
 table for findings. Log platform coverage and any missing visual checks.
+
+## References
+- themes: https://github.com/aaaaalexis/obsidian-baseline/tree/main/src/color-schemes
+
+## Native chrome and themes
+
+Use the [chrome and Baseline theme specification](chrome-themes.md) for shell
+geometry and appearance. It replaces the old palette selection and KDE overrides.
+Keep the sidebar on solid chrome and the toolbar inside the rounded content panel.
+Use semantic native tokens for content and chrome; Vivid must retain separate
+foreground colors for each surface.

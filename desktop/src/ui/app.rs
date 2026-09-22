@@ -41,7 +41,8 @@ pub struct GameSyncApp {
     view: LibraryView,
     restore_grid_focus: bool,
     last_sync: Option<u64>,
-    theme: String,
+    theme: gamesync_desktop::appearance::Appearance,
+    appearance_revision: std::sync::Arc<std::sync::atomic::AtomicU64>,
     _subscriptions: Vec<Subscription>,
     cache: Entity<LruImageCache>,
     load_task: Option<Task<()>>,
@@ -60,7 +61,7 @@ impl GameSyncApp {
     pub fn new(
         library: Library,
         initial_path: Option<PathBuf>,
-        initial_theme: String,
+        initial_theme: gamesync_desktop::appearance::Appearance,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
@@ -123,6 +124,7 @@ impl GameSyncApp {
             view: LibraryView::Cards,
             restore_grid_focus: false,
             theme: initial_theme,
+            appearance_revision: Default::default(),
             _subscriptions: vec![
                 grid_subscription,
                 search_subscription,
@@ -199,7 +201,7 @@ impl GameSyncApp {
     }
 
     pub fn appearance_changed(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if self.theme == theme::SYSTEM_THEME {
+        if self.theme.mode == gamesync_desktop::appearance::AppearanceMode::Auto {
             theme::apply_choice(&self.theme, window, cx);
         }
     }
@@ -292,15 +294,23 @@ impl Render for GameSyncApp {
             self.search
                 .update(cx, |search, cx| search.set_value("", window, cx));
         }
-        let title = format!("GameSync — {}", self.library.read(cx).name);
+        let title = self.library.read(cx).name.clone();
         if self.window_title != title {
             window.set_window_title(&title);
             self.window_title = title;
         }
         if self.detail_shown {
-            return div()
+            return v_flex()
                 .size_full()
-                .child(self.detail.clone())
+                .bg(cx.theme().sidebar)
+                .child(gpui_component::TitleBar::new().border_b_0())
+                .child(
+                    div()
+                        .flex_1()
+                        .min_h_0()
+                        .p(px(8.))
+                        .child(super::panel::content(self.detail.clone(), cx)),
+                )
                 .into_any_element();
         }
         let sidebar_progress = if super::motion::reduced(cx) {
@@ -313,38 +323,7 @@ impl Render for GameSyncApp {
             self.sidebar_motion.value()
         };
         let sidebar_width = px(255. * sidebar_progress);
-        let toolbar_height = if self.view == LibraryView::Table {
-            98.
-        } else {
-            68.
-        };
-        let dimensions = gpui::size(
-            window.viewport_size().width - sidebar_width,
-            window.viewport_size().height,
-        );
-        let library_surface = div().size_full().px_5().child(self.grid.clone());
-        // Bound the optional chrome capture at large window/display sizes. Flat
-        // translucency is the fallback; card textures keep their existing budget.
-        let capture_bytes = f32::from(dimensions.width)
-            * f32::from(dimensions.height)
-            * window.scale_factor().powi(2)
-            * 4.;
-        let library_surface =
-            if !self.sidebar_motion.active() && capture_bytes < 24. * 1024. * 1024. {
-                gpui::card_layer(
-                    u64::MAX,
-                    dimensions,
-                    gpui::CardPose {
-                        material: true,
-                        frosted_top: toolbar_height / f32::from(dimensions.height).max(1.),
-                        ..Default::default()
-                    },
-                    px(0.),
-                    library_surface,
-                )
-            } else {
-                library_surface.into_any_element()
-            };
+        let library_surface = div().size_full().child(self.grid.clone());
         let sync_status = if self.loading {
             "Opening library…".to_owned()
         } else {
@@ -369,7 +348,7 @@ impl Render for GameSyncApp {
                     .left_0()
                     .right_0()
                     .occlude()
-                    .bg(super::card::tabletop(cx).opacity(0.76))
+                    .bg(super::card::tabletop(cx))
                     .border_b_1()
                     .border_color(cx.theme().border.opacity(0.25))
                     .child(self.toolbar(cx))
@@ -394,7 +373,7 @@ impl Render for GameSyncApp {
                                 .px_5()
                                 .py_2()
                                 .text_xs()
-                                .bg(cx.theme().sidebar)
+                                .bg(cx.theme().muted)
                                 .child(self.notice.clone()),
                         )
                     })
@@ -420,7 +399,7 @@ impl Render for GameSyncApp {
                     .right_0()
                     .occlude()
                     .rounded_tl(px(12.))
-                    .bg(super::card::tabletop(cx).opacity(0.94))
+                    .bg(super::card::tabletop(cx))
                     .child(
                         Button::new("library-status")
                             .ghost()
@@ -435,6 +414,7 @@ impl Render for GameSyncApp {
         h_flex()
             .relative()
             .size_full()
+            .bg(cx.theme().sidebar)
             .on_action(
                 cx.listener(|this, _: &crate::ManageCollections, _, cx| this.open_collections(cx)),
             )
@@ -446,15 +426,50 @@ impl Render for GameSyncApp {
                         .flex_shrink_0()
                         .overflow_hidden()
                         .child(
-                            div()
+                            v_flex()
                                 .w(px(255.))
                                 .h_full()
                                 .ml(sidebar_width - px(255.))
-                                .child(self.sidebar.clone()),
+                                .child(div().h(px(34.)).flex_shrink_0())
+                                .child(div().flex_1().min_h_0().child(self.sidebar.clone())),
                         ),
                 )
             })
-            .child(div().flex_1().min_w_0().h_full().child(content))
+            .child(
+                v_flex()
+                    .flex_1()
+                    .min_w_0()
+                    .h_full()
+                    // Reserve traffic-light space continuously while the sidebar slides away.
+                    .child(
+                        div()
+                            .h(px(if cfg!(target_os = "macos") {
+                                34. * (1. - f32::from(sidebar_width) / 100.).clamp(0., 1.)
+                            } else {
+                                34.
+                            }))
+                            .flex_shrink_0(),
+                    )
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_h_0()
+                            .p(px(8.))
+                            .child(super::panel::content(content, cx)),
+                    ),
+            )
+            .child(
+                div()
+                    .absolute()
+                    .top_0()
+                    .left_0()
+                    .w(if cfg!(target_os = "macos") && sidebar_progress > 0. {
+                        sidebar_width.max(px(80.))
+                    } else {
+                        window.viewport_size().width
+                    })
+                    .child(gpui_component::TitleBar::new().border_b_0()),
+            )
             .into_any_element()
     }
 }

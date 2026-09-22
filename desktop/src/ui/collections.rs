@@ -174,6 +174,7 @@ impl Render for Collections {
             })
             .unwrap_or_default();
         v_flex().id("collections-window").size_full().overflow_y_scroll().p_6().gap_4().bg(cx.theme().background).text_color(cx.theme().foreground)
+            .child(gpui_component::TitleBar::new().border_b_0())
             .child(div().text_xl().font_semibold().child("Collections"))
             .child("Group games your way. Removing a collection keeps its games.")
             .children(current.as_ref().into_iter().flat_map(|m| m.definitions.collections.clone()).filter(|c| !c.archived).map(|collection| {

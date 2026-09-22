@@ -18,6 +18,8 @@ use gpui_component::{
 use std::{rc::Rc, sync::Arc};
 
 const GAP: Pixels = px(24.);
+// Keep spacing inside the full-width scroll mask so shadows can use the gutter.
+const CONTENT_INSET: Pixels = px(20.);
 const CAPTION: Pixels = px(52.);
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -133,7 +135,7 @@ impl GameGrid {
     }
 
     fn measure(&mut self, width: Pixels) -> bool {
-        let usable = f32::from(width).max(0.);
+        let usable = f32::from(width - CONTENT_INSET * 2.).max(0.);
         let columns = if self.view == LibraryView::Table {
             1
         } else {
@@ -317,6 +319,7 @@ impl GameGrid {
                                     .into_iter()
                                     .map(|cells| {
                                         h_flex()
+                                            .px(CONTENT_INSET)
                                             .gap(GAP)
                                             .pb(if this.view == LibraryView::Table {
                                                 px(0.)

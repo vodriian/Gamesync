@@ -16,3 +16,5 @@ mod card_motion;
 pub mod card_proof;
 
 mod filmstrip;
+
+mod panel;

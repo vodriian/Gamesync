@@ -15,6 +15,8 @@ pub struct Settings {
     #[serde(default = "system_theme")]
     pub theme: String,
     #[serde(default)]
+    pub appearance: Option<crate::appearance::Appearance>,
+    #[serde(default)]
     pub reduce_motion: bool,
     #[serde(default)]
     pub last_sync: BTreeMap<String, u64>,
@@ -75,6 +77,7 @@ impl Default for Settings {
         Self {
             library_path: None,
             theme: system_theme(),
+            appearance: None,
             reduce_motion: false,
             last_sync: Default::default(),
             extra: Default::default(),
@@ -99,4 +102,30 @@ pub fn sync_label(time: Option<u64>) -> String {
         }
     })
     .unwrap_or_else(|| "No Steam sync time recorded".into())
+}
+
+impl Settings {
+    pub fn appearance(&self) -> crate::appearance::Appearance {
+        self.appearance
+            .clone()
+            .unwrap_or_else(|| crate::appearance::Appearance::from_legacy(&self.theme))
+    }
+}
+
+#[cfg(test)]
+mod appearance_migration_tests {
+    use super::*;
+    #[test]
+    fn appearance_round_trip_retains_legacy_and_unrelated_settings() {
+        let mut old:Settings=serde_json::from_str(r#"{"library_path":null,"theme":"Tokyo Night","reduce_motion":true,"future_setting":{"enabled":true}}"#).unwrap();
+        let appearance = old.appearance();
+        assert_eq!(appearance.dark_scheme.as_str(), "notion");
+        old.appearance = Some(appearance.clone());
+        let bytes = serde_json::to_vec(&old).unwrap();
+        let reopened: Settings = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(reopened.appearance(), appearance);
+        assert_eq!(reopened.theme, "Tokyo Night");
+        assert!(reopened.reduce_motion);
+        assert_eq!(reopened.extra["future_setting"]["enabled"], true);
+    }
 }

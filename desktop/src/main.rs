@@ -86,9 +86,7 @@ fn main() -> anyhow::Result<()> {
         library.name = "My games".into();
         library.demo = false;
     }
-    let initial_theme = settings::load()
-        .map(|s| s.theme)
-        .unwrap_or_else(|_| theme::SYSTEM_THEME.into());
+    let initial_theme = settings::load().map(|s| s.appearance()).unwrap_or_default();
 
     Application::new()
         .with_assets(assets::Assets)
@@ -119,8 +117,8 @@ fn main() -> anyhow::Result<()> {
             let result = cx.open_window(
                 WindowOptions {
                     titlebar: Some(gpui::TitlebarOptions {
-                        title: Some("GameSync — Demo library".into()),
-                        ..Default::default()
+                        title: Some(library.name.clone().into()),
+                        ..gpui_component::TitleBar::title_bar_options()
                     }),
                     window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
                         None,

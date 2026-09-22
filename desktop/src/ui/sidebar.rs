@@ -68,8 +68,7 @@ impl Render for LibrarySidebar {
             .h_full()
             .flex_shrink_0()
             .bg(cx.theme().sidebar)
-            .border_r_1()
-            .border_color(cx.theme().border)
+            .text_color(cx.theme().sidebar_foreground)
             .child(
                 v_flex()
                     .p_4()
@@ -80,6 +79,7 @@ impl Render for LibrarySidebar {
                             .child(div().font_semibold().child("GameSync"))
                             .child(
                                 Button::new("settings")
+                                    .text_color(cx.theme().sidebar_foreground)
                                     .ghost()
                                     .small()
                                     .icon(IconName::Settings)
@@ -92,7 +92,7 @@ impl Render for LibrarySidebar {
                     .child(
                         div()
                             .text_xs()
-                            .text_color(cx.theme().muted_foreground)
+                            .text_color(cx.theme().sidebar_foreground.opacity(0.65))
                             .child("A little room for your games"),
                     ),
             )
@@ -115,6 +115,7 @@ impl Render for LibrarySidebar {
                     .child(
                         h_flex().child(
                             Button::new("status-section")
+                                .text_color(cx.theme().sidebar_foreground)
                                 .ghost()
                                 .small()
                                 .label("Status")
@@ -155,6 +156,7 @@ impl Render for LibrarySidebar {
                             .gap_1()
                             .child(
                                 Button::new("collections-section")
+                                    .text_color(cx.theme().sidebar_foreground)
                                     .ghost()
                                     .small()
                                     .label("Collections")
@@ -172,6 +174,7 @@ impl Render for LibrarySidebar {
                             .child(div().flex_1())
                             .child(
                                 Button::new("add-collection")
+                                    .text_color(cx.theme().sidebar_foreground)
                                     .ghost()
                                     .small()
                                     .icon(IconName::Plus)

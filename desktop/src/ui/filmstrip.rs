@@ -65,7 +65,7 @@ impl Render for Filmstrip {
             .flex_shrink_0()
             .border_t_1()
             .border_color(cx.theme().border.opacity(0.4))
-            .bg(cx.theme().sidebar.opacity(0.35))
+            .bg(cx.theme().muted)
             .child(
                 image_cache(self.cache.clone()).size_full().child(
                     h_flex().id("strip-inner").size_full().child(

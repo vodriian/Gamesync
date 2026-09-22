@@ -175,3 +175,10 @@ creates a ZIP under `desktop/target/macos/`. The app does not depend on the
 checkout or development executable. Its minimum macOS version comes from the
 linked binary. This is a local test build, not a universal or notarized release.
 Developer ID signing and notarization remain required for public distribution.
+
+### Appearance
+
+Settings → Look and feel provides Auto/Light/Dark appearance, independent light
+and dark Baseline schemes, contrast variants, and two accent switches. Defaults
+are Sanctum light and Notion dark. Preferences apply across open windows and
+persist on restart. See [chrome and themes](../plan/chrome-themes.md).

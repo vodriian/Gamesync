@@ -7,9 +7,7 @@ use gpui::{
 use gpui_component::{h_flex, v_flex, ActiveTheme as _};
 
 pub fn tabletop(cx: &App) -> gpui::Hsla {
-    cx.theme().background.blend(
-        gpui::Hsla::from(rgb(0xa6b2c7)).opacity(if cx.theme().is_dark() { 0.10 } else { 0.24 }),
-    )
+    cx.theme().background
 }
 
 pub fn front(
@@ -22,7 +20,7 @@ pub fn front(
     let height = width * 1.46;
     let artwork_size = gpui::size(px(width - 20.), px(height - 49.));
     let edge = cx.theme().border;
-    let paper = cx.theme().sidebar;
+    let paper = cx.theme().background;
     let angle = light.map_or(140., |(x, y)| 105. + x * 55. + y * 25.);
     let shine = if light.is_some() { 0.23 } else { 0.045 };
     v_flex()

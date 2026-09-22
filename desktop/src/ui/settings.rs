@@ -1,5 +1,6 @@
 //! Glaze's grouped settings layout, backed by native device services.
 mod ai;
+mod appearance;
 mod view;
 use crate::model::Library;
 use gamesync_desktop::{
@@ -18,7 +19,7 @@ use std::sync::{
 use uuid::Uuid;
 
 pub enum SettingsEvent {
-    Theme(String),
+    Theme(gamesync_desktop::appearance::Appearance),
     Refresh,
     LastSync(Option<u64>),
 }
@@ -56,7 +57,7 @@ pub struct SettingsView {
     library_id: Option<Uuid>,
     ai: Entity<ai::AiSettings>,
     key_saved: bool,
-    theme: String,
+    theme: gamesync_desktop::appearance::Appearance,
     section: Section,
     tested: Option<TestedKey>,
     clear_key: bool,
@@ -70,7 +71,7 @@ impl EventEmitter<SettingsEvent> for SettingsView {}
 impl SettingsView {
     pub fn new(
         library: Entity<Library>,
-        theme: String,
+        theme: gamesync_desktop::appearance::Appearance,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
@@ -118,7 +119,11 @@ impl SettingsView {
     pub fn busy(&self) -> bool {
         self.busy
     }
-    pub fn set_theme(&mut self, theme: String, cx: &mut Context<Self>) {
+    pub fn set_theme(
+        &mut self,
+        theme: gamesync_desktop::appearance::Appearance,
+        cx: &mut Context<Self>,
+    ) {
         self.theme = theme;
         cx.notify();
     }

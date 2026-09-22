@@ -37,7 +37,7 @@ impl GameSyncApp {
             WindowOptions {
                 titlebar: Some(gpui::TitlebarOptions {
                     title: Some("Collections".into()),
-                    ..Default::default()
+                    ..gpui_component::TitleBar::title_bar_options()
                 }),
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 ..Default::default()
@@ -56,14 +56,27 @@ impl GameSyncApp {
         }
     }
 
-    pub(super) fn set_theme(&mut self, choice: String, cx: &mut Context<Self>) {
+    pub(super) fn set_theme(
+        &mut self,
+        choice: gamesync_desktop::appearance::Appearance,
+        cx: &mut Context<Self>,
+    ) {
         self.theme = choice.clone();
         if let Some(view) = &self.settings_view {
             view.update(cx, |view, cx| view.set_theme(choice.clone(), cx));
         }
+        // Rapid preview clicks must not let an older background save win.
+        let revision_state = self.appearance_revision.clone();
+        let revision = revision_state.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
         cx.spawn(async move |this, cx| {
             let result = cx
-                .background_spawn(async move { crate::settings::update(|s| s.theme = choice) })
+                .background_spawn(async move {
+                    crate::settings::update(|s| {
+                        if revision_state.load(std::sync::atomic::Ordering::SeqCst) == revision {
+                            s.appearance = Some(choice);
+                        }
+                    })
+                })
                 .await;
             if let Err(error) = result {
                 let _ = this.update(cx, |this, cx| {
@@ -100,7 +113,7 @@ impl GameSyncApp {
             WindowOptions {
                 titlebar: Some(gpui::TitlebarOptions {
                     title: Some("Settings".into()),
-                    ..Default::default()
+                    ..gpui_component::TitleBar::title_bar_options()
                 }),
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 window_min_size: Some(size(px(700.), px(480.))),

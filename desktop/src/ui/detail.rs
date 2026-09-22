@@ -26,6 +26,7 @@ pub struct DetailPanel {
     edit_focus: Option<FocusHandle>,
     restore_edit_focus: bool,
     bounds: Bounds<Pixels>,
+    viewport: gpui::Size<Pixels>,
     library: Entity<Library>,
     cache: Entity<LruImageCache>,
     editor: Option<Entity<InspectorEditor>>,
@@ -72,6 +73,7 @@ impl DetailPanel {
             edit_focus: None,
             restore_edit_focus: false,
             bounds: Bounds::default(),
+            viewport: gpui::Size::default(),
             library,
             cache,
             editor: None,
@@ -315,7 +317,12 @@ impl Render for DetailPanel {
         } else {
             self.strip_motion.value()
         };
-        let width = ((f32::from(window.viewport_size().height) - 270.) / 1.46).clamp(180., 460.);
+        let available_height = if self.viewport.height > px(0.) {
+            self.viewport.height
+        } else {
+            window.viewport_size().height - px(50.)
+        };
+        let width = ((f32::from(available_height) - 270.) / 1.46).clamp(180., 460.);
         let reduced = super::motion::reduced(cx) || !cfg!(target_os = "macos");
         let turning = !reduced && self.turn.active();
         let turn = if reduced {
@@ -350,7 +357,7 @@ impl Render for DetailPanel {
             .overflow_hidden()
             .border_1()
             .border_color(cx.theme().border)
-            .bg(cx.theme().sidebar)
+            .bg(cx.theme().background)
             .shadow(super::card::floating_shadow());
         if let Some(review) = &self.review {
             body = body.child(review.clone());
@@ -463,7 +470,14 @@ impl Render for DetailPanel {
                 front
             }
         };
+        let viewport_target = cx.entity();
         v_flex()
+            .relative()
+            .child(canvas(move |bounds, _, cx| {
+                viewport_target.update(cx, |this, cx| {
+                    if this.viewport != bounds.size { this.viewport = bounds.size; cx.notify(); }
+                });
+            }, |_, _, _, _| {}).absolute().inset_0())
             .id("card-viewer")
             .occlude()
             .track_focus(&self.focus)

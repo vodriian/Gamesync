@@ -55,3 +55,12 @@ copy at base `d1fc38f` into `src/ui/filmstrip.rs`. Retained its 80 px cells,
 instant hover feedback. Game records replace asset thumbnails; selection emits
 an event so the focused game's existing pending-save guard remains authoritative.
 Eagle itself was not changed.
+
+## Baseline palettes
+
+The native appearance catalog derives from obsidian-baseline revision
+`8c56e831e1abb1d3841c4ffdecbe06b5182fbc68`. It includes all 25 named schemes. See `licenses/baseline/LICENSE.txt` and
+`licenses/baseline/SOURCES.md` for upstream licensing and palette author credits.
+The development-only importer resolves inherited colors into bundled data; no
+upstream CSS or browser runtime is loaded by the app. See
+[chrome and themes](../plan/chrome-themes.md) for regeneration and mapping rules.

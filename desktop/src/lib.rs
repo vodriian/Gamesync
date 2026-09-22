@@ -10,3 +10,5 @@ pub mod storage;
 pub mod credentials;
 pub mod settings;
 pub mod steam;
+
+pub mod appearance;

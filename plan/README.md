@@ -50,3 +50,5 @@ Keep screenshots and large test output outside Git unless they are needed
 as a small, stable project reference. Do not commit personal game libraries.
 
 - [Motion and interaction review](motion-review.md): Eagle reuse, scope, and native limits.
+- [Chrome and Baseline themes](chrome-themes.md): inset native shell, palette catalog, contrast, and migration.
+- [Chrome/theme implementation log](logs/2026-09-22-chrome-themes.md): validation and platform limits.
