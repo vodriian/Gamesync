@@ -357,8 +357,7 @@ impl Render for DetailPanel {
             .overflow_hidden()
             .border_1()
             .border_color(cx.theme().border)
-            .bg(cx.theme().background)
-            .shadow(super::card::floating_shadow());
+            .bg(cx.theme().background);
         if let Some(review) = &self.review {
             body = body.child(review.clone());
         } else {
@@ -437,7 +436,13 @@ impl Render for DetailPanel {
             frosted_top: 0.,
         };
         let face = if show_back && !turning {
-            body.into_any_element()
+            div()
+                .w(dimensions.width)
+                .h(dimensions.height)
+                .rounded(px(17.))
+                .shadow(super::card::card_shadow(true))
+                .child(body)
+                .into_any_element()
         } else {
             let front = game
                 .as_ref()

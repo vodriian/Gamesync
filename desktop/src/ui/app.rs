@@ -1,3 +1,4 @@
+mod display;
 mod loading;
 mod windows;
 // A shared library model with three presentations and a focused game card.
@@ -54,17 +55,24 @@ pub struct GameSyncApp {
     loading: bool,
     refreshing: bool,
     notice: String,
+    display_save: Option<Task<()>>,
+    display_pending: usize,
     last_issues: Vec<String>,
 }
 
 impl GameSyncApp {
     pub fn new(
-        library: Library,
+        mut library: Library,
         initial_path: Option<PathBuf>,
         initial_theme: gamesync_desktop::appearance::Appearance,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
+        if let Ok(settings) = crate::settings::load() {
+            library.display = settings.library_display;
+            library.recompute();
+        }
+        library.show_hidden_games = crate::settings::load().is_ok_and(|s| s.show_hidden_games);
         cx.set_global(super::motion::MotionPreferences {
             reduced: crate::settings::load().is_ok_and(|s| s.reduce_motion),
         });
@@ -103,6 +111,11 @@ impl GameSyncApp {
             this.detail.update(cx, |detail, cx| detail.present(cx));
             cx.notify();
         });
+        let bulk_subscription =
+            cx.subscribe(&grid, |this, _, event: &super::grid::BulkSaved, cx| {
+                this.sidebar
+                    .update(cx, |sidebar, cx| sidebar.show_toast(&event.0, cx));
+            });
         let library_subscription = cx.observe(&library, |_, _, cx| cx.notify());
         window.focus(&grid.focus_handle(cx));
         let mut app = Self {
@@ -127,6 +140,7 @@ impl GameSyncApp {
             appearance_revision: Default::default(),
             _subscriptions: vec![
                 grid_subscription,
+                bulk_subscription,
                 search_subscription,
                 library_subscription,
                 editor_subscription,
@@ -141,6 +155,8 @@ impl GameSyncApp {
             loading: false,
             refreshing: false,
             notice: String::new(),
+            display_save: None,
+            display_pending: 0,
             last_issues: Vec::new(),
         };
         if let Some(path) = initial_path {
@@ -166,10 +182,22 @@ impl GameSyncApp {
     }
 
     pub fn can_close(&mut self, cx: &mut Context<Self>) -> bool {
-        if self
-            .collections_view
-            .as_ref()
-            .is_some_and(|v| v.read(cx).busy())
+        if self.display_pending > 0 {
+            self.notice = "Wait for display settings to save.".into();
+            cx.notify();
+            return false;
+        }
+        if self.grid.read(cx).busy() {
+            self.notice =
+                "Wait for game changes to save, or close the note, before closing.".into();
+            cx.notify();
+            return false;
+        }
+        if self.sidebar.read(cx).busy()
+            || self
+                .collections_view
+                .as_ref()
+                .is_some_and(|v| v.read(cx).busy())
         {
             self.notice = "Wait for the collection save to finish.".into();
             cx.notify();
@@ -264,6 +292,7 @@ impl GameSyncApp {
                         }),
                     ),
             )
+            .child(self.display_control(cx))
             .child(
                 h_flex()
                     .w(px(220.))
@@ -335,7 +364,16 @@ impl Render for GameSyncApp {
                 window.focus(&this.search.focus_handle(cx));
             }))
             .on_action(
-                cx.listener(|this, _: &crate::ManageCollections, _, cx| this.open_collections(cx)),
+                cx.listener(|this, _: &crate::ManageCollections, window, cx| {
+                    if this.review_folder.is_some() || this.library.read(cx).write_issue.is_some() {
+                        this.open_collections(cx);
+                    } else {
+                        this.sidebar_shown = true;
+                        this.sidebar_motion.set(1., cx);
+                        this.sidebar
+                            .update(cx, |sidebar, cx| sidebar.begin_name(None, window, cx));
+                    }
+                }),
             )
             .size_full()
             .bg(super::card::tabletop(cx))
@@ -352,21 +390,6 @@ impl Render for GameSyncApp {
                     .border_b_1()
                     .border_color(cx.theme().border.opacity(0.25))
                     .child(self.toolbar(cx))
-                    .when(self.view == LibraryView::Table, |header| {
-                        header.child(
-                            h_flex()
-                                .h(px(30.))
-                                .px_5()
-                                .gap_4()
-                                .text_xs()
-                                .text_color(cx.theme().muted_foreground)
-                                .child(div().w(px(42.)))
-                                .child(div().flex_1().child("Title"))
-                                .child(div().w(px(140.)).child("Status"))
-                                .child(div().w(px(100.)).child("Rating"))
-                                .child(div().w(px(112.)).child("Playtime")),
-                        )
-                    })
                     .when(!self.notice.is_empty(), |header| {
                         header.child(
                             div()
@@ -416,7 +439,16 @@ impl Render for GameSyncApp {
             .size_full()
             .bg(cx.theme().sidebar)
             .on_action(
-                cx.listener(|this, _: &crate::ManageCollections, _, cx| this.open_collections(cx)),
+                cx.listener(|this, _: &crate::ManageCollections, window, cx| {
+                    if this.review_folder.is_some() || this.library.read(cx).write_issue.is_some() {
+                        this.open_collections(cx);
+                    } else {
+                        this.sidebar_shown = true;
+                        this.sidebar_motion.set(1., cx);
+                        this.sidebar
+                            .update(cx, |sidebar, cx| sidebar.begin_name(None, window, cx));
+                    }
+                }),
             )
             .when(sidebar_progress > 0., |shell| {
                 shell.child(

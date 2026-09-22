@@ -56,6 +56,14 @@ instant hover feedback. Game records replace asset thumbnails; selection emits
 an event so the focused game's existing pending-save guard remains authoritative.
 Eagle itself was not changed.
 
+## Trading-card varnish reference
+
+The September 22 clear-coat refinement was informed by the visual breakdown in
+[sixrobin/TradingCardShader](https://github.com/sixrobin/TradingCardShader).
+The native Metal implementation is original; no Unity code or artwork was copied.
+This pass adds angle-driven varnish and edge reflection. The reference's separated
+character layers, parallax backgrounds, wind and particles are not implemented.
+
 ## Baseline palettes
 
 The native appearance catalog derives from obsidian-baseline revision

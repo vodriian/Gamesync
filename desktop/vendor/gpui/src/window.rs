@@ -3243,6 +3243,7 @@ impl Window {
                 scene: local,
                 pose,
                 radius: f32::from(radius) * self.scale_factor(),
+                scale_factor: self.scale_factor(),
             })),
         });
     }

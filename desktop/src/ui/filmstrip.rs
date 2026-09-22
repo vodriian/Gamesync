@@ -96,18 +96,7 @@ impl Render for Filmstrip {
                                             .h(CELL)
                                             .flex_shrink_0()
                                             .overflow_hidden()
-                                            .rounded(cx.theme().radius)
-                                            .border_2()
-                                            .border_color(if active {
-                                                cx.theme().primary
-                                            } else {
-                                                cx.theme().border
-                                            })
-                                            .when(!active, |cell| {
-                                                cell.opacity(0.55).hover(|s| {
-                                                    s.border_color(cx.theme().primary.opacity(0.55))
-                                                })
-                                            })
+                                            .rounded(px(4.))
                                             .cursor_pointer()
                                             .child(
                                                 img(game
@@ -115,10 +104,32 @@ impl Render for Filmstrip {
                                                     .map(gpui::ImageSource::from)
                                                     .unwrap_or_else(|| game.cover.into()))
                                                 .size_full()
+                                                .rounded(px(4.))
+                                                .when(!active, |image| image.opacity(0.55))
                                                 .object_fit(ObjectFit::Cover)
                                                 .with_fallback(|| {
                                                     div().size_full().child("✦").into_any_element()
                                                 }),
+                                            )
+                                            .child(
+                                                div()
+                                                    .id("thumbnail-highlight")
+                                                    .absolute()
+                                                    .inset_0()
+                                                    .rounded(px(4.))
+                                                    .border_4()
+                                                    .border_color(if active {
+                                                        cx.theme().ring
+                                                    } else {
+                                                        cx.theme().transparent
+                                                    })
+                                                    .when(!active, |outline| {
+                                                        outline.hover(|style| {
+                                                            style.border_color(
+                                                                cx.theme().ring.opacity(0.5),
+                                                            )
+                                                        })
+                                                    }),
                                             )
                                             .on_click(cx.listener(move |_, _, _, cx| {
                                                 cx.emit(SelectGame(slot))

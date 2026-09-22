@@ -10,7 +10,7 @@ vertex CardVertex card_vertex(uint vertex_id [[vertex_id]], constant CardUniform
     float yaw = u.viewport_pose.w - u.shape.y * M_PI_F;
     float2 local = (uv - .5) * dimensions;
     float z = 0.;
-    if (u.shape.w == 2.) { local *= (dimensions + 160.) / dimensions; uv = local / dimensions + .5; }
+    if (u.shape.w == 2.) { local *= (dimensions + 120. * u.texture_region.w) / dimensions; uv = local / dimensions + .5; }
     if (u.shape.w == 1.) {
         // A thin physical edge remains visible when the face is edge-on.
         local.x = (sin(yaw) >= 0. ? 1. : -1.) * (dimensions.x / 2. - .8);
@@ -22,7 +22,7 @@ vertex CardVertex card_vertex(uint vertex_id [[vertex_id]], constant CardUniform
     float distance = max(dimensions.x, dimensions.y) * 3.;
     float w = 1. - p.z / distance;
     float2 center = u.rect.xy + dimensions * .5;
-    if (u.shape.w == 2.) { center += float2(-sin(yaw) * 9., 18. + abs(sin(pitch)) * 9.); }
+    if (u.shape.w == 2.) { center += float2(0., 20. * u.texture_region.w); }
     float2 screen = center + p.xy / w;
     float2 ndc = screen / u.viewport_pose.xy * 2. - 1.;
     return {float4(ndc.x * w, -ndc.y * w, 0., w), uv};
@@ -36,7 +36,18 @@ fragment float4 card_fragment(CardVertex in [[stage_in]], constant CardUniforms 
     float yaw = u.viewport_pose.w - u.shape.y * M_PI_F;
     if (cos(yaw) * cos(u.viewport_pose.z) < 0.) { discard_fragment(); }
     float d = card_sdf(in.uv, u.rect.zw, u.shape.x);
-    if (u.shape.w == 2.) { float a = .10 * exp(-max(d,0.) / 28.) * (1. - smoothstep(0.,80.,d)); return float4(float3(.025)*a,a); }
+    if (u.shape.w == 2.) {
+        // Figma hover shadow: y 20, blur 40 (sigma 20), spread -20, black 27%.
+        float scale = u.texture_region.w;
+        float spread = 20. * scale;
+        float2 dimensions = max(u.rect.zw - 2. * spread, float2(1.));
+        float2 shadow_uv = ((in.uv - .5) * u.rect.zw) / dimensions + .5;
+        float sd = card_sdf(shadow_uv, dimensions, max(u.shape.x - spread, 0.));
+        float x = sd / (20. * scale);
+        float cdf = .5 * (1. - tanh(.79788456 * (x + .044715 * x*x*x)));
+        float a = .27 * cdf;
+        return float4(0., 0., 0., a);
+    }
     if (u.shape.w == 1.) { float a = .9; return float4(float3(.38,.40,.43)*a,a); }
     constexpr sampler s(mag_filter::linear, min_filter::linear, address::clamp_to_edge);
     float4 color = face.sample(s, in.uv * u.texture_region.xy);
@@ -58,9 +69,26 @@ fragment float4 card_fragment(CardVertex in [[stage_in]], constant CardUniforms 
     float aa = max(fwidth(d), .7);
     color *= 1. - smoothstep(-aa * .5, aa * .5, d);
     if (u.shape.z > .5 && u.shape.y < .5) {
-        float light = .97 + .03 * cos(yaw);
-        float band = exp(-pow((in.uv.x + in.uv.y * .34 - .55 - sin(yaw) * .5 - sin(u.viewport_pose.z) * .2) * 3.5, 2.));
-        color.rgb = color.rgb * light + float3(.045,.047,.05) * band * color.a;
+        // A clear coat follows the card angle. This is evaluated over cached
+        // pixels, so pointer motion never re-rasterizes the native face.
+        float pitch = u.viewport_pose.z;
+        float2 uv = in.uv;
+        float sweep = uv.x + uv.y * .32 - .66
+            - sin(yaw) * 1.65 - sin(pitch) * .85;
+        float broad = exp(-pow(sweep / .30, 2.));
+        float glint = exp(-pow(sweep / .055, 2.));
+        float angle = clamp(length(float2(sin(yaw), sin(pitch))) * 3., 0., 1.);
+        // Fade above the printed title and footer; concentrate on the cover.
+        float artwork = smoothstep(.025, .07, uv.y)
+            * (1. - smoothstep(.60, .83, uv.y))
+            * smoothstep(.02, .06, uv.x)
+            * (1. - smoothstep(.94, .98, uv.x));
+        float rim = (1. - smoothstep(0., 7. * u.texture_region.w, -d))
+            * (.4 + .6 * angle);
+        float reflection = artwork * (broad * .10 + glint * (.07 + .12 * angle));
+        float3 coat = float3(.92, .96, 1.);
+        color.rgb = color.rgb * (.98 + .02 * cos(yaw))
+            + (coat * reflection + float3(.08) * rim) * color.a;
     }
     return color;
 }

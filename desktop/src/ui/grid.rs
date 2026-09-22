@@ -15,7 +15,10 @@ use gpui_component::{
     scroll::ScrollableElement as _,
     v_flex, v_virtual_list, ActiveTheme as _, StyledExt as _, VirtualListScrollHandle,
 };
+use gpui_component::{menu::ContextMenuExt as _, Disableable as _};
 use std::{rc::Rc, sync::Arc};
+mod actions;
+mod bulk;
 
 const GAP: Pixels = px(24.);
 // Keep spacing inside the full-width scroll mask so shadows can use the gutter.
@@ -28,13 +31,55 @@ pub enum LibraryView {
     Grid,
     Table,
 }
+/// The source library identity prevents drops into a different loaded store.
+#[derive(Clone)]
+pub(super) struct DraggedGame {
+    pub id: uuid::Uuid,
+    pub library_id: Option<uuid::Uuid>,
+    title: String,
+    offset: gpui::Point<Pixels>,
+}
+impl Render for DraggedGame {
+    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        h_flex()
+            .ml(self.offset.x + px(12.))
+            .mt(self.offset.y + px(12.))
+            .px_3()
+            .py_2()
+            .gap_2()
+            .rounded_lg()
+            .shadow_lg()
+            .bg(cx.theme().popover)
+            .text_color(cx.theme().popover_foreground)
+            .child(gpui_component::Icon::new(gpui_component::IconName::Plus).size_4())
+            .child(self.title.clone())
+    }
+}
+fn drag_game(data: &GameCell) -> DraggedGame {
+    DraggedGame {
+        id: data.game.id,
+        library_id: data.library_id,
+        title: data.game.title.clone(),
+        offset: gpui::Point::default(),
+    }
+}
+
+pub struct BulkSaved(pub String);
+impl gpui::EventEmitter<BulkSaved> for GameGrid {}
+
 pub struct OpenGame;
 impl gpui::EventEmitter<OpenGame> for GameGrid {}
 
 pub struct GameGrid {
+    selection: std::collections::BTreeSet<uuid::Uuid>,
+    note: Option<actions::NoteDraft>,
+    saving: bool,
+    feedback: String,
+    restore_focus: bool,
     view: LibraryView,
     hovered: Option<uuid::Uuid>,
     preserve_viewport: bool,
+    preserve_next_library_update: bool,
     hover_bounds: Bounds<Pixels>,
     pitch: super::card_motion::Spring,
     yaw: super::card_motion::Spring,
@@ -48,6 +93,8 @@ pub struct GameGrid {
     minimum: Pixels,
     last_visible: Arc<Vec<usize>>,
     row_sizes: Rc<Vec<Size<Pixels>>>,
+    groups: Vec<(String, Vec<usize>)>,
+    rows: Vec<(Option<String>, Vec<usize>)>,
 }
 
 impl Focusable for GameGrid {
@@ -63,12 +110,17 @@ impl GameGrid {
         cx: &mut Context<Self>,
     ) -> Self {
         cx.observe(&library, |this, library, cx| {
-            let visible = library.read(cx).visible.clone();
-            if *this.last_visible != *visible {
+            let lib = library.read(cx);
+            let visible = lib.visible.clone();
+            let preserve_next_update = std::mem::take(&mut this.preserve_next_library_update);
+            this.selection
+                .retain(|id| visible.iter().any(|&i| lib.games[i].id == *id));
+            if *this.last_visible != *visible || this.groups != lib.groups {
+                this.groups = lib.groups.clone();
                 this.hovered = None;
                 this.last_visible = visible;
                 this.rebuild_rows();
-                if !this.preserve_viewport {
+                if !this.preserve_viewport && !preserve_next_update {
                     this.scroll
                         .base_handle()
                         .set_offset(gpui::point(px(0.), px(0.)));
@@ -78,14 +130,20 @@ impl GameGrid {
         })
         .detach();
         Self {
+            selection: Default::default(),
+            note: None,
+            saving: false,
+            feedback: String::new(),
+            restore_focus: false,
             view: LibraryView::Cards,
             hovered: None,
             preserve_viewport: false,
+            preserve_next_library_update: false,
             hover_bounds: Bounds::default(),
             pitch: super::card_motion::Spring::new(0.),
             yaw: super::card_motion::Spring::new(0.),
             last_visible: library.read(cx).visible.clone(),
-            library,
+            library: library.clone(),
             cache,
             focus: cx.focus_handle(),
             scroll: VirtualListScrollHandle::new(),
@@ -94,6 +152,8 @@ impl GameGrid {
             cell: px(150.),
             minimum: px(260.),
             row_sizes: Rc::new(Vec::new()),
+            groups: library.read(cx).groups.clone(),
+            rows: Vec::new(),
         }
     }
 
@@ -104,6 +164,7 @@ impl GameGrid {
     pub fn set_view(&mut self, view: LibraryView, cx: &mut Context<Self>) {
         self.hovered = None;
         self.view = view;
+        self.selection.clear();
         self.minimum = px(if view == LibraryView::Cards {
             260.
         } else {
@@ -115,23 +176,51 @@ impl GameGrid {
             Some(self.library.read(cx).games[i].id) == self.library.read(cx).selected
         }) {
             self.scroll
-                .scroll_to_item(slot / self.columns, ScrollStrategy::Top);
+                .scroll_to_item(self.row_for_slot(slot), ScrollStrategy::Top);
         }
         cx.notify();
     }
 
     fn rebuild_rows(&mut self) {
-        self.row_sizes = Rc::new(vec![
-            size(
-                self.width,
-                match self.view {
-                    LibraryView::Cards => self.cell * 1.46 + GAP,
-                    LibraryView::Grid => self.cell * 1.5 + CAPTION + GAP,
-                    LibraryView::Table => px(66.),
-                }
-            );
-            self.last_visible.len().div_ceil(self.columns)
-        ]);
+        self.rows.clear();
+        if self.groups.is_empty() {
+            let slots: Vec<_> = (0..self.last_visible.len()).collect();
+            self.rows
+                .extend(slots.chunks(self.columns).map(|s| (None, s.to_vec())));
+        } else {
+            for (label, slots) in &self.groups {
+                self.rows
+                    .push((Some(format!("{} · {}", label, slots.len())), Vec::new()));
+                self.rows
+                    .extend(slots.chunks(self.columns).map(|s| (None, s.to_vec())));
+            }
+        }
+        self.row_sizes = Rc::new(
+            self.rows
+                .iter()
+                .map(|(header, _)| {
+                    size(
+                        self.width,
+                        if header.is_some() {
+                            px(44.)
+                        } else {
+                            match self.view {
+                                LibraryView::Cards => self.cell * 1.46 + GAP,
+                                LibraryView::Grid => self.cell * 1.5 + CAPTION + GAP,
+                                LibraryView::Table => px(66.),
+                            }
+                        },
+                    )
+                })
+                .collect(),
+        );
+    }
+
+    fn row_for_slot(&self, slot: usize) -> usize {
+        self.rows
+            .iter()
+            .position(|(_, slots)| slots.contains(&slot))
+            .unwrap_or(0)
     }
 
     fn measure(&mut self, width: Pixels) -> bool {
@@ -167,18 +256,29 @@ impl GameGrid {
     }
 
     fn navigate(&mut self, delta: isize, cx: &mut Context<Self>) {
-        let slot = self.library.update(cx, |lib, cx| {
-            let slot = lib.step_selection(delta);
-            cx.notify();
-            slot
-        });
-        if let Some(slot) = slot {
-            // In gpui-component 0.5.1, Top reveals a row only when it is outside
-            // the viewport. Center moves even visible rows and causes jumps.
-            self.scroll
-                .scroll_to_item(slot / self.columns, ScrollStrategy::Top);
+        let selected = self.library.read(cx).selected_slot();
+        let mut ordered: Vec<_> = self
+            .rows
+            .iter()
+            .flat_map(|(_, slots)| slots.iter().copied())
+            .collect();
+        // A multi-collection game is one keyboard stop, like bulk selection.
+        let mut seen = std::collections::HashSet::new();
+        ordered.retain(|slot| seen.insert(*slot));
+        if ordered.is_empty() {
+            return;
         }
+        let position = selected.and_then(|slot| ordered.iter().position(|s| *s == slot));
+        let next = position.map_or(0, |p| p.saturating_add_signed(delta).min(ordered.len() - 1));
+        let slot = ordered[next];
+        self.library.update(cx, |lib, cx| {
+            lib.select_slot(slot);
+            cx.notify();
+        });
+        self.scroll
+            .scroll_to_item(self.row_for_slot(slot), ScrollStrategy::Top);
     }
+
     fn card_cell(
         &mut self,
         data: &GameCell,
@@ -267,7 +367,19 @@ impl GameGrid {
                     cx.notify();
                 }),
             )
+            .on_drag(drag_game(data), |game, offset, _, cx| {
+                cx.new(|_| {
+                    let mut preview = game.clone();
+                    preview.offset = offset;
+                    preview
+                })
+            })
             .on_click(cx.listener(move |this, _, window, cx| this.open(slot, window, cx)))
+            .context_menu({
+                let grid = cx.entity();
+                let id = data.game.id;
+                move |menu, window, cx| actions::menu(grid.clone(), id, menu, window, cx)
+            })
             .into_any_element()
     }
     fn render_grid(
@@ -275,7 +387,6 @@ impl GameGrid {
         library: &Entity<Library>,
         cx: &mut Context<Self>,
     ) -> gpui::AnyElement {
-        let columns = self.columns;
         let cell_size = self.cell;
 
         let visible = library.read(cx).visible.clone();
@@ -299,26 +410,51 @@ impl GameGrid {
                                 // the shared model in one short borrow; building
                                 // elements needs `cx` mutably for the click
                                 // listeners.
-                                let rows_data: Vec<Vec<GameCell>> = {
+                                let rows_data: Vec<(Option<String>, Vec<GameCell>)> = {
                                     let library = library.read(cx);
                                     rows.clone()
                                         .map(|row| {
-                                            let start = row * columns;
-                                            let end = (start + columns).min(visible.len());
-                                            (start..end)
-                                                .map(|slot| {
-                                                    let idx = visible[slot];
-                                                    GameCell::new(slot, &library.games[idx])
-                                                })
-                                                .collect()
+                                            let (header, slots) = &this.rows[row];
+                                            (
+                                                header.clone(),
+                                                slots
+                                                    .iter()
+                                                    .copied()
+                                                    .map(|slot| {
+                                                        let idx = visible[slot];
+                                                        GameCell::new(
+                                                            slot,
+                                                            &library.games[idx],
+                                                            library
+                                                                .source
+                                                                .as_ref()
+                                                                .map(|(_, m)| m.library_id),
+                                                        )
+                                                    })
+                                                    .collect(),
+                                            )
                                         })
                                         .collect()
                                 };
 
                                 rows_data
                                     .into_iter()
-                                    .map(|cells| {
+                                    .enumerate()
+                                    .map(|(offset, (header, cells))| {
+                                        if let Some(label) = header {
+                                            return div()
+                                                .h(px(44.))
+                                                .px(CONTENT_INSET)
+                                                .flex()
+                                                .items_center()
+                                                .text_sm()
+                                                .font_medium()
+                                                .text_color(cx.theme().muted_foreground)
+                                                .child(label)
+                                                .into_any_element();
+                                        }
                                         h_flex()
+                                            .id(("game-row", rows.start + offset))
                                             .px(CONTENT_INSET)
                                             .gap(GAP)
                                             .pb(if this.view == LibraryView::Table {
@@ -329,14 +465,20 @@ impl GameGrid {
                                             .children(cells.into_iter().map(|data| {
                                                 let active = false;
                                                 if this.view == LibraryView::Table {
-                                                    return table_row(&data, cell_size, active, cx);
+                                                    return table_row(
+                                                        &data,
+                                                        cell_size,
+                                                        this.selection.contains(&data.game.id),
+                                                        this.saving,
+                                                        cx,
+                                                    );
                                                 }
                                                 if this.view == LibraryView::Cards {
                                                     return this.card_cell(
                                                         &data, cell_size, active, window, cx,
                                                     );
                                                 }
-                                                cell(&data, cell_size, active, 1., cx)
+                                                cell(&data, cell_size, active, cx)
                                             }))
                                             .into_any_element()
                                     })
@@ -360,7 +502,11 @@ impl GameGrid {
 }
 
 impl Render for GameGrid {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        if self.restore_focus {
+            self.restore_focus = false;
+            window.focus(&self.focus);
+        }
         let entity = cx.entity();
         let measure = canvas(
             move |bounds: Bounds<Pixels>, _, cx| {
@@ -382,6 +528,15 @@ impl Render for GameGrid {
             .relative()
             .size_full()
             .on_key_down(cx.listener(|this, event: &gpui::KeyDownEvent, _, cx| {
+                if this.note.is_some() {
+                    cx.propagate();
+                    return;
+                }
+                if event.keystroke.key == "escape" && !this.saving {
+                    this.selection.clear();
+                    cx.notify();
+                    return;
+                }
                 if event.keystroke.key == "enter" || event.keystroke.key == "space" {
                     if this.library.read(cx).selected.is_some() {
                         cx.emit(OpenGame);
@@ -419,7 +574,7 @@ impl Render for GameGrid {
                             .child(if library.read(cx).games.is_empty() {
                                 "Connect Steam in Settings to sync your games."
                             } else {
-                                "Try another search or status."
+                                "Try another search or clear the filters."
                             }),
                     )
                     .when(library.read(cx).games.is_empty(), |column| {
@@ -438,6 +593,29 @@ impl Render for GameGrid {
             } else {
                 self.render_grid(&library, cx)
             })
+            .when(self.view == LibraryView::Table, |view| {
+                view.child(self.table_header(cx))
+            })
+            .when(
+                self.view == LibraryView::Table && !self.selection.is_empty(),
+                |view| view.child(self.bulk_panel(cx)),
+            )
+            .when(self.note.is_some(), |view| view.child(self.note_dialog(cx)))
+            .when(self.note.is_none() && !self.feedback.is_empty(), |view| {
+                view.child(
+                    div()
+                        .absolute()
+                        .bottom(px(if self.selection.is_empty() { 16. } else { 70. }))
+                        .left_4()
+                        .right_4()
+                        .p_3()
+                        .rounded_lg()
+                        .bg(cx.theme().popover)
+                        .text_color(cx.theme().popover_foreground)
+                        .text_sm()
+                        .child(self.feedback.clone()),
+                )
+            })
     }
 }
 
@@ -445,12 +623,14 @@ impl Render for GameGrid {
 struct GameCell {
     slot: usize,
     game: Game,
+    library_id: Option<uuid::Uuid>,
 }
 impl GameCell {
-    fn new(slot: usize, game: &Game) -> Self {
+    fn new(slot: usize, game: &Game, library_id: Option<uuid::Uuid>) -> Self {
         Self {
             slot,
             game: game.clone(),
+            library_id,
         }
     }
 }
@@ -459,7 +639,6 @@ fn cell(
     data: &GameCell,
     width: Pixels,
     selected: bool,
-    scale: f32,
     cx: &mut Context<GameGrid>,
 ) -> gpui::AnyElement {
     let slot = data.slot;
@@ -470,6 +649,13 @@ fn cell(
         .flex_shrink_0()
         .gap_1()
         .cursor_pointer()
+        .on_drag(drag_game(data), |game, offset, _, cx| {
+            cx.new(|_| {
+                let mut preview = game.clone();
+                preview.offset = offset;
+                preview
+            })
+        })
         .on_click(cx.listener(move |this, _, window, cx| {
             window.focus(&this.focus);
             this.open(slot, window, cx);
@@ -477,22 +663,14 @@ fn cell(
         .child(
             div()
                 .id("cover")
+                .relative()
                 .flex()
                 .items_center()
                 .justify_center()
                 .w_full()
                 .h(width * 1.5)
                 .overflow_hidden()
-                .rounded(cx.theme().radius)
-                .border_2()
-                .border_color(if selected {
-                    cx.theme().primary
-                } else {
-                    cx.theme().transparent
-                })
-                .hover(|style| style.border_color(cx.theme().primary.opacity(0.55)))
-                .active(|style| style.border_color(cx.theme().primary))
-                .bg(cx.theme().secondary)
+                .rounded(px(8.))
                 .child(
                     img(data
                         .game
@@ -500,8 +678,8 @@ fn cell(
                         .clone()
                         .map(gpui::ImageSource::from)
                         .unwrap_or_else(|| data.game.cover.clone().into()))
-                    .w(width * scale)
-                    .h(width * 1.5 * scale)
+                    .size_full()
+                    .rounded(px(8.))
                     .flex_shrink_0()
                     .object_fit(ObjectFit::Cover)
                     .with_fallback(move || {
@@ -515,6 +693,21 @@ fn cell(
                             .child(div().text_xs().child("Cover unavailable"))
                             .into_any_element()
                     }),
+                )
+                .child(
+                    div()
+                        .id("cover-highlight")
+                        .absolute()
+                        .inset_0()
+                        .rounded(px(8.))
+                        .border_4()
+                        .border_color(if selected {
+                            cx.theme().ring
+                        } else {
+                            cx.theme().transparent
+                        })
+                        .hover(|style| style.border_color(cx.theme().ring.opacity(0.5)))
+                        .active(|style| style.border_color(cx.theme().ring.opacity(0.5))),
                 ),
         )
         .child(
@@ -541,6 +734,11 @@ fn cell(
                         })),
                 ),
         )
+        .context_menu({
+            let grid = cx.entity();
+            let id = data.game.id;
+            move |menu, window, cx| actions::menu(grid.clone(), id, menu, window, cx)
+        })
         .into_any_element()
 }
 
@@ -548,9 +746,11 @@ fn table_row(
     data: &GameCell,
     width: Pixels,
     selected: bool,
+    saving: bool,
     cx: &mut Context<GameGrid>,
 ) -> gpui::AnyElement {
     let slot = data.slot;
+    let id = data.game.id;
     h_flex()
         .id(slot)
         .w(width)
@@ -560,13 +760,44 @@ fn table_row(
         .border_b_1()
         .border_color(cx.theme().border)
         .bg(if selected {
-            cx.theme().secondary
+            cx.theme().selection
         } else {
             cx.theme().background
         })
-        .hover(|s| s.bg(cx.theme().secondary))
+        .hover(|s| {
+            s.bg(if selected {
+                cx.theme().selection
+            } else {
+                cx.theme().secondary
+            })
+        })
         .cursor_pointer()
+        .on_drag(drag_game(data), |game, offset, _, cx| {
+            cx.new(|_| {
+                let mut preview = game.clone();
+                preview.offset = offset;
+                preview
+            })
+        })
         .on_click(cx.listener(move |this, _, window, cx| this.open(slot, window, cx)))
+        .child(
+            gpui_component::checkbox::Checkbox::new(gpui::SharedString::from(format!(
+                "select-game-{id}"
+            )))
+            .checked(selected)
+            .disabled(saving)
+            .on_click(cx.listener(move |this, checked, window, cx| {
+                cx.stop_propagation();
+                if *checked {
+                    this.selection.insert(id);
+                } else {
+                    this.selection.remove(&id);
+                }
+                window.focus(&this.focus);
+                this.feedback.clear();
+                cx.notify();
+            })),
+        )
         .child(
             img(data
                 .game
@@ -602,5 +833,10 @@ fn table_row(
                 .text_sm()
                 .child(format!("{:.1} h", data.game.playtime_minutes as f32 / 60.)),
         )
+        .context_menu({
+            let grid = cx.entity();
+            let id = data.game.id;
+            move |menu, window, cx| actions::menu(grid.clone(), id, menu, window, cx)
+        })
         .into_any_element()
 }

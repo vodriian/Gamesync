@@ -68,6 +68,8 @@ pub struct PersonalData {
     /// Half-star units, 1 through 10. None means unrated.
     pub rating: Option<u8>,
     pub favorite: bool,
+    #[serde(default)]
+    pub hidden: bool,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub collections: Vec<Uuid>,
     pub tags: Vec<String>,
@@ -86,6 +88,7 @@ impl Default for PersonalData {
             status: "backlog".into(),
             rating: None,
             favorite: false,
+            hidden: false,
             collections: Vec::new(),
             tags: Vec::new(),
             notes: String::new(),
@@ -142,6 +145,7 @@ impl GameRevision {
                 "status",
                 "rating",
                 "favorite",
+                "hidden",
                 "collections",
                 "tags",
                 "notes",

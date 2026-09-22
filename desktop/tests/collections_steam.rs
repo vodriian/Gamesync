@@ -117,6 +117,7 @@ fn steam_import_is_idempotent_and_preserves_archived_games_and_manual_changes() 
     let mut personal = game.game.personal.clone();
     personal.rating = Some(8);
     personal.notes = "Keep".into();
+    personal.hidden = true;
     personal.status = "completed".into();
     let saved = library
         .edit_game_personal(&manifest, game.game_id, game.revision_id, personal.clone())
@@ -196,4 +197,195 @@ fn collection_conflicts_need_all_heads_and_keep_membership_history() {
     let final_state = library.inspect().unwrap();
     assert!(final_state.revisions.contains_key(&remote.revision_id));
     assert!(final_state.current().is_some());
+}
+
+#[test]
+fn adding_collection_membership_preserves_game_data_and_rejects_stale_writes() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().join("games");
+    let library = LibraryStore::create(&root, "Games").unwrap();
+    let base = library.inspect().unwrap().current().unwrap().clone();
+    let first = collection();
+    let mut second = collection();
+    second.name = "Weekend".into();
+    let mut definitions = base.definitions.clone();
+    definitions.collections = vec![first.clone(), second.clone()];
+    let manifest = library.edit(base.revision_id, definitions).unwrap();
+    let mut data = GameData::new("Test game");
+    data.personal.collections.push(first.id);
+    data.personal.notes = "Keep my notes".into();
+    data.personal.favorite = true;
+    data.personal.rating = Some(9);
+    let store = RecordStore::open(&root).unwrap();
+    let game = store.create(data).unwrap();
+    let mut personal = game.game.personal.clone();
+    personal.collections.push(second.id);
+    let saved = library
+        .edit_game_personal(&manifest, game.game_id, game.revision_id, personal.clone())
+        .unwrap();
+    let mut expected = game.game.clone();
+    expected.personal = personal.clone();
+    assert_eq!(saved.game, expected);
+    assert_eq!(saved.game.personal.collections, vec![first.id, second.id]);
+    assert!(library
+        .edit_game_personal(&manifest, game.game_id, game.revision_id, personal.clone())
+        .is_err());
+    let mut definitions = manifest.definitions.clone();
+    definitions.collections[1].name = "Renamed elsewhere".into();
+    library.edit(manifest.revision_id, definitions).unwrap();
+    assert!(library
+        .edit_game_personal(&manifest, saved.game_id, saved.revision_id, personal)
+        .is_err());
+    assert_eq!(
+        store.inspect(game.game_id).unwrap().current().unwrap(),
+        &saved
+    );
+}
+
+#[test]
+fn hidden_state_defaults_for_old_records_and_survives_reopen() {
+    let temp = tempfile::tempdir().unwrap();
+    let library = LibraryStore::create(temp.path().join("games"), "Games").unwrap();
+    let manifest = library.inspect().unwrap().current().unwrap().clone();
+    let store = RecordStore::open(library.root()).unwrap();
+    let game = store.create(GameData::new("Hidden example")).unwrap();
+    let mut old = serde_json::to_value(&game).unwrap();
+    old["game"]["personal"]
+        .as_object_mut()
+        .unwrap()
+        .remove("hidden");
+    let old: gamesync_desktop::records::GameRevision = serde_json::from_value(old).unwrap();
+    assert!(!old.game.personal.hidden);
+    let mut personal = game.game.personal.clone();
+    personal.hidden = true;
+    let saved = library
+        .edit_game_personal(&manifest, game.game_id, game.revision_id, personal)
+        .unwrap();
+    assert!(!saved.deleted);
+    let reopened = RecordStore::open(library.root())
+        .unwrap()
+        .inspect(game.game_id)
+        .unwrap()
+        .current()
+        .unwrap()
+        .clone();
+    assert_eq!(reopened, saved);
+    let mut personal = saved.game.personal.clone();
+    personal.hidden = false;
+    let restored = library
+        .edit_game_personal(&manifest, saved.game_id, saved.revision_id, personal)
+        .unwrap();
+    assert_eq!(restored.game, game.game);
+}
+
+#[test]
+fn bulk_edits_preserve_unrelated_fields_and_report_stale_games() {
+    use gamesync_desktop::bulk::{apply, Change};
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().join("games");
+    let library = LibraryStore::create(&root, "Games").unwrap();
+    let manifest = library.inspect().unwrap().current().unwrap().clone();
+    let store = RecordStore::open(&root).unwrap();
+    let mut data = GameData::new("Selected");
+    data.personal.notes = "Keep this note".into();
+    data.personal.tags = vec!["cozy".into()];
+    let first = store.create(data).unwrap();
+    let stale = store.create(GameData::new("Changed elsewhere")).unwrap();
+    let untouched = store.create(GameData::new("Not selected")).unwrap();
+    let mut personal = stale.game.personal.clone();
+    personal.notes = "New note from another window".into();
+    let newer = library
+        .edit_game_personal(&manifest, stale.game_id, stale.revision_id, personal)
+        .unwrap();
+    let outcome = apply(
+        &library,
+        &manifest,
+        vec![first.clone(), stale.clone()],
+        &Change::Favorite(true),
+    );
+    assert_eq!(outcome.saved.len(), 1);
+    assert_eq!(outcome.failed.len(), 1);
+    assert_eq!(outcome.failed[0].0, stale.game_id);
+    let mut expected = first.game.clone();
+    expected.personal.favorite = true;
+    assert_eq!(outcome.saved[0].game, expected);
+    assert_eq!(
+        store.inspect(stale.game_id).unwrap().current().unwrap(),
+        &newer
+    );
+    assert_eq!(
+        store.inspect(untouched.game_id).unwrap().current().unwrap(),
+        &untouched
+    );
+    let hidden = apply(&library, &manifest, outcome.saved, &Change::Hidden(true));
+    assert!(hidden.failed.is_empty());
+    assert!(hidden.saved[0].game.personal.hidden);
+    assert!(hidden.saved[0].game.personal.favorite);
+    let restored = apply(&library, &manifest, hidden.saved, &Change::Hidden(false));
+    assert_eq!(restored.saved[0].game, expected);
+}
+
+#[test]
+fn bulk_collection_add_remove_and_status_use_current_definitions() {
+    use gamesync_desktop::bulk::{apply, Change};
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().join("games");
+    let library = LibraryStore::create(&root, "Games").unwrap();
+    let base = library.inspect().unwrap().current().unwrap().clone();
+    let c = collection();
+    let mut definitions = base.definitions.clone();
+    definitions.collections.push(c.clone());
+    let manifest = library.edit(base.revision_id, definitions).unwrap();
+    let store = RecordStore::open(&root).unwrap();
+    let first = store.create(GameData::new("First")).unwrap();
+    let second = store.create(GameData::new("Second")).unwrap();
+    let added = apply(
+        &library,
+        &manifest,
+        vec![first, second],
+        &Change::Collection(c.id, true),
+    );
+    let added_again = apply(
+        &library,
+        &manifest,
+        added.saved,
+        &Change::Collection(c.id, true),
+    );
+    assert!(added_again.failed.is_empty());
+    assert!(added_again
+        .saved
+        .iter()
+        .all(|r| r.game.personal.collections == vec![c.id]));
+    let status = manifest.definitions.statuses.last().unwrap().key.clone();
+    let changed = apply(
+        &library,
+        &manifest,
+        added_again.saved,
+        &Change::Status(status.clone()),
+    );
+    assert!(changed
+        .saved
+        .iter()
+        .all(|r| r.game.personal.status == status));
+    let removed = apply(
+        &library,
+        &manifest,
+        changed.saved,
+        &Change::Collection(c.id, false),
+    );
+    assert!(removed
+        .saved
+        .iter()
+        .all(|r| r.game.personal.collections.is_empty()));
+    let mut definitions = manifest.definitions.clone();
+    definitions.collections[0].archived = true;
+    library.edit(manifest.revision_id, definitions).unwrap();
+    let rejected = apply(
+        &library,
+        &manifest,
+        removed.saved,
+        &Change::Collection(c.id, true),
+    );
+    assert_eq!(rejected.failed.len(), 2);
+    assert!(rejected.saved.is_empty());
 }

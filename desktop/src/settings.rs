@@ -9,8 +9,35 @@ use std::{
     sync::Mutex,
 };
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SortBy {
+    #[default]
+    Name,
+    Status,
+    Hours,
+    Collection,
+}
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GroupBy {
+    #[default]
+    None,
+    Status,
+    Collections,
+}
+#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(default)]
+pub struct LibraryDisplay {
+    pub sort: SortBy,
+    pub descending: bool,
+    pub group: GroupBy,
+}
+
 #[derive(Deserialize, Serialize)]
 pub struct Settings {
+    #[serde(default)]
+    pub library_display: LibraryDisplay,
     pub library_path: Option<PathBuf>,
     #[serde(default = "system_theme")]
     pub theme: String,
@@ -18,6 +45,8 @@ pub struct Settings {
     pub appearance: Option<crate::appearance::Appearance>,
     #[serde(default)]
     pub reduce_motion: bool,
+    #[serde(default)]
+    pub show_hidden_games: bool,
     #[serde(default)]
     pub last_sync: BTreeMap<String, u64>,
     #[serde(flatten)]
@@ -75,10 +104,12 @@ pub fn update(change: impl FnOnce(&mut Settings)) -> Result<()> {
 impl Default for Settings {
     fn default() -> Self {
         Self {
+            library_display: LibraryDisplay::default(),
             library_path: None,
             theme: system_theme(),
             appearance: None,
             reduce_motion: false,
+            show_hidden_games: false,
             last_sync: Default::default(),
             extra: Default::default(),
         }
@@ -127,5 +158,29 @@ mod appearance_migration_tests {
         assert_eq!(reopened.theme, "Tokyo Night");
         assert!(reopened.reduce_motion);
         assert_eq!(reopened.extra["future_setting"]["enabled"], true);
+    }
+}
+
+#[cfg(test)]
+mod display_tests {
+    use super::*;
+    #[test]
+    fn display_preferences_round_trip_and_old_settings_keep_defaults() {
+        let old: Settings =
+            serde_json::from_str(r#"{"library_path":null,"future_setting":42}"#).unwrap();
+        assert_eq!(old.library_display, LibraryDisplay::default());
+        let mut settings = old;
+        settings.library_display = LibraryDisplay {
+            sort: SortBy::Hours,
+            descending: true,
+            group: GroupBy::Collections,
+        };
+        let saved = serde_json::to_vec(&settings).unwrap();
+        let restored: Settings = serde_json::from_slice(&saved).unwrap();
+        assert_eq!(restored.library_display, settings.library_display);
+        assert_eq!(
+            restored.extra.get("future_setting"),
+            Some(&serde_json::json!(42))
+        );
     }
 }

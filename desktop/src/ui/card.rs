@@ -38,20 +38,7 @@ pub fn front(
         ))
         .border_1()
         .border_color(edge.opacity(0.55))
-        .shadow(vec![
-            BoxShadow {
-                color: rgba(0x17202c12).into(),
-                offset: point(px(0.), px(10.)),
-                blur_radius: px(34.),
-                spread_radius: px(-6.),
-            },
-            BoxShadow {
-                color: rgba(0x17202c08).into(),
-                offset: point(px(0.), px(3.)),
-                blur_radius: px(12.),
-                spread_radius: px(0.),
-            },
-        ])
+        .shadow(card_shadow(false))
         .child(gpui::card_layer(
             surface_id(game.id, 0),
             artwork_size,
@@ -159,13 +146,13 @@ pub fn surface_id(id: uuid::Uuid, role: u8) -> u64 {
     hash.finish()
 }
 
-/// Broad, low-opacity shadow for the settled native editor.
-pub fn floating_shadow() -> Vec<BoxShadow> {
+/// Figma blur is twice the Gaussian sigma used by GPUI's native renderer.
+pub fn card_shadow(hovered: bool) -> Vec<BoxShadow> {
     vec![BoxShadow {
-        color: rgba(0x10182716).into(),
-        offset: point(px(0.), px(18.)),
-        blur_radius: px(48.),
-        spread_radius: px(-8.),
+        color: gpui::Hsla::from(rgb(0x000000)).opacity(if hovered { 0.27 } else { 0.20 }),
+        offset: point(px(0.), px(20.)),
+        blur_radius: px(20.),
+        spread_radius: px(if hovered { -20. } else { -24. }),
     }]
 }
 

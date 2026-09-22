@@ -23,9 +23,7 @@ impl CredentialStore for SteamCredential {
         match self.entry.get_password() {
             Ok(value) => Ok(Some(value)),
             Err(keyring::Error::NoEntry) => Ok(None),
-            Err(_) => bail!(
-                "Secure storage is unavailable or locked. Unlock it, or choose session-only use."
-            ),
+            Err(_) => bail!("Secure storage is unavailable or locked. Unlock it and try again."),
         }
     }
     fn set(&self, secret: &str) -> Result<()> {

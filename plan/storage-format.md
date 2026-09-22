@@ -9,7 +9,7 @@ and AI write operations are pending.
 - `game_id` and `revision_id` are UUIDs. Steam App ID is a provider link, not game identity.
 - `parents` lists the revisions an edit replaces. A new game has no parents.
 - `game` separates title, Steam data, and personal values.
-- Personal data contains status, rating, favorite, tags, notes, and optional description/cover overrides.
+- Personal data contains status, rating, favorite, hidden, tags, notes, and optional description/cover overrides.
 - Rating uses half-star units from 1 to 10. `null` means unrated.
 - A `null` description uses Steam text. An empty string is an intentional blank.
 - Status is a stable key, initially `backlog`. The folder reader checks game keys against the manifest.
@@ -101,3 +101,10 @@ are not rewritten merely to add empty fields. Preserve extension properties.
 
 Credentials, appearance, and last successful sync times stay on the device.
 Keys use macOS Keychain or Linux Secret Service. They never enter library files.
+
+## Hidden games
+
+Personal `hidden` is an additive boolean with a default of false. It controls
+browsing only; it is separate from the `deleted` tombstone. Steam sync preserves
+it with other personal fields. Hidden games remain loaded so the Hidden games
+scope can show and unhide them. The sidebar visibility preference is device-local.

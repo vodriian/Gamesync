@@ -1,5 +1,6 @@
 //! Non-UI services. Keep disk work outside the GPUI thread.
 
+pub mod bulk;
 pub mod library;
 pub mod library_reader;
 pub mod record_store;

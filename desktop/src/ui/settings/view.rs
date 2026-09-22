@@ -66,6 +66,39 @@ impl Render for SettingsView {
                     cx.notify();
                 })),
         );
+        let appearance = appearance.child(
+            Checkbox::new("show-hidden-games")
+                .label("Show hidden games in sidebar")
+                .checked(self.library.read(cx).show_hidden_games)
+                .disabled(self.saving_hidden_preference)
+                .on_click(cx.listener(|this, checked: &bool, _, cx| {
+                    let value = *checked;
+                    this.saving_hidden_preference = true;
+                    cx.notify();
+                    cx.spawn(async move |this, cx| {
+                        let result = cx
+                            .background_spawn(async move {
+                                settings::update(|s| s.show_hidden_games = value)
+                            })
+                            .await;
+                        let _ = this.update(cx, |this, cx| {
+                            this.saving_hidden_preference = false;
+                            match result {
+                                Ok(()) => this.library.update(cx, |library, cx| {
+                                    library.set_show_hidden_games(value);
+                                    cx.notify();
+                                }),
+                                Err(error) => {
+                                    this.message =
+                                        format!("Could not save sidebar preference: {error}")
+                                }
+                            }
+                            cx.notify();
+                        });
+                    })
+                    .detach();
+                })),
+        );
         let connection = group()
             .child("Steam profile or ID")
             .child(Input::new(&self.profile).disabled(self.busy || !has_library))

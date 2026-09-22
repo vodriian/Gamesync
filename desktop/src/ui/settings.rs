@@ -62,6 +62,7 @@ pub struct SettingsView {
     tested: Option<TestedKey>,
     clear_key: bool,
     reduce_motion: bool,
+    saving_hidden_preference: bool,
     busy: bool,
     cancel: Option<steam::Cancellation>,
     message: String,
@@ -88,6 +89,7 @@ impl SettingsView {
             tested: None,
             clear_key: false,
             reduce_motion: super::motion::reduced(cx),
+            saving_hidden_preference: false,
             busy: false,
             cancel: None,
             message: String::new(),
@@ -117,7 +119,7 @@ impl SettingsView {
         cx.notify();
     }
     pub fn busy(&self) -> bool {
-        self.busy
+        self.saving_hidden_preference || self.busy
     }
     pub fn set_theme(
         &mut self,

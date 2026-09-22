@@ -246,6 +246,10 @@ fn version_fields(record: &GameRevision, manifest: &LibraryRevision) -> Vec<(Str
             "Favorite".into(),
             if personal.favorite { "Yes" } else { "No" }.into(),
         ),
+        (
+            "Hidden".into(),
+            if personal.hidden { "Yes" } else { "No" }.into(),
+        ),
         ("Collections".into(), format!("{:?}", personal.collections)),
         ("Tags".into(), format!("{:?}", personal.tags)),
         ("Notes".into(), personal.notes.clone()),

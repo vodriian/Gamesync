@@ -5,8 +5,16 @@
 Keep Eagle's native shell and portrait grid. Use Glaze's grouped settings and
 flat collections. Do not import its runtime or browser storage.
 
-- Collections: create, rename, remove, counts, search within a collection, and
-  inline inspector membership with automatic saves.
+- Collections: create inline with the sidebar plus button. Right-click a row to
+  rename inline or remove it. Enter saves; Escape or Cancel discards the name.
+  Empty and duplicate names keep the editor open with an error.
+- Drag a game from Cards, Grid, or Table onto a collection row to add it. The row
+  highlights during the drag. Repeated drops do not duplicate membership. Other
+  collections and personal fields remain unchanged. Card-back collection chips
+  remain available as the alternative to dragging.
+- Counts, badges, and collection filters update after the guarded save. Removing
+  a collection archives its definition and keeps all games. The separate window
+  is now reserved for library-definition recovery.
 - Conflicting library definitions: explicit whole-version choice. Missing
   collection IDs from the chosen version remain archived. Other status keys stay
   available. Every branch stays in history.

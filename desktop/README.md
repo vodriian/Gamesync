@@ -31,10 +31,16 @@ and create collections without affecting your Steam library.
 - Normal startup prepares your Steam store. Sample games require `--demo`.
 - Refresh automatically after file changes, or use Command-R / Control-R.
 - Filter by title, tag, status, or favorite.
-- Use Cards, Grid, or Table. Click a game to open its card.
+- Use Cards, Grid, or Table. Click a game to open its card. Right-click for
+  favorite, status, collection membership, Add/Edit note, and Hide/Unhide.
+- Hidden games stay saved and sync normally. Enable **Show hidden games in sidebar**
+  under Settings → Look and feel to browse and unhide them.
 - Use Space to turn the card, arrows or the thumbnail strip to browse, and Escape to return.
 - Use Command-F on macOS or Control-F on Linux to focus search.
-- Filter with the left sidebar. Collections and Settings are in the sidebar.
+- Filter with the left sidebar. Use the Collections plus button to create inline;
+  right-click a collection to rename or remove it. Enter saves; Escape cancels.
+  Drag games from Cards, Grid, or Table into a collection. The card-back chips
+  remain available for membership changes. Settings stays in the sidebar.
   The toolbar button animates navigation over 200 ms; Reduce motion makes it immediate.
 - Quit with Command-Q on macOS or Control-Q on Linux.
 - The footer shows the last completed Steam sync. Game cards open on their front.
@@ -47,7 +53,7 @@ selected star again to clear the rating. Descriptions are read-only; existing ov
 Revision checks protect each write. A failed save keeps the draft and offers
 Retry. External edits require review or explicit discard. Closing or switching
 libraries waits for unsaved work. A forced exit can still lose unsaved text.
-Table currently supports browsing; sorting, column controls, and bulk editing remain planned. Kanban and AI remain future work.
+Table supports row selection and bulk favorite, status, collection, and hide actions. Select-all applies to the current filtered results. Sorting and column controls remain planned. Kanban and AI remain future work.
 
 ## Storage foundation
 

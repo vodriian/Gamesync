@@ -23,6 +23,7 @@ pub(crate) struct CardLayer {
     pub scene: crate::Scene,
     pub pose: CardPose,
     pub radius: f32,
+    pub scale_factor: f32,
 }
 #[cfg(target_os = "macos")]
 impl std::fmt::Debug for CardLayer {

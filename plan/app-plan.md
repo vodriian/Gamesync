@@ -100,7 +100,21 @@ Dropbox moves files; it does not resolve application-level edits. See
 - **Table:** sortable, resizable, reorderable columns; inline edits; bulk status, tag, and rating changes.
 - **Kanban (deferred):** status columns; drag to change status; persist order within columns; provide a keyboard/menu alternative.
 
+Cards, Grid, and Table share a right-click menu for favorite, status, collection
+membership, notes, and Hide/Unhide. Hidden games stay saved and sync normally but
+are excluded from normal views and counts. Look and feel includes a device-local
+"Show hidden games in sidebar" setting (off by default). The Hidden games scope
+shows only hidden games and provides Unhide through the same menu.
+
 Share search, filters, selected game IDs, and saved views across presentations.
+The toolbar menu between view controls and search provides status, collection,
+and favorites filters; Name, Status, Hours, and Collection sorting with direction;
+and None, Status, or Collections grouping. Filters compose with search and the
+sidebar scope and reset on restart. Sorting and grouping persist in device settings.
+Status order follows library definitions. Collection sorting uses the first
+alphabetical collection name (unassigned games first ascending). Grouping shows
+a game in every active collection, with a final No collection section. Bulk
+selection and counts continue to use unique game IDs.
 Keep the selected game and useful scroll state when changing views.
 
 ### Properties
@@ -109,7 +123,7 @@ Start with Backlog, Want to play, Playing, Paused, Completed, and Dropped.
 Allow status creation, renaming, and reordering. Removing a populated status
 requires a replacement. Each status sets recommendation eligibility.
 
-Include personal rating (five whole-star choices; retain existing half-star values), favorite, tags, notes, description,
+Include personal rating (five whole-star choices; retain existing half-star values), favorite, hidden, tags, notes, description,
 cover override, and provider links. Custom fields support text, number,
 checkbox, select, multiselect, date, and URL.
 
@@ -238,6 +252,9 @@ remain. See [implementation and limits](collections-settings-steam.md).
 ## Physical card UI
 
 The September 21 direction replaces permanent sidebars with a Library menu
-and focused card details. Cards, Grid, and a basic read-only Table share
-selection and filters. Editing stays on the card back. Advanced table controls
-remain planned. See [scope and rendering limits](physical-cards.md).
+and focused card details. Cards, Grid, and Table share filters and game context
+menus. Table checkboxes support bulk favorite, status, collection membership, and
+hide changes. Select-all applies to current results; filtering removes out-of-view
+selections. Successful actions retain visible selections for repeated edits.
+Each game uses its own guarded write; partial failures remain selected and are
+reported without undoing successful writes. Sorting and grouping are shared across views and saved on this device. Column controls remain planned. See [scope and rendering limits](physical-cards.md).

@@ -91,3 +91,13 @@ The viewer strip toggle sits before Previous/Next, with a 200 ms reversible
 clipped slide using the existing motion token. Reduce motion is immediate.
 Visibility is retained while browsing in the current session; T toggles it when
 the viewer, rather than an editor input, has focus.
+
+## September 22 clear-coat refinement
+
+The user requested a more visible trading-card shader, referencing
+sixrobin/TradingCardShader. Keep the existing perspective and compact shadows;
+replace the subtle satin band with an angle-driven clear-coat sweep, narrow glint,
+and edge reflection on fronts. Attenuate it over title/footer content. Details
+remain clear for editing. This is original Metal code over cached face pixels,
+without additional textures or idle animation. Layer-separated artwork/parallax
+from the reference remains a separate asset-dependent task.

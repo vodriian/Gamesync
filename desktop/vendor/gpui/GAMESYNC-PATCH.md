@@ -54,3 +54,7 @@ native layout/prepaint/paint CPU time separately. Neither trace is on by default
 
 See `plan/logs/2026-09-21.md` (from the repository root) for the native checks and
 remaining platform limits. Linux keeps flat cards; Linux 3D remains pending.
+
+September 22 shadow refinement: card layers carry display scale to the compositor.
+The projected shadow uses y 20, design blur 40 (sigma 20), spread -20 and 27%
+black, with a Gaussian distance-field approximation instead of exponential decay.
