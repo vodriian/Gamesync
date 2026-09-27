@@ -1,4 +1,4 @@
-//! GPUI clips overflow to rectangles. Paint a rounded frame instead of capturing
+//! GPUI clips overflow to rectangles. Paint the shaped frame instead of capturing
 //! the whole library into a texture; this keeps virtualization and shadows native.
 use gpui::{canvas, div, prelude::*, px, App, Bounds, Pixels};
 use gpui_component::ActiveTheme as _;
@@ -6,10 +6,11 @@ use gpui_component::ActiveTheme as _;
 pub fn content(child: impl IntoElement, cx: &App) -> gpui::Div {
     let chrome = cx.theme().sidebar;
     let border = cx.theme().border;
+    let radius = crate::theme::interface_radius(cx, px(12.));
     div()
         .relative()
         .size_full()
-        .rounded(px(12.))
+        .rounded(radius)
         .overflow_hidden()
         .child(child)
         .child(
@@ -18,11 +19,11 @@ pub fn content(child: impl IntoElement, cx: &App) -> gpui::Div {
                 move |bounds: Bounds<Pixels>, _, window, _| {
                     let w = f32::from(bounds.size.width);
                     let h = f32::from(bounds.size.height);
-                    let r = 12_f32.min(w / 2.).min(h / 2.);
+                    let r = f32::from(radius).min(w / 2.).min(h / 2.);
                     // The frame lies outside the panel except at its corners. Its
                     // inner radius matches the panel; the rectangular content mask
                     // clips away the rest. Use quads so edge coverage matches GPUI's
-                    // rounded outline, including on Retina displays.
+                    // shaped outline, including on Retina displays.
                     let mut mask =
                         gpui::outline(bounds.dilate(px(r)), chrome, gpui::BorderStyle::Solid);
                     mask.border_widths = px(r).into();

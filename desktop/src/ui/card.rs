@@ -1,4 +1,4 @@
-//! Native card face. Artwork is composited once before applying its rounded mask.
+//! Native card face. Artwork is composited once before applying its shape mask.
 use crate::model::Game;
 use gpui::{
     div, img, linear_color_stop, linear_gradient, point, prelude::*, px, rgb, rgba, App, BoxShadow,
@@ -30,7 +30,7 @@ pub fn front(
         .flex_shrink_0()
         .p(px(9.))
         .gap(px(7.))
-        .rounded(px(17.))
+        .rounded(crate::theme::interface_radius(cx, px(17.)))
         .bg(linear_gradient(
             145.,
             linear_color_stop(paper, 0.),
@@ -43,7 +43,7 @@ pub fn front(
             surface_id(game.id, 0),
             artwork_size,
             gpui::CardPose::default(),
-            px(10.),
+            crate::theme::interface_radius(cx, px(10.)),
             div()
                 .relative()
                 .w(artwork_size.width)
@@ -162,7 +162,7 @@ fn badge(label: String, cx: &App) -> gpui::Div {
         .max_w(px(125.))
         .px(px(6.))
         .py(px(2.))
-        .rounded_full()
+        .rounded(crate::theme::pill_radius(cx))
         .bg(cx.theme().muted_foreground.opacity(0.10))
         .text_color(cx.theme().foreground.opacity(0.75))
         .truncate()

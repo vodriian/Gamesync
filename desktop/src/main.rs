@@ -86,7 +86,14 @@ fn main() -> anyhow::Result<()> {
         library.name = "My games".into();
         library.demo = false;
     }
-    let initial_theme = settings::load().map(|s| s.appearance()).unwrap_or_default();
+    let (initial_theme, omarchy_mode) = settings::load()
+        .map(|settings| (settings.appearance(), settings.omarchy_mode))
+        .unwrap_or_default();
+    let initial_omarchy = omarchy_mode
+        .then(gamesync_desktop::omarchy::OmarchyTheme::load_active)
+        .transpose()
+        .ok()
+        .flatten();
 
     Application::new()
         .with_assets(assets::Assets)
@@ -133,9 +140,21 @@ fn main() -> anyhow::Result<()> {
                     ..Default::default()
                 },
                 move |window, cx| {
-                    theme::apply_choice(&initial_theme, window, cx);
+                    if let Some(theme) = &initial_omarchy {
+                        theme::apply_omarchy(theme, window, cx);
+                    } else {
+                        theme::apply_choice(&initial_theme, window, cx);
+                    }
                     let view = cx.new(|cx| {
-                        GameSyncApp::new(library, initial_path, initial_theme, window, cx)
+                        GameSyncApp::new(
+                            library,
+                            initial_path,
+                            initial_theme,
+                            omarchy_mode,
+                            initial_omarchy,
+                            window,
+                            cx,
+                        )
                     });
                     let close_view = view.downgrade();
                     window.on_window_should_close(cx, move |_, cx| {

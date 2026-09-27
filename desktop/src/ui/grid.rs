@@ -47,7 +47,7 @@ impl Render for DraggedGame {
             .px_3()
             .py_2()
             .gap_2()
-            .rounded_lg()
+            .rounded(cx.theme().radius_lg)
             .shadow_lg()
             .bg(cx.theme().popover)
             .text_color(cx.theme().popover_foreground)
@@ -307,7 +307,7 @@ impl GameGrid {
                     material: true,
                     frosted_top: 0.,
                 },
-                px(17.),
+                crate::theme::interface_radius(cx, px(17.)),
                 face,
             )
         } else {
@@ -609,7 +609,7 @@ impl Render for GameGrid {
                         .left_4()
                         .right_4()
                         .p_3()
-                        .rounded_lg()
+                        .rounded(cx.theme().radius_lg)
                         .bg(cx.theme().popover)
                         .text_color(cx.theme().popover_foreground)
                         .text_sm()
@@ -670,7 +670,7 @@ fn cell(
                 .w_full()
                 .h(width * 1.5)
                 .overflow_hidden()
-                .rounded(px(8.))
+                .rounded(crate::theme::interface_radius(cx, px(8.)))
                 .child(
                     img(data
                         .game
@@ -679,7 +679,7 @@ fn cell(
                         .map(gpui::ImageSource::from)
                         .unwrap_or_else(|| data.game.cover.clone().into()))
                     .size_full()
-                    .rounded(px(8.))
+                    .rounded(crate::theme::interface_radius(cx, px(8.)))
                     .flex_shrink_0()
                     .object_fit(ObjectFit::Cover)
                     .with_fallback(move || {
@@ -699,7 +699,7 @@ fn cell(
                         .id("cover-highlight")
                         .absolute()
                         .inset_0()
-                        .rounded(px(8.))
+                        .rounded(crate::theme::interface_radius(cx, px(8.)))
                         .border_4()
                         .border_color(if selected {
                             cx.theme().ring
@@ -807,7 +807,7 @@ fn table_row(
                 .unwrap_or_else(|| data.game.cover.clone().into()))
             .w(px(30.))
             .h(px(44.))
-            .rounded(px(4.))
+            .rounded(crate::theme::interface_radius(cx, px(4.)))
             .object_fit(ObjectFit::Cover)
             .with_fallback(|| div().w(px(30.)).h(px(44.)).child("✦").into_any_element()),
         )

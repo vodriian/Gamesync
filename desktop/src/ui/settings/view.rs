@@ -39,33 +39,38 @@ impl Render for SettingsView {
         }
         let has_library = source.is_some() && !self.library.read(cx).demo;
         let surface = cx.theme().secondary;
-        let group = || v_flex().p_5().gap_4().rounded_lg().bg(surface);
-        let appearance = group().child(self.appearance_controls(cx)).child(
-            Checkbox::new("reduce-motion")
-                .label("Reduce motion")
-                .checked(self.reduce_motion)
-                .on_click(cx.listener(|this, checked: &bool, _, cx| {
-                    this.reduce_motion = *checked;
-                    cx.global_mut::<super::super::motion::MotionPreferences>()
-                        .reduced = *checked;
-                    let value = *checked;
-                    cx.spawn(async move |this, cx| {
-                        let result = cx
-                            .background_spawn(async move {
-                                settings::update(|s| s.reduce_motion = value)
-                            })
-                            .await;
-                        if let Err(error) = result {
-                            let _ = this.update(cx, |this, cx| {
-                                this.message = format!("Could not save motion preference: {error}");
-                                cx.notify();
-                            });
-                        }
-                    })
-                    .detach();
-                    cx.notify();
-                })),
-        );
+        let radius = cx.theme().radius_lg;
+        let group = || v_flex().p_5().gap_4().rounded(radius).bg(surface);
+        let appearance = group()
+            .child(self.omarchy_controls(cx))
+            .child(self.appearance_controls(cx))
+            .child(
+                Checkbox::new("reduce-motion")
+                    .label("Reduce motion")
+                    .checked(self.reduce_motion)
+                    .on_click(cx.listener(|this, checked: &bool, _, cx| {
+                        this.reduce_motion = *checked;
+                        cx.global_mut::<super::super::motion::MotionPreferences>()
+                            .reduced = *checked;
+                        let value = *checked;
+                        cx.spawn(async move |this, cx| {
+                            let result = cx
+                                .background_spawn(async move {
+                                    settings::update(|s| s.reduce_motion = value)
+                                })
+                                .await;
+                            if let Err(error) = result {
+                                let _ = this.update(cx, |this, cx| {
+                                    this.message =
+                                        format!("Could not save motion preference: {error}");
+                                    cx.notify();
+                                });
+                            }
+                        })
+                        .detach();
+                        cx.notify();
+                    })),
+            );
         let appearance = appearance.child(
             Checkbox::new("show-hidden-games")
                 .label("Show hidden games in sidebar")

@@ -60,7 +60,7 @@ impl GameSyncApp {
             .ghost()
             .small()
             .icon(IconName::Settings2)
-            .rounded_full()
+            .rounded(crate::theme::pill_radius(cx))
             .w(px(36.))
             .h(px(38.))
             .selected(active)

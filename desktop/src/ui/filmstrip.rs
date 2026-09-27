@@ -96,7 +96,7 @@ impl Render for Filmstrip {
                                             .h(CELL)
                                             .flex_shrink_0()
                                             .overflow_hidden()
-                                            .rounded(px(4.))
+                                            .rounded(crate::theme::interface_radius(cx, px(4.)))
                                             .cursor_pointer()
                                             .child(
                                                 img(game
@@ -104,7 +104,7 @@ impl Render for Filmstrip {
                                                     .map(gpui::ImageSource::from)
                                                     .unwrap_or_else(|| game.cover.into()))
                                                 .size_full()
-                                                .rounded(px(4.))
+                                                .rounded(crate::theme::interface_radius(cx, px(4.)))
                                                 .when(!active, |image| image.opacity(0.55))
                                                 .object_fit(ObjectFit::Cover)
                                                 .with_fallback(|| {
@@ -116,7 +116,10 @@ impl Render for Filmstrip {
                                                     .id("thumbnail-highlight")
                                                     .absolute()
                                                     .inset_0()
-                                                    .rounded(px(4.))
+                                                    .rounded(crate::theme::interface_radius(
+                                                        cx,
+                                                        px(4.),
+                                                    ))
                                                     .border_4()
                                                     .border_color(if active {
                                                         cx.theme().ring

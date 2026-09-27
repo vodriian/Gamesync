@@ -105,6 +105,8 @@ impl GameSyncApp {
         }
         let library = self.library.clone();
         let theme = self.theme.clone();
+        let omarchy_mode = self.omarchy_mode;
+        let omarchy_theme_name = self.omarchy_theme.as_ref().map(|theme| theme.name.clone());
         let existing = self.settings_view.clone();
         let bounds = Bounds::centered(None, size(px(820.), px(780.)), cx);
         let created = std::rc::Rc::new(std::cell::RefCell::new(None));
@@ -121,7 +123,16 @@ impl GameSyncApp {
             },
             move |window, cx| {
                 let view = existing.unwrap_or_else(|| {
-                    cx.new(|cx| crate::ui::settings::SettingsView::new(library, theme, window, cx))
+                    cx.new(|cx| {
+                        crate::ui::settings::SettingsView::new(
+                            library,
+                            theme,
+                            omarchy_mode,
+                            omarchy_theme_name,
+                            window,
+                            cx,
+                        )
+                    })
                 });
                 let root = cx.new(|cx| Root::new(view.clone(), window, cx));
                 *result_view.borrow_mut() = Some(view);
@@ -136,6 +147,9 @@ impl GameSyncApp {
                             .push(cx.subscribe(&view, |this, _, event, cx| match event {
                                 crate::ui::settings::SettingsEvent::Theme(choice) => {
                                     this.set_theme(choice.clone(), cx)
+                                }
+                                crate::ui::settings::SettingsEvent::OmarchyMode(enabled, theme) => {
+                                    this.set_omarchy_mode(*enabled, theme.clone(), cx)
                                 }
                                 crate::ui::settings::SettingsEvent::LastSync(time) => {
                                     this.last_sync = *time;

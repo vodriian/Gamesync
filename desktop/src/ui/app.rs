@@ -1,5 +1,6 @@
 mod display;
 mod loading;
+mod omarchy;
 mod windows;
 // A shared library model with three presentations and a focused game card.
 
@@ -43,6 +44,9 @@ pub struct GameSyncApp {
     restore_grid_focus: bool,
     last_sync: Option<u64>,
     theme: gamesync_desktop::appearance::Appearance,
+    omarchy_mode: bool,
+    omarchy_theme: Option<gamesync_desktop::omarchy::OmarchyTheme>,
+    omarchy_watch_task: Option<Task<()>>,
     appearance_revision: std::sync::Arc<std::sync::atomic::AtomicU64>,
     _subscriptions: Vec<Subscription>,
     cache: Entity<LruImageCache>,
@@ -58,6 +62,7 @@ pub struct GameSyncApp {
     display_save: Option<Task<()>>,
     display_pending: usize,
     last_issues: Vec<String>,
+    main_window: gpui::AnyWindowHandle,
 }
 
 impl GameSyncApp {
@@ -65,6 +70,8 @@ impl GameSyncApp {
         mut library: Library,
         initial_path: Option<PathBuf>,
         initial_theme: gamesync_desktop::appearance::Appearance,
+        omarchy_mode: bool,
+        omarchy_theme: Option<gamesync_desktop::omarchy::OmarchyTheme>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
@@ -137,6 +144,9 @@ impl GameSyncApp {
             view: LibraryView::Cards,
             restore_grid_focus: false,
             theme: initial_theme,
+            omarchy_mode,
+            omarchy_theme,
+            omarchy_watch_task: None,
             appearance_revision: Default::default(),
             _subscriptions: vec![
                 grid_subscription,
@@ -158,7 +168,11 @@ impl GameSyncApp {
             display_save: None,
             display_pending: 0,
             last_issues: Vec::new(),
+            main_window: window.window_handle(),
         };
+        if app.omarchy_mode {
+            app.start_omarchy_sync(cx);
+        }
         if let Some(path) = initial_path {
             app.open_folder(path, cx);
         }
@@ -209,8 +223,7 @@ impl GameSyncApp {
             .is_some_and(|view| view.read(cx).busy())
         {
             self.notice =
-                "Wait for Steam or cancel sync in Settings before closing or switching libraries."
-                    .into();
+                "Wait for Settings to finish, or cancel the Steam sync, before closing.".into();
             cx.notify();
             return false;
         }
@@ -229,7 +242,9 @@ impl GameSyncApp {
     }
 
     pub fn appearance_changed(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if self.theme.mode == gamesync_desktop::appearance::AppearanceMode::Auto {
+        if !self.omarchy_mode
+            && self.theme.mode == gamesync_desktop::appearance::AppearanceMode::Auto
+        {
             theme::apply_choice(&self.theme, window, cx);
         }
     }
@@ -264,7 +279,7 @@ impl GameSyncApp {
                     .h(px(38.))
                     .p_1()
                     .gap_1()
-                    .rounded_full()
+                    .rounded(crate::theme::pill_radius(cx))
                     .bg(cx.theme().secondary.opacity(0.70))
                     .children(
                         [
@@ -279,7 +294,7 @@ impl GameSyncApp {
                                 .small()
                                 .icon(icon)
                                 .tooltip(label)
-                                .rounded_full()
+                                .rounded(crate::theme::pill_radius(cx))
                                 .w(px(36.))
                                 .h(px(30.))
                                 .selected(self.view == view)
@@ -298,7 +313,7 @@ impl GameSyncApp {
                     .w(px(220.))
                     .h(px(38.))
                     .px_2()
-                    .rounded_full()
+                    .rounded(crate::theme::pill_radius(cx))
                     .border_1()
                     .border_color(cx.theme().border.opacity(0.5))
                     .bg(cx.theme().background.opacity(0.75))
@@ -421,7 +436,7 @@ impl Render for GameSyncApp {
                     .bottom_0()
                     .right_0()
                     .occlude()
-                    .rounded_tl(px(12.))
+                    .rounded_tl(crate::theme::interface_radius(cx, px(12.)))
                     .bg(super::card::tabletop(cx))
                     .child(
                         Button::new("library-status")

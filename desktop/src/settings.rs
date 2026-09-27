@@ -44,6 +44,8 @@ pub struct Settings {
     #[serde(default)]
     pub appearance: Option<crate::appearance::Appearance>,
     #[serde(default)]
+    pub omarchy_mode: bool,
+    #[serde(default)]
     pub reduce_motion: bool,
     #[serde(default)]
     pub show_hidden_games: bool,
@@ -108,6 +110,7 @@ impl Default for Settings {
             library_path: None,
             theme: system_theme(),
             appearance: None,
+            omarchy_mode: false,
             reduce_motion: false,
             show_hidden_games: false,
             last_sync: Default::default(),
@@ -151,11 +154,14 @@ mod appearance_migration_tests {
         let mut old:Settings=serde_json::from_str(r#"{"library_path":null,"theme":"Tokyo Night","reduce_motion":true,"future_setting":{"enabled":true}}"#).unwrap();
         let appearance = old.appearance();
         assert_eq!(appearance.dark_scheme.as_str(), "notion");
+        assert!(!old.omarchy_mode);
         old.appearance = Some(appearance.clone());
+        old.omarchy_mode = true;
         let bytes = serde_json::to_vec(&old).unwrap();
         let reopened: Settings = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(reopened.appearance(), appearance);
         assert_eq!(reopened.theme, "Tokyo Night");
+        assert!(reopened.omarchy_mode);
         assert!(reopened.reduce_motion);
         assert_eq!(reopened.extra["future_setting"]["enabled"], true);
     }

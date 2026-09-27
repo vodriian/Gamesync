@@ -45,6 +45,31 @@ Tokyo Night maps to Notion dark. The old `theme` string remains migration metada
 Unknown scheme IDs fall back to the per-mode default at resolution time. Unrelated
 settings and game data are retained.
 
+### Omarchy mode
+
+Linux can opt into **Sync with Omarchy theme** under Look and feel. GameSync reads
+the active theme name and semantic colors from
+`$XDG_STATE_HOME/omarchy/current`, or `~/.local/state/omarchy/current` when the
+environment variable is unset. It does not install an Omarchy hook or change an
+Omarchy file.
+
+The active Omarchy mode selects light or dark appearance and maps its background,
+foreground, accent, selection, muted, and semantic colors to native GameSync
+tokens. GameSync watches the stable `current` directory because Omarchy replaces
+the nested theme directory atomically. A periodic check covers unavailable file
+watching. Invalid or incomplete colors keep the last valid theme.
+
+Omarchy mode also changes the interface shape language. Native controls, panels,
+menus, search, segmented controls, notices, status chips, cards, covers, and
+thumbnails use square corners. The sidebar uses Omarchy's primary background,
+matching its shell surfaces instead of using a separate dark shade. These changes
+apply only while Omarchy mode is on; normal GameSync surfaces return when it is
+turned off.
+
+The checkbox is off by default. While it is on, bundled palette controls are
+disabled but their saved values stay unchanged. Turning it off restores those
+values. If Omarchy state disappears, the user can still turn the mode off.
+
 ## Sources and regeneration
 
 The source is [Baseline](https://github.com/aaaaalexis/obsidian-baseline/tree/8c56e831e1abb1d3841c4ffdecbe06b5182fbc68/src/color-schemes).

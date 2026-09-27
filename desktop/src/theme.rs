@@ -1,6 +1,9 @@
 //! Baseline colors resolved offline; native controls consume one semantic palette.
-use gamesync_desktop::appearance::{Appearance, Palette};
-use gpui::{App, Hsla, Window, WindowAppearance};
+use gamesync_desktop::{
+    appearance::{Appearance, Palette},
+    omarchy::OmarchyTheme,
+};
+use gpui::{px, App, Hsla, Pixels, Window, WindowAppearance};
 use gpui_component::{Theme, ThemeColor, ThemeMode};
 use std::collections::BTreeMap;
 
@@ -40,6 +43,78 @@ pub fn apply_choice(choice: &Appearance, window: &mut Window, cx: &mut App) {
     Theme::change(mode, Some(window), cx);
     Theme::global_mut(cx).colors = resolve(palette, choice.interface_accent);
     cx.refresh_windows();
+}
+
+pub fn apply_omarchy(theme: &OmarchyTheme, window: &mut Window, cx: &mut App) {
+    let palette = omarchy_palette(theme);
+    let mode = if theme.mode == "dark" {
+        ThemeMode::Dark
+    } else {
+        ThemeMode::Light
+    };
+    Theme::change(mode, Some(window), cx);
+    let native = Theme::global_mut(cx);
+    native.colors = resolve(&palette, true);
+    // Omarchy uses square corners throughout its application design language.
+    // Custom GameSync surfaces use this value as their mode signal too.
+    native.radius = px(0.);
+    native.radius_lg = px(0.);
+    cx.refresh_windows();
+    log::info!("Applied Omarchy theme: {}", theme.name);
+}
+
+/// Keep each surface's current radius outside Omarchy, but square it when the
+/// global control radius marks the active Omarchy design language.
+pub fn interface_radius(cx: &App, normal: Pixels) -> Pixels {
+    if Theme::global(cx).radius == px(0.) {
+        px(0.)
+    } else {
+        normal
+    }
+}
+
+pub fn pill_radius(cx: &App) -> Pixels {
+    interface_radius(cx, px(999.))
+}
+
+fn omarchy_palette(theme: &OmarchyTheme) -> Palette {
+    let mut content = BTreeMap::new();
+    let mut set = |target: &str, source: &str| {
+        content.insert(target.to_owned(), theme.color(source).to_owned());
+    };
+    set("background-primary", "background");
+    set("background-primary-alt", "lighter_background");
+    set("background-modifier-border", "muted");
+    set("background-modifier-hover", "selection");
+    set("interactive-normal", "lighter_background");
+    set("interactive-accent", "accent");
+    set("interactive-accent-hover", "accent");
+    set("text-normal", "foreground");
+    set("text-muted", "dark_foreground");
+    set("text-selection", "selection");
+    set("color-red", "red");
+    set("color-green", "green");
+    set("color-blue", "blue");
+    set("color-yellow", "yellow");
+    set("color-purple", "magenta");
+    set("color-cyan", "cyan");
+
+    let mut chrome = content.clone();
+    // Omarchy's shell uses the primary theme background for bars, popups, and
+    // menus. Keep the sidebar on that same surface instead of inventing a
+    // separate dark chrome shade.
+    chrome.insert(
+        "background-secondary".into(),
+        theme.color("background").to_owned(),
+    );
+    Palette {
+        id: "omarchy".into(),
+        mode: theme.mode.clone(),
+        contrast: "normal".into(),
+        scheme_accent: true,
+        content,
+        chrome,
+    }
 }
 fn resolve(p: &Palette, accented: bool) -> ThemeColor {
     let c = |key| color(&p.content, key);

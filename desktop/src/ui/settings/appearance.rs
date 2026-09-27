@@ -9,7 +9,7 @@ use gpui_component::{
     checkbox::Checkbox,
     h_flex,
     menu::{DropdownMenu as _, PopupMenuItem},
-    v_flex, ActiveTheme as _, IconName, Sizable as _,
+    v_flex, ActiveTheme as _, Disableable as _, IconName, Sizable as _,
 };
 impl SettingsView {
     fn appearance_row(
@@ -18,6 +18,7 @@ impl SettingsView {
         label: &'static str,
         value: String,
         choices: Vec<(String, Appearance)>,
+        disabled: bool,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         let target = cx.entity();
@@ -32,6 +33,7 @@ impl SettingsView {
                 Button::new(id)
                     .ghost()
                     .small()
+                    .disabled(disabled)
                     .label(value.clone())
                     .icon(IconName::ChevronDown)
                     .dropdown_menu(move |mut menu, _, _| {
@@ -50,6 +52,105 @@ impl SettingsView {
                         }
                         menu
                     }),
+            )
+    }
+
+    fn change_omarchy_mode(&mut self, enabled: bool, window: &mut Window, cx: &mut Context<Self>) {
+        if self.saving_appearance_preference {
+            return;
+        }
+        self.saving_appearance_preference = true;
+        self.message = if enabled {
+            "Reading the current Omarchy theme…".into()
+        } else {
+            "Restoring GameSync colors…".into()
+        };
+        let fallback = self.theme.clone();
+        let window = window.window_handle();
+        cx.spawn(async move |this, cx| {
+            let theme = if enabled {
+                cx.background_spawn(async {
+                    gamesync_desktop::omarchy::OmarchyTheme::load_active().map(Some)
+                })
+                .await
+            } else {
+                Ok(None)
+            };
+            let result = match theme {
+                Ok(theme) => {
+                    let saved = cx
+                        .background_spawn(async move {
+                            settings::update(|settings| settings.omarchy_mode = enabled)
+                        })
+                        .await;
+                    saved.map(|()| theme)
+                }
+                Err(error) => Err(error),
+            };
+            match result {
+                Ok(theme) => {
+                    let applied = theme.clone();
+                    let _ = window.update(cx, move |_, window, cx| {
+                        if let Some(theme) = &applied {
+                            crate::theme::apply_omarchy(theme, window, cx);
+                        } else {
+                            crate::theme::apply_choice(&fallback, window, cx);
+                        }
+                    });
+                    let _ = this.update(cx, |this, cx| {
+                        this.saving_appearance_preference = false;
+                        this.omarchy_mode = enabled;
+                        this.omarchy_theme_name = theme.as_ref().map(|theme| theme.name.clone());
+                        this.message.clear();
+                        cx.emit(SettingsEvent::OmarchyMode(enabled, theme));
+                        cx.notify();
+                    });
+                }
+                Err(error) => {
+                    let _ = this.update(cx, |this, cx| {
+                        this.saving_appearance_preference = false;
+                        this.message = format!(
+                            "Could not {} Omarchy mode: {error:#}",
+                            if enabled { "enable" } else { "disable" }
+                        );
+                        cx.notify();
+                    });
+                }
+            }
+        })
+        .detach();
+        cx.notify();
+    }
+
+    pub(super) fn omarchy_controls(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let detail = if self.saving_appearance_preference {
+            "Updating the appearance…".to_owned()
+        } else if !self.omarchy_available {
+            "Omarchy theme state was not found on this device.".to_owned()
+        } else if let Some(name) = &self.omarchy_theme_name {
+            format!("Following {name}. Theme changes apply automatically.")
+        } else {
+            "Use the active Omarchy theme and follow changes.".to_owned()
+        };
+        v_flex()
+            .gap_1()
+            .child(
+                Checkbox::new("omarchy-mode")
+                    .label("Sync with Omarchy theme")
+                    .checked(self.omarchy_mode)
+                    .disabled(
+                        (!self.omarchy_available && !self.omarchy_mode)
+                            || self.saving_appearance_preference,
+                    )
+                    .on_click(cx.listener(|this, checked: &bool, window, cx| {
+                        this.change_omarchy_mode(*checked, window, cx)
+                    })),
+            )
+            .child(
+                div()
+                    .text_sm()
+                    .text_color(cx.theme().muted_foreground)
+                    .child(detail),
             )
     }
     fn change_appearance(
@@ -83,6 +184,7 @@ impl SettingsView {
                 make("Light", |a| a.mode = AppearanceMode::Light),
                 make("Dark", |a| a.mode = AppearanceMode::Dark),
             ],
+            self.omarchy_mode,
             cx,
         ));
         for dark in [false, true] {
@@ -120,6 +222,7 @@ impl SettingsView {
                 },
                 label.into(),
                 choices,
+                self.omarchy_mode,
                 cx,
             ));
             let (value, choices) = if dark {
@@ -162,6 +265,7 @@ impl SettingsView {
                 },
                 value.into(),
                 choices,
+                self.omarchy_mode,
                 cx,
             ));
         }
@@ -182,6 +286,7 @@ impl SettingsView {
                     Checkbox::new(SharedString::from(id))
                         .label(label)
                         .checked(checked)
+                        .disabled(self.omarchy_mode)
                         .on_click(cx.listener(move |this, value: &bool, window, cx| {
                             let mut a = this.theme.clone();
                             if id == "interface-accent" {

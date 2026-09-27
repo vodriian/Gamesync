@@ -317,7 +317,7 @@ impl Render for LibrarySidebar {
                         .px_3()
                         .py_2()
                         .gap_2()
-                        .rounded_lg()
+                        .rounded(cx.theme().radius_lg)
                         .border_1()
                         .border_color(cx.theme().border)
                         .bg(cx.theme().popover)

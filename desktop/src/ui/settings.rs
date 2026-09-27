@@ -20,6 +20,7 @@ use uuid::Uuid;
 
 pub enum SettingsEvent {
     Theme(gamesync_desktop::appearance::Appearance),
+    OmarchyMode(bool, Option<gamesync_desktop::omarchy::OmarchyTheme>),
     Refresh,
     LastSync(Option<u64>),
 }
@@ -58,10 +59,14 @@ pub struct SettingsView {
     ai: Entity<ai::AiSettings>,
     key_saved: bool,
     theme: gamesync_desktop::appearance::Appearance,
+    omarchy_mode: bool,
+    omarchy_available: bool,
+    omarchy_theme_name: Option<String>,
     section: Section,
     tested: Option<TestedKey>,
     clear_key: bool,
     reduce_motion: bool,
+    saving_appearance_preference: bool,
     saving_hidden_preference: bool,
     busy: bool,
     cancel: Option<steam::Cancellation>,
@@ -73,6 +78,8 @@ impl SettingsView {
     pub fn new(
         library: Entity<Library>,
         theme: gamesync_desktop::appearance::Appearance,
+        omarchy_mode: bool,
+        omarchy_theme_name: Option<String>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
@@ -85,10 +92,14 @@ impl SettingsView {
             ai: cx.new(|cx| ai::AiSettings::new(window, cx)),
             key_saved: false,
             theme,
+            omarchy_mode,
+            omarchy_available: gamesync_desktop::omarchy::is_available(),
+            omarchy_theme_name,
             section: Section::General,
             tested: None,
             clear_key: false,
             reduce_motion: super::motion::reduced(cx),
+            saving_appearance_preference: false,
             saving_hidden_preference: false,
             busy: false,
             cancel: None,
@@ -119,7 +130,7 @@ impl SettingsView {
         cx.notify();
     }
     pub fn busy(&self) -> bool {
-        self.saving_hidden_preference || self.busy
+        self.saving_appearance_preference || self.saving_hidden_preference || self.busy
     }
     pub fn set_theme(
         &mut self,
@@ -127,6 +138,15 @@ impl SettingsView {
         cx: &mut Context<Self>,
     ) {
         self.theme = theme;
+        cx.notify();
+    }
+    pub fn set_omarchy_theme(
+        &mut self,
+        theme: &gamesync_desktop::omarchy::OmarchyTheme,
+        cx: &mut Context<Self>,
+    ) {
+        self.omarchy_available = true;
+        self.omarchy_theme_name = Some(theme.name.clone());
         cx.notify();
     }
     fn read_connection(&mut self, id: Uuid, cx: &mut Context<Self>) {

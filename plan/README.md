@@ -11,6 +11,7 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 | [App plan](app-plan.md) | Scope, architecture, data rules, milestones, and acceptance checks |
 | [Guardrails](guardrails.md) | Code quality, tests, writing, and efficient agent work |
 | [Design](design.md) | Eagle GUI reference and design rules |
+| [Latest Omarchy log](logs/2026-09-28.md) | Completed theme integration, release checks, and current limits |
 | [Latest UI log](logs/2026-09-22.md) | Physical card views, save checks, and rendering limits |
 | [Foundation log](logs/2026-09-11.md) | Initial decisions, changes, checks, and next task |
 | [Desktop demo](../desktop/README.md) | Run commands and current native features |
@@ -23,7 +24,7 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 - Desktop implementation: native Cards, Grid, Table, and focused game details use app-managed Steam storage on macOS.
 - Milestone 1: Linux runtime verification remains pending.
 - Milestone 2: file records, definitions, folder loading, and a local index are in place. Inspector draft edits, guarded saves, and saved-game conflict review are implemented.
-- Working branch: `codex/desktop-foundation`.
+- Working branch: `omarchy-desktop` for the opt-in Omarchy theme integration.
 - Runtime targets: macOS and Linux. Windows follows later.
 - Existing React/Express app: retained as a reference.
 

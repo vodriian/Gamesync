@@ -95,7 +95,7 @@ impl Render for AiSettings {
                     Button::new(PROVIDERS[index]).label(PROVIDERS[index]).selected(self.provider == index)
                         .on_click(cx.listener(move |this, _, _, cx| { this.provider = index; cx.notify(); }))
                 }))))
-            .child(v_flex().p_5().gap_4().rounded_lg().bg(cx.theme().secondary)
+            .child(v_flex().p_5().gap_4().rounded(cx.theme().radius_lg).bg(cx.theme().secondary)
                 .child(div().font_semibold().child(PROVIDERS[index]))
                 .child("Model")
                 .child(Input::new(&connection.model))

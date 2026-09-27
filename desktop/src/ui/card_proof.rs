@@ -70,7 +70,7 @@ impl Render for Proof {
                     material: true,
                     frosted_top: 0.,
                 },
-                px(17.),
+                crate::theme::interface_radius(cx, px(17.)),
                 face,
             ))
             .child("Space: turn · 1: perspective · 2: edge · 3: rear · Q: quit")

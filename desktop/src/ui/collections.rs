@@ -141,7 +141,7 @@ impl Render for Collections {
             .when(!alternatives.is_empty(), |v| v.child("Library definitions conflict. Keep one version below. Collections absent from that version become archived; other status keys remain available."))
             .children(alternatives.into_iter().map(|version| {
                 let id = version.revision_id;
-                v_flex().p_4().gap_2().rounded_lg().bg(cx.theme().secondary)
+                v_flex().p_4().gap_2().rounded(cx.theme().radius_lg).bg(cx.theme().secondary)
                     .child(format!("Version {}", &id.to_string()[..8]))
                     .child(format!("Library: {}", version.definitions.name))
                     .child(format!("Collections: {}", version.definitions.collections.iter().map(|c| format!("{}{}", c.name, if c.archived { " (removed)" } else { "" })).collect::<Vec<_>>().join(" · ")))

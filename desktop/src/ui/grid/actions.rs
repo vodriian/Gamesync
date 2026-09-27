@@ -287,7 +287,7 @@ impl GameGrid {
                     .max_w_full()
                     .p_5()
                     .gap_3()
-                    .rounded_lg()
+                    .rounded(cx.theme().radius_lg)
                     .shadow_lg()
                     .bg(cx.theme().popover)
                     .text_color(cx.theme().popover_foreground)

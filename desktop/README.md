@@ -188,3 +188,11 @@ Settings → Look and feel provides Auto/Light/Dark appearance, independent ligh
 and dark Baseline schemes, contrast variants, and two accent switches. Defaults
 are Sanctum light and Notion dark. Preferences apply across open windows and
 persist on restart. See [chrome and themes](../plan/chrome-themes.md).
+
+On Omarchy, enable **Sync with Omarchy theme** in Look and feel to use the active
+Omarchy colors and follow later theme changes. GameSync reads Omarchy's current
+theme state. While enabled, application chrome also uses Omarchy's square-corner
+design language everywhere, including game covers and physical cards. Its sidebar
+uses the theme's primary background like Omarchy shell surfaces. GameSync does not
+install hooks or modify Omarchy configuration. Turn the option off to restore the
+saved GameSync schemes and interface radii.

@@ -353,7 +353,7 @@ impl Render for DetailPanel {
             .w(px(width))
             .h(px(width * 1.46))
             .flex_shrink_0()
-            .rounded(px(17.))
+            .rounded(crate::theme::interface_radius(cx, px(17.)))
             .overflow_hidden()
             .border_1()
             .border_color(cx.theme().border)
@@ -439,7 +439,7 @@ impl Render for DetailPanel {
             div()
                 .w(dimensions.width)
                 .h(dimensions.height)
-                .rounded(px(17.))
+                .rounded(crate::theme::interface_radius(cx, px(17.)))
                 .shadow(super::card::card_shadow(true))
                 .child(body)
                 .into_any_element()
@@ -452,7 +452,7 @@ impl Render for DetailPanel {
                     .map_or(0, |g| super::card::surface_id(g.id, 1)),
                 dimensions,
                 pose,
-                px(17.),
+                crate::theme::interface_radius(cx, px(17.)),
                 div().children(front),
             );
             if turning {
@@ -466,7 +466,7 @@ impl Render for DetailPanel {
                                 .map_or(0, |g| super::card::surface_id(g.id, 2)),
                             dimensions,
                             gpui::CardPose { back: true, ..pose },
-                            px(17.),
+                            crate::theme::interface_radius(cx, px(17.)),
                             body,
                         )),
                     )
