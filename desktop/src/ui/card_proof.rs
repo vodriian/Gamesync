@@ -77,6 +77,7 @@ impl Render for Proof {
     }
 }
 pub fn run() -> anyhow::Result<()> {
+    gpui::enable_linux_card_proof();
     let game = crate::fixtures::games()?.into_iter().next().unwrap();
     Application::new()
         .with_assets(crate::assets::Assets)

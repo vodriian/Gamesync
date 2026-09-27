@@ -1,5 +1,17 @@
-//! GameSync's opt-in Metal card surface. Other renderers keep the original flat element.
+//! GameSync's opt-in native card surface. Unsupported renderers keep the flat element.
 use crate::{Pixels, Size, prelude::*};
+#[cfg(target_os = "linux")]
+use std::sync::atomic::{AtomicBool, Ordering};
+
+#[cfg(target_os = "linux")]
+static LINUX_CARD_PROOF_ENABLED: AtomicBool = AtomicBool::new(false);
+
+/// Enable the experimental Linux compositor for the isolated card proof process.
+#[doc(hidden)]
+pub fn enable_linux_card_proof() {
+    #[cfg(target_os = "linux")]
+    LINUX_CARD_PROOF_ENABLED.store(true, Ordering::Relaxed);
+}
 
 /// Angles are radians. A back face is authored upright, then turned by PI before projection.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -17,7 +29,7 @@ pub struct CardPose {
     pub frosted_top: f32,
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 pub(crate) struct CardLayer {
     pub id: u64,
     pub scene: crate::Scene,
@@ -25,13 +37,13 @@ pub(crate) struct CardLayer {
     pub radius: f32,
     pub scale_factor: f32,
 }
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 impl std::fmt::Debug for CardLayer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CardLayer").field("id", &self.id).finish()
     }
 }
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 impl PartialEq for CardLayer {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
@@ -41,7 +53,7 @@ impl PartialEq for CardLayer {
     }
 }
 
-/// Composite a fixed-size native face into a perspective surface on macOS Metal.
+/// Composite a fixed-size native face into a perspective surface.
 /// Pose changes do not change layout or invalidate the cached face pixels.
 pub fn card_layer(
     id: u64,
@@ -51,7 +63,16 @@ pub fn card_layer(
     element: impl IntoElement,
 ) -> crate::AnyElement {
     let element = element.into_any_element();
-    #[cfg(all(target_os = "macos", not(feature = "macos-blade")))]
+    // The Linux POC only captures material cards. Keeping mask-only layers flat avoids
+    // recursive surfaces until the Blade compositor has a general offscreen scene stack.
+    #[cfg(target_os = "linux")]
+    if !pose.material || !LINUX_CARD_PROOF_ENABLED.load(Ordering::Relaxed) {
+        return element;
+    }
+    #[cfg(any(
+        target_os = "linux",
+        all(target_os = "macos", not(feature = "macos-blade"))
+    ))]
     {
         let mut element = element;
         crate::canvas(
@@ -70,7 +91,10 @@ pub fn card_layer(
         .flex_shrink_0()
         .into_any_element()
     }
-    #[cfg(not(all(target_os = "macos", not(feature = "macos-blade"))))]
+    #[cfg(not(any(
+        target_os = "linux",
+        all(target_os = "macos", not(feature = "macos-blade"))
+    )))]
     {
         let _ = (id, dimensions, pose, radius);
         element

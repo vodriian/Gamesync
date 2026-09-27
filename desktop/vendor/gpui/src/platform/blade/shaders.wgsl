@@ -1294,3 +1294,153 @@ fn fs_surface(input: SurfaceVarying) -> @location(0) vec4<f32> {
 
     return ycbcr_to_RGB * y_cb_cr;
 }
+
+// --- GameSync card proof --- //
+
+struct CardParams {
+    rect: vec4<f32>,
+    viewport_pose: vec4<f32>,
+    shape: vec4<f32>,
+    clip: vec4<f32>,
+    texture_region: vec4<f32>,
+}
+
+var<uniform> card_params: CardParams;
+var t_card: texture_2d<f32>;
+var s_card: sampler;
+
+struct CardVarying {
+    @builtin(position) position: vec4<f32>,
+    @location(0) uv: vec2<f32>,
+}
+
+@vertex
+fn vs_card(@builtin(vertex_index) vertex_id: u32) -> CardVarying {
+    let vertices = array<vec2<f32>, 6>(
+        vec2<f32>(0.0, 0.0),
+        vec2<f32>(1.0, 0.0),
+        vec2<f32>(0.0, 1.0),
+        vec2<f32>(0.0, 1.0),
+        vec2<f32>(1.0, 0.0),
+        vec2<f32>(1.0, 1.0),
+    );
+    var uv = vertices[vertex_id];
+    let dimensions = card_params.rect.zw;
+    let pitch = card_params.viewport_pose.z;
+    let yaw = card_params.viewport_pose.w - card_params.shape.y * M_PI_F;
+    var local = (uv - vec2<f32>(0.5)) * dimensions;
+    var z = 0.0;
+
+    if (card_params.shape.w == 2.0) {
+        local *= (dimensions + vec2<f32>(120.0 * card_params.texture_region.w)) / dimensions;
+        uv = local / dimensions + vec2<f32>(0.5);
+    }
+    if (card_params.shape.w == 1.0) {
+        let side = select(-1.0, 1.0, sin(yaw) >= 0.0);
+        local.x = side * (dimensions.x * 0.5 - 0.8);
+        local.y *= (dimensions.y - 2.0 * card_params.shape.x) / dimensions.y;
+        z = (uv.x - 0.5) * 3.0;
+    }
+
+    var point = vec3<f32>(
+        local.x * cos(yaw) + z * sin(yaw),
+        local.y,
+        -local.x * sin(yaw) + z * cos(yaw),
+    );
+    point = vec3<f32>(
+        point.x,
+        point.y * cos(pitch) - point.z * sin(pitch),
+        point.y * sin(pitch) + point.z * cos(pitch),
+    );
+    let distance = max(dimensions.x, dimensions.y) * 3.0;
+    let perspective_w = 1.0 - point.z / distance;
+    var center = card_params.rect.xy + dimensions * 0.5;
+    if (card_params.shape.w == 2.0) {
+        center += vec2<f32>(0.0, 20.0 * card_params.texture_region.w);
+    }
+    let screen = center + point.xy / perspective_w;
+    let ndc = screen / card_params.viewport_pose.xy * 2.0 - vec2<f32>(1.0);
+
+    var out: CardVarying;
+    out.position = vec4<f32>(ndc.x * perspective_w, -ndc.y * perspective_w, 0.0, perspective_w);
+    out.uv = uv;
+    return out;
+}
+
+fn card_sdf(uv: vec2<f32>, dimensions: vec2<f32>, radius: f32) -> f32 {
+    let q = abs((uv - vec2<f32>(0.5)) * dimensions) - dimensions * 0.5 + vec2<f32>(radius);
+    return length(max(q, vec2<f32>(0.0))) + min(max(q.x, q.y), 0.0) - radius;
+}
+
+@fragment
+fn fs_card(input: CardVarying) -> @location(0) vec4<f32> {
+    if (any(input.position.xy < card_params.clip.xy) ||
+        any(input.position.xy > card_params.clip.xy + card_params.clip.zw)) {
+        discard;
+    }
+    let yaw = card_params.viewport_pose.w - card_params.shape.y * M_PI_F;
+    if (cos(yaw) * cos(card_params.viewport_pose.z) < 0.0) {
+        discard;
+    }
+    let distance = card_sdf(input.uv, card_params.rect.zw, card_params.shape.x);
+
+    if (card_params.shape.w == 2.0) {
+        let scale = card_params.texture_region.w;
+        let spread = 20.0 * scale;
+        let dimensions = max(card_params.rect.zw - vec2<f32>(2.0 * spread), vec2<f32>(1.0));
+        let shadow_uv = ((input.uv - vec2<f32>(0.5)) * card_params.rect.zw) / dimensions + vec2<f32>(0.5);
+        let shadow_distance = card_sdf(shadow_uv, dimensions, max(card_params.shape.x - spread, 0.0));
+        let x = shadow_distance / (20.0 * scale);
+        let cdf = 0.5 * (1.0 - tanh(0.79788456 * (x + 0.044715 * x * x * x)));
+        return vec4<f32>(0.0, 0.0, 0.0, 0.27 * cdf);
+    }
+    if (card_params.shape.w == 1.0) {
+        let alpha = 0.9;
+        return vec4<f32>(vec3<f32>(0.38, 0.40, 0.43) * alpha, alpha);
+    }
+
+    var color = textureSample(t_card, s_card, input.uv * card_params.texture_region.xy);
+    if (card_params.texture_region.z > 0.0 && input.uv.y < card_params.texture_region.z) {
+        var blurred = vec4<f32>(0.0);
+        var weight = 0.0;
+        let texel = vec2<f32>(1.0) / vec2<f32>(textureDimensions(t_card, 0));
+        for (var y = -3; y <= 3; y += 1) {
+            for (var x = -3; x <= 3; x += 1) {
+                let sample_weight = exp(-f32(x * x + y * y) / 5.0);
+                let uv = clamp(
+                    input.uv * card_params.texture_region.xy + vec2<f32>(f32(x), f32(y)) * 8.0 * texel,
+                    vec2<f32>(0.0),
+                    card_params.texture_region.xy - texel,
+                );
+                blurred += textureSample(t_card, s_card, uv) * sample_weight;
+                weight += sample_weight;
+            }
+        }
+        color = blurred / weight;
+    }
+
+    let aa = max(fwidth(distance), 0.7);
+    color *= 1.0 - smoothstep(-aa * 0.5, aa * 0.5, distance);
+    if (card_params.shape.z > 0.5 && card_params.shape.y < 0.5) {
+        let pitch = card_params.viewport_pose.z;
+        let sweep = input.uv.x + input.uv.y * 0.32 - 0.66
+            - sin(yaw) * 1.65 - sin(pitch) * 0.85;
+        let broad = exp(-pow(sweep / 0.30, 2.0));
+        let glint = exp(-pow(sweep / 0.055, 2.0));
+        let angle = clamp(length(vec2<f32>(sin(yaw), sin(pitch))) * 3.0, 0.0, 1.0);
+        let artwork = smoothstep(0.025, 0.07, input.uv.y)
+            * (1.0 - smoothstep(0.60, 0.83, input.uv.y))
+            * smoothstep(0.02, 0.06, input.uv.x)
+            * (1.0 - smoothstep(0.94, 0.98, input.uv.x));
+        let rim = (1.0 - smoothstep(0.0, 7.0 * card_params.texture_region.w, -distance))
+            * (0.4 + 0.6 * angle);
+        let reflection = artwork * (broad * 0.10 + glint * (0.07 + 0.12 * angle));
+        let coat = vec3<f32>(0.92, 0.96, 1.0);
+        color = vec4<f32>(
+            color.rgb * (0.98 + 0.02 * cos(yaw))
+                + (coat * reflection + vec3<f32>(0.08) * rim) * color.a,
+            color.a,
+        );
+    }
+    return color;
+}

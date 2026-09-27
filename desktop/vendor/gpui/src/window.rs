@@ -3200,8 +3200,11 @@ impl Window {
         });
     }
 
-    /// Capture a card face without a CPU readback. The Metal backend caches equal scenes.
-    #[cfg(all(target_os = "macos", not(feature = "macos-blade")))]
+    /// Capture a card face without a CPU readback. Native backends cache equal scenes.
+    #[cfg(any(
+        target_os = "linux",
+        all(target_os = "macos", not(feature = "macos-blade"))
+    ))]
     pub(crate) fn paint_card_layer(
         &mut self,
         id: u64,
@@ -3237,6 +3240,7 @@ impl Window {
             order: 0,
             bounds: scaled,
             content_mask: self.content_mask().scale(self.scale_factor()),
+            #[cfg(target_os = "macos")]
             image_buffer: None,
             card: Some(Arc::new(crate::card_layer::CardLayer {
                 id,

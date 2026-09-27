@@ -11,6 +11,8 @@ use blade_util::{BufferBelt, BufferBeltDescriptor};
 use bytemuck::{Pod, Zeroable};
 #[cfg(target_os = "macos")]
 use media::core_video::CVMetalTextureCache;
+#[cfg(target_os = "linux")]
+use std::collections::HashMap;
 use std::sync::Arc;
 
 const MAX_FRAME_TIME_MS: u32 = 10000;
@@ -46,6 +48,17 @@ impl From<Bounds<ScaledPixels>> for PodBounds {
 struct SurfaceParams {
     bounds: PodBounds,
     content_mask: PodBounds,
+}
+
+#[cfg(target_os = "linux")]
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
+struct CardParams {
+    rect: [f32; 4],
+    viewport_pose: [f32; 4],
+    shape: [f32; 4],
+    clip: [f32; 4],
+    texture_region: [f32; 4],
 }
 
 #[derive(blade_macros::ShaderData)]
@@ -107,6 +120,14 @@ struct ShaderSurfacesData {
     s_surface: gpu::Sampler,
 }
 
+#[cfg(target_os = "linux")]
+#[derive(blade_macros::ShaderData)]
+struct ShaderCardsData {
+    card_params: CardParams,
+    t_card: gpu::TextureView,
+    s_card: gpu::Sampler,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[repr(C)]
 struct PathSprite {
@@ -131,6 +152,8 @@ struct BladePipelines {
     mono_sprites: gpu::RenderPipeline,
     poly_sprites: gpu::RenderPipeline,
     surfaces: gpu::RenderPipeline,
+    #[cfg(target_os = "linux")]
+    cards: gpu::RenderPipeline,
 }
 
 impl BladePipelines {
@@ -146,6 +169,8 @@ impl BladePipelines {
         });
         shader.check_struct_size::<GlobalParams>();
         shader.check_struct_size::<SurfaceParams>();
+        #[cfg(target_os = "linux")]
+        shader.check_struct_size::<CardParams>();
         shader.check_struct_size::<Quad>();
         shader.check_struct_size::<Shadow>();
         shader.check_struct_size::<PathRasterizationVertex>();
@@ -300,6 +325,25 @@ impl BladePipelines {
                 color_targets,
                 multisample_state: gpu::MultisampleState::default(),
             }),
+            #[cfg(target_os = "linux")]
+            cards: gpu.create_render_pipeline(gpu::RenderPipelineDesc {
+                name: "cards",
+                data_layouts: &[&ShaderCardsData::layout()],
+                vertex: shader.at("vs_card"),
+                vertex_fetches: &[],
+                primitive: gpu::PrimitiveState {
+                    topology: gpu::PrimitiveTopology::TriangleList,
+                    ..Default::default()
+                },
+                depth_stencil: None,
+                fragment: Some(shader.at("fs_card")),
+                color_targets: &[gpu::ColorTargetState {
+                    format: surface_info.format,
+                    blend: Some(gpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
+                    write_mask: gpu::ColorWrites::default(),
+                }],
+                multisample_state: gpu::MultisampleState::default(),
+            }),
         }
     }
 
@@ -312,7 +356,18 @@ impl BladePipelines {
         gpu.destroy_render_pipeline(&mut self.mono_sprites);
         gpu.destroy_render_pipeline(&mut self.poly_sprites);
         gpu.destroy_render_pipeline(&mut self.surfaces);
+        #[cfg(target_os = "linux")]
+        gpu.destroy_render_pipeline(&mut self.cards);
     }
+}
+
+#[cfg(target_os = "linux")]
+struct CachedCardFace {
+    texture: gpu::Texture,
+    view: gpu::TextureView,
+    width: u32,
+    height: u32,
+    content: Arc<crate::card_layer::CardLayer>,
 }
 
 pub struct BladeSurfaceConfig {
@@ -334,6 +389,12 @@ pub struct BladeRenderer {
     instance_belt: BufferBelt,
     atlas: Arc<BladeAtlas>,
     atlas_sampler: gpu::Sampler,
+    #[cfg(target_os = "linux")]
+    card_sampler: gpu::Sampler,
+    #[cfg(target_os = "linux")]
+    card_faces: HashMap<u64, CachedCardFace>,
+    #[cfg(target_os = "linux")]
+    retired_card_faces: Vec<CachedCardFace>,
     #[cfg(target_os = "macos")]
     core_video_texture_cache: CVMetalTextureCache,
     path_intermediate_texture: gpu::Texture,
@@ -384,6 +445,13 @@ impl BladeRenderer {
             min_filter: gpu::FilterMode::Linear,
             ..Default::default()
         });
+        #[cfg(target_os = "linux")]
+        let card_sampler = context.gpu.create_sampler(gpu::SamplerDesc {
+            name: "card face sampler",
+            mag_filter: gpu::FilterMode::Linear,
+            min_filter: gpu::FilterMode::Linear,
+            ..Default::default()
+        });
 
         let (path_intermediate_texture, path_intermediate_texture_view) =
             create_path_intermediate_texture(
@@ -420,6 +488,12 @@ impl BladeRenderer {
             instance_belt,
             atlas,
             atlas_sampler,
+            #[cfg(target_os = "linux")]
+            card_sampler,
+            #[cfg(target_os = "linux")]
+            card_faces: HashMap::new(),
+            #[cfg(target_os = "linux")]
+            retired_card_faces: Vec::new(),
             #[cfg(target_os = "macos")]
             core_video_texture_cache,
             path_intermediate_texture,
@@ -621,10 +695,197 @@ impl BladeRenderer {
         }
     }
 
+    #[cfg(target_os = "linux")]
+    fn rasterize_card_face(&mut self, surface: &crate::PaintSurface) {
+        let card = surface.card.as_ref().expect("card surface");
+        let width = surface.bounds.size.width.0.ceil().max(1.) as u32;
+        let height = surface.bounds.size.height.0.ceil().max(1.) as u32;
+        let cached = self.card_faces.get(&card.id).is_some_and(|face| {
+            face.width == width
+                && face.height == height
+                && face.content.scene.paint_operations == card.scene.paint_operations
+        });
+        if cached {
+            return;
+        }
+
+        let format = self.surface.info().format;
+        let texture = self.gpu.create_texture(gpu::TextureDesc {
+            name: "card face",
+            format,
+            size: gpu::Extent {
+                width,
+                height,
+                depth: 1,
+            },
+            array_layer_count: 1,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: gpu::TextureDimension::D2,
+            usage: gpu::TextureUsage::RESOURCE | gpu::TextureUsage::TARGET,
+            external: None,
+        });
+        let view = self.gpu.create_texture_view(
+            texture,
+            gpu::TextureViewDesc {
+                name: "card face view",
+                format,
+                dimension: gpu::ViewDimension::D2,
+                subresources: &Default::default(),
+            },
+        );
+        self.command_encoder.init_texture(texture);
+
+        let globals = GlobalParams {
+            viewport_size: [width as f32, height as f32],
+            premultiplied_alpha: 1,
+            pad: 0,
+        };
+        let mut pass = self.command_encoder.render(
+            "card face",
+            gpu::RenderTargetSet {
+                colors: &[gpu::RenderTarget {
+                    view,
+                    init_op: gpu::InitOp::Clear(gpu::TextureColor::TransparentBlack),
+                    finish_op: gpu::FinishOp::Store,
+                }],
+                depth_stencil: None,
+            },
+        );
+
+        // The proof face is made from the same native quad, text, and atlas primitives
+        // as the main scene. Paths and nested surfaces remain outside this focused POC.
+        for batch in card.scene.batches() {
+            match batch {
+                PrimitiveBatch::Quads(quads) => {
+                    let instances = unsafe { self.instance_belt.alloc_typed(quads, &self.gpu) };
+                    let mut encoder = pass.with(&self.pipelines.quads);
+                    encoder.bind(
+                        0,
+                        &ShaderQuadsData {
+                            globals,
+                            b_quads: instances,
+                        },
+                    );
+                    encoder.draw(0, 4, 0, quads.len() as u32);
+                }
+                PrimitiveBatch::Shadows(shadows) => {
+                    let instances =
+                        unsafe { self.instance_belt.alloc_typed(shadows, &self.gpu) };
+                    let mut encoder = pass.with(&self.pipelines.shadows);
+                    encoder.bind(
+                        0,
+                        &ShaderShadowsData {
+                            globals,
+                            b_shadows: instances,
+                        },
+                    );
+                    encoder.draw(0, 4, 0, shadows.len() as u32);
+                }
+                PrimitiveBatch::Underlines(underlines) => {
+                    let instances =
+                        unsafe { self.instance_belt.alloc_typed(underlines, &self.gpu) };
+                    let mut encoder = pass.with(&self.pipelines.underlines);
+                    encoder.bind(
+                        0,
+                        &ShaderUnderlinesData {
+                            globals,
+                            b_underlines: instances,
+                        },
+                    );
+                    encoder.draw(0, 4, 0, underlines.len() as u32);
+                }
+                PrimitiveBatch::MonochromeSprites {
+                    texture_id,
+                    sprites,
+                } => {
+                    let texture = self.atlas.get_texture_info(texture_id);
+                    let instances =
+                        unsafe { self.instance_belt.alloc_typed(sprites, &self.gpu) };
+                    let mut encoder = pass.with(&self.pipelines.mono_sprites);
+                    encoder.bind(
+                        0,
+                        &ShaderMonoSpritesData {
+                            globals,
+                            gamma_ratios: self.rendering_parameters.gamma_ratios,
+                            grayscale_enhanced_contrast: self
+                                .rendering_parameters
+                                .grayscale_enhanced_contrast,
+                            t_sprite: texture.raw_view,
+                            s_sprite: self.atlas_sampler,
+                            b_mono_sprites: instances,
+                        },
+                    );
+                    encoder.draw(0, 4, 0, sprites.len() as u32);
+                }
+                PrimitiveBatch::PolychromeSprites {
+                    texture_id,
+                    sprites,
+                } => {
+                    let texture = self.atlas.get_texture_info(texture_id);
+                    let instances =
+                        unsafe { self.instance_belt.alloc_typed(sprites, &self.gpu) };
+                    let mut encoder = pass.with(&self.pipelines.poly_sprites);
+                    encoder.bind(
+                        0,
+                        &ShaderPolySpritesData {
+                            globals,
+                            t_sprite: texture.raw_view,
+                            s_sprite: self.atlas_sampler,
+                            b_poly_sprites: instances,
+                        },
+                    );
+                    encoder.draw(0, 4, 0, sprites.len() as u32);
+                }
+                PrimitiveBatch::Paths(_) | PrimitiveBatch::Surfaces(_) => {
+                    log::warn!(
+                        "Linux card proof skipped an unsupported nested primitive for card {}",
+                        card.id
+                    );
+                }
+            }
+        }
+        drop(pass);
+
+        let face = CachedCardFace {
+            texture,
+            view,
+            width,
+            height,
+            content: Arc::clone(card),
+        };
+        if let Some(old) = self.card_faces.insert(card.id, face) {
+            // The previous frame can still reference this face. Release it after that
+            // frame's sync point completes at the end of `draw`.
+            self.retired_card_faces.push(old);
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    fn release_retired_card_faces(&mut self) {
+        for face in self.retired_card_faces.drain(..) {
+            self.gpu.destroy_texture_view(face.view);
+            self.gpu.destroy_texture(face.texture);
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    fn destroy_card_faces(&mut self) {
+        self.release_retired_card_faces();
+        for (_, face) in self.card_faces.drain() {
+            self.gpu.destroy_texture_view(face.view);
+            self.gpu.destroy_texture(face.texture);
+        }
+    }
+
     pub fn destroy(&mut self) {
         self.wait_for_gpu();
+        #[cfg(target_os = "linux")]
+        self.destroy_card_faces();
         self.atlas.destroy();
         self.gpu.destroy_sampler(self.atlas_sampler);
+        #[cfg(target_os = "linux")]
+        self.gpu.destroy_sampler(self.card_sampler);
         self.instance_belt.destroy(&self.gpu);
         self.gpu.destroy_command_encoder(&mut self.command_encoder);
         self.pipelines.destroy(&self.gpu);
@@ -814,17 +1075,87 @@ impl BladeRenderer {
                     encoder.draw(0, 4, 0, sprites.len() as u32);
                 }
                 PrimitiveBatch::Surfaces(surfaces) => {
-                    let mut _encoder = pass.with(&self.pipelines.surfaces);
-
                     for surface in surfaces {
-                        #[cfg(not(target_os = "macos"))]
+                        #[cfg(target_os = "linux")]
                         {
-                            let _ = surface;
+                            let Some(card) = &surface.card else {
+                                continue;
+                            };
+                            drop(pass);
+                            self.rasterize_card_face(surface);
+                            pass = self.command_encoder.render(
+                                "main",
+                                gpu::RenderTargetSet {
+                                    colors: &[gpu::RenderTarget {
+                                        view: frame.texture_view(),
+                                        init_op: gpu::InitOp::Load,
+                                        finish_op: gpu::FinishOp::Store,
+                                    }],
+                                    depth_stencil: None,
+                                },
+                            );
+
+                            let Some(face) = self.card_faces.get(&card.id) else {
+                                continue;
+                            };
+                            let bounds = surface.bounds;
+                            let clip = surface.content_mask.bounds;
+                            let mut params = CardParams {
+                                rect: [
+                                    bounds.origin.x.0,
+                                    bounds.origin.y.0,
+                                    bounds.size.width.0,
+                                    bounds.size.height.0,
+                                ],
+                                viewport_pose: [
+                                    self.surface_config.size.width as f32,
+                                    self.surface_config.size.height as f32,
+                                    card.pose.pitch,
+                                    card.pose.yaw,
+                                ],
+                                shape: [
+                                    card.radius,
+                                    if card.pose.back { 1. } else { 0. },
+                                    1.,
+                                    0.,
+                                ],
+                                clip: [
+                                    clip.origin.x.0,
+                                    clip.origin.y.0,
+                                    clip.size.width.0,
+                                    clip.size.height.0,
+                                ],
+                                texture_region: [
+                                    bounds.size.width.0 / face.width as f32,
+                                    bounds.size.height.0 / face.height as f32,
+                                    card.pose.frosted_top,
+                                    card.scale_factor,
+                                ],
+                            };
+                            let modes: &[f32] = if card.pose.frosted_top == 0. {
+                                &[2., 1., 0.]
+                            } else {
+                                &[0.]
+                            };
+                            let mut encoder = pass.with(&self.pipelines.cards);
+                            for &mode in modes {
+                                params.shape[3] = mode;
+                                encoder.bind(
+                                    0,
+                                    &ShaderCardsData {
+                                        card_params: params,
+                                        t_card: face.view,
+                                        s_card: self.card_sampler,
+                                    },
+                                );
+                                encoder.draw(0, 6, 0, 1);
+                            }
                             continue;
-                        };
+                        }
 
                         #[cfg(target_os = "macos")]
                         {
+                            let mut encoder = pass.with(&self.pipelines.surfaces);
                             let (t_y, t_cb_cr) = unsafe {
                                 use core_foundation::base::TCFType as _;
                                 use std::ptr;
@@ -908,7 +1239,7 @@ impl BladeRenderer {
                                 )
                             };
 
-                            _encoder.bind(
+                            encoder.bind(
                                 0,
                                 &ShaderSurfacesData {
                                     globals,
@@ -922,8 +1253,11 @@ impl BladeRenderer {
                                 },
                             );
 
-                            _encoder.draw(0, 4, 0, 1);
+                            encoder.draw(0, 4, 0, 1);
                         }
+
+                        #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+                        let _ = surface;
                     }
                 }
             }
@@ -938,6 +1272,8 @@ impl BladeRenderer {
         self.atlas.after_frame(&sync_point);
 
         self.wait_for_gpu();
+        #[cfg(target_os = "linux")]
+        self.release_retired_card_faces();
         self.last_sync_point = Some(sync_point);
     }
 }

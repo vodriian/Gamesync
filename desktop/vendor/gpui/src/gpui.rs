@@ -32,7 +32,7 @@ mod path_builder;
 mod platform;
 pub mod prelude;
 mod scene;
-pub use card_layer::{CardPose, card_layer};
+pub use card_layer::{CardPose, card_layer, enable_linux_card_proof};
 mod shared_string;
 mod shared_uri;
 mod style;
