@@ -7,6 +7,7 @@ use std::sync::Arc;
 use gamesync_desktop::{
     library::{LibraryDefinitions, StatusDefinition},
     library_reader::LoadedLibrary,
+    smart::{self, PlaytimeBand, RatingBand, SmartKind, SmartRule},
 };
 use std::path::PathBuf;
 use uuid::Uuid;
@@ -68,7 +69,48 @@ pub enum Scope {
     Favorites,
     Hidden,
     Collection(Uuid),
+    /// Computed membership. See `gamesync_desktop::smart`.
+    Smart(SmartRule),
 }
+
+/// One sidebar smart group with its values and game counts. Rating and time
+/// bands keep their fixed order; text values are sorted by count, then name.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SmartGroup {
+    pub kind: SmartKind,
+    pub values: Vec<(SmartRule, usize)>,
+}
+
+/// Counts cover games in All games, so hidden games are excluded.
+fn smart_groups(games: &[Game]) -> Vec<SmartGroup> {
+    let band_order = |rule: &SmartRule| match rule {
+        SmartRule::Rating(band) => RatingBand::ALL.iter().position(|b| b == band),
+        SmartRule::Playtime(band) => PlaytimeBand::ALL.iter().position(|b| b == band),
+        _ => None,
+    };
+    SmartKind::ALL
+        .iter()
+        .map(|&kind| {
+            let mut counts = std::collections::HashMap::<SmartRule, usize>::new();
+            for game in games.iter().filter(|game| Scope::All.contains(game)) {
+                if let Some(record) = &game.record {
+                    for rule in smart::rules_for(&record.game, kind) {
+                        *counts.entry(rule).or_default() += 1;
+                    }
+                }
+            }
+            let mut values: Vec<_> = counts.into_iter().collect();
+            values.sort_by(|(a, a_count), (b, b_count)| {
+                band_order(a)
+                    .cmp(&band_order(b))
+                    .then(b_count.cmp(a_count))
+                    .then_with(|| a.label().to_lowercase().cmp(&b.label().to_lowercase()))
+            });
+            SmartGroup { kind, values }
+        })
+        .collect()
+}
+
 impl Scope {
     fn contains(&self, game: &Game) -> bool {
         let hidden = game.record.as_ref().is_some_and(|r| r.game.personal.hidden);
@@ -84,6 +126,7 @@ impl Scope {
                 .record
                 .as_ref()
                 .is_some_and(|r| r.game.personal.collections.contains(id)),
+            Self::Smart(rule) => game.record.as_ref().is_some_and(|r| rule.matches(&r.game)),
             Self::All => true,
             Self::Favorites => game.favorite,
         }
@@ -119,6 +162,8 @@ pub struct Library {
     pub filter_collection: Option<Uuid>,
     pub filter_favorites: bool,
     pub groups: Vec<(String, Vec<usize>)>,
+    /// Refreshed when game data changes, not on every search or filter change.
+    pub smart: Vec<SmartGroup>,
     query: String,
     search_keys: Vec<String>,
 }
@@ -147,6 +192,7 @@ impl Library {
                 .filter_map(|(index, game)| Scope::All.contains(game).then_some(index))
                 .collect(),
         );
+        let smart = smart_groups(&games);
         Self {
             games,
             visible,
@@ -165,6 +211,7 @@ impl Library {
             filter_collection: None,
             filter_favorites: false,
             groups: Vec::new(),
+            smart,
             query: String::new(),
             search_keys,
         }
@@ -233,6 +280,7 @@ impl Library {
             Scope::All => "All games".into(),
             Scope::Favorites => "Favorites".into(),
             Scope::Hidden => "Hidden games".into(),
+            Scope::Smart(rule) => rule.label().into(),
         }
     }
 
@@ -424,6 +472,7 @@ impl Library {
             .iter()
             .map(|g| format!("{} {}", g.title, g.tags.join(" ")).to_lowercase())
             .collect();
+        self.smart = smart_groups(&self.games);
         self.recompute();
     }
 
@@ -438,6 +487,14 @@ impl Library {
     }
 
     pub fn count(&self, scope: &Scope) -> usize {
+        if let Scope::Smart(rule) = scope {
+            return self
+                .smart
+                .iter()
+                .flat_map(|group| &group.values)
+                .find(|(value, _)| value == rule)
+                .map_or(0, |(_, count)| *count);
+        }
         self.games
             .iter()
             .filter(|game| scope.contains(game))
@@ -837,6 +894,52 @@ mod tests {
         let sidebar: Vec<_> = lib.statuses.iter().map(|s| s.label.clone()).collect();
         assert_eq!(labels, sidebar);
         assert_eq!(labels[labels.len() - 2], "On hold");
+    }
+
+    #[test]
+    fn smart_groups_count_visible_games_and_match_the_scope() {
+        let mut lib = library();
+        let games: Vec<_> = lib.games[..3].to_vec();
+        let records = games
+            .iter()
+            .enumerate()
+            .map(|(i, game)| {
+                let mut record = record(game, &game.status, None);
+                record.game.personal.tags = vec!["Weekend".into()];
+                record.game.personal.rating = Some([10, 8, 10][i]);
+                record.game.personal.hidden = i == 2;
+                record
+            })
+            .collect();
+        lib.apply_personal_records(records);
+        let group = |kind| {
+            lib.smart
+                .iter()
+                .find(|g| g.kind == kind)
+                .unwrap()
+                .values
+                .clone()
+        };
+        // The hidden game is not counted.
+        assert_eq!(
+            group(SmartKind::MyTag),
+            [(SmartRule::MyTag("Weekend".into()), 2)]
+        );
+        assert_eq!(
+            group(SmartKind::Rating),
+            [
+                (SmartRule::Rating(RatingBand::Five), 1),
+                (SmartRule::Rating(RatingBand::Four), 1)
+            ]
+        );
+        // Games without Steam data have no time played value.
+        assert!(group(SmartKind::Playtime).is_empty());
+
+        let scope = Scope::Smart(SmartRule::MyTag("Weekend".into()));
+        lib.set_scope(scope.clone());
+        assert_eq!(lib.visible.len(), 2);
+        assert_eq!(lib.count(&scope), 2);
+        assert_eq!(lib.scope_label(&scope), "Weekend");
     }
 
     #[test]

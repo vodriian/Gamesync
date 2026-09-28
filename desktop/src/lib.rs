@@ -7,6 +7,7 @@ pub mod library_reader;
 pub mod record_store;
 pub mod records;
 mod revision_store;
+pub mod smart;
 pub mod storage;
 
 pub mod credentials;

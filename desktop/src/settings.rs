@@ -51,6 +51,9 @@ pub struct Settings {
     pub show_hidden_games: bool,
     #[serde(default)]
     pub last_sync: BTreeMap<String, u64>,
+    /// Expanded sidebar smart groups on this device. Empty keeps all collapsed.
+    #[serde(default)]
+    pub smart_groups_open: Vec<crate::smart::SmartKind>,
     #[serde(flatten)]
     extra: std::collections::BTreeMap<String, serde_json::Value>,
 }
@@ -114,6 +117,7 @@ impl Default for Settings {
             reduce_motion: false,
             show_hidden_games: false,
             last_sync: Default::default(),
+            smart_groups_open: Vec::new(),
             extra: Default::default(),
         }
     }

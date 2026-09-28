@@ -1,5 +1,5 @@
 //! Eagle's sidebar row geometry. Statuses live on the board view; the sidebar
-//! keeps library scopes and collections.
+//! keeps library scopes, collections, and computed smart collections.
 
 use crate::model::{Library, Scope};
 use gpui::{div, prelude::*, px, Entity, Window};
@@ -11,6 +11,7 @@ use gpui_component::{
     v_flex, ActiveTheme as _, Disableable as _, Icon, IconName, Sizable as _, StyledExt as _,
 };
 mod collections;
+mod smart;
 
 pub struct LibrarySidebar {
     library: Entity<Library>,
@@ -19,6 +20,7 @@ pub struct LibrarySidebar {
     focus: gpui::FocusHandle,
     restore_focus: bool,
     edit: Option<collections::NameEdit>,
+    smart: smart::SmartState,
     busy: bool,
     message: String,
     toast: Option<String>,
@@ -35,6 +37,7 @@ impl LibrarySidebar {
             focus: cx.focus_handle(),
             restore_focus: false,
             edit: None,
+            smart: smart::SmartState::new(),
             busy: false,
             message: String::new(),
             toast: None,
@@ -59,8 +62,19 @@ impl LibrarySidebar {
     }
 
     fn row(&self, scope: Scope, icon: IconName, cx: &mut Context<Self>) -> impl IntoElement {
-        let active = self.library.read(cx).scope == scope;
         let count = self.library.read(cx).count(&scope);
+        self.scope_row(scope, Some(icon), count, cx)
+    }
+
+    /// Callers pass `count` so smart rows can use cached counts.
+    fn scope_row(
+        &self,
+        scope: Scope,
+        icon: Option<IconName>,
+        count: usize,
+        cx: &mut Context<Self>,
+    ) -> gpui::Stateful<gpui::Div> {
+        let active = self.library.read(cx).scope == scope;
         let label = self.library.read(cx).scope_label(&scope);
         h_flex()
             .id(gpui::SharedString::from(format!("scope-{scope:?}")))
@@ -96,7 +110,7 @@ impl LibrarySidebar {
                     cx.notify();
                 });
             }))
-            .child(Icon::new(icon).size_4())
+            .when_some(icon, |row, icon| row.child(Icon::new(icon).size_4()))
             .child(div().flex_1().min_w_0().truncate().child(label))
             .child(div().text_xs().child(count.to_string()))
     }
@@ -261,6 +275,7 @@ impl Render for LibrarySidebar {
                         self.edit.as_ref().is_some_and(|edit| edit.id.is_none()),
                         |view| view.child(self.name_editor(cx)),
                     )
+                    .child(self.smart_section(cx))
                     .when(!self.message.is_empty(), |view| {
                         view.child(div().px_2().text_xs().child(self.message.clone()))
                     }),

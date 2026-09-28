@@ -63,6 +63,8 @@ returns `steam_deck_compat_category`. Add it when a feature uses it.
 
 ## 2. Smart collections
 
+Status: implemented on September 28.
+
 A **Smart collections** sidebar section below **Collections**. The app
 computes the groups from current records. They store nothing and write nothing.
 
@@ -85,14 +87,20 @@ computes the groups from current records. They store nothing and write nothing.
   are not shown.
 - Cards, Grid, Table, and Board work with a smart scope. Dragging a game onto
   a smart value does nothing, because the membership is computed.
-- The expanded or collapsed state of each group is device-local.
+- Groups are collapsed until the user opens them. The open groups are saved
+  in device settings (`smart_groups_open`). A group with no values is not
+  shown. With no values at all, the section shows one hint sentence.
+- A group header shows a chevron and the group name, not a number. Every
+  number in the sidebar is a game count.
 
 ### Model
 
-Add `Scope::Smart(SmartRule)`. `SmartRule` is a typed enum: `Genre(String)`,
+`Scope::Smart(SmartRule)` in `model.rs`. `SmartRule` is in
+`gamesync_desktop::smart`, next to the records it matches: `Genre(String)`,
 `SteamTag(String)`, `MyTag(String)`, `Rating(RatingBand)`, and
-`Playtime(PlaytimeBand)`. Put the matching and counting in a domain module
-without GPUI, and test it there.
+`Playtime(PlaytimeBand)`. `Library::smart` caches the groups and counts. It is
+rebuilt when game data changes, not on search or filter changes, so sidebar
+rendering does not scan all games.
 
 ### Later: user smart collections
 
