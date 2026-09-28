@@ -535,7 +535,7 @@ fn board_order_menu(
 ) -> PopupMenu {
     let view = grid.read(cx);
     let lib = view.library.read(cx);
-    if lib.scope != crate::model::Scope::Board || lib.source.is_none() || view.busy() {
+    if view.view != LibraryView::Board || lib.source.is_none() || view.busy() {
         return menu;
     }
     let Some((column, row)) = view.board.find(id, lib) else {

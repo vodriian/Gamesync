@@ -32,6 +32,8 @@ pub enum LibraryView {
     Cards,
     Grid,
     Table,
+    /// Status columns with manual order. See `board`.
+    Board,
 }
 /// The source library identity prevents drops into a different loaded store.
 #[derive(Clone)]
@@ -116,7 +118,7 @@ impl GameGrid {
         cx.observe(&library, |this, library, cx| {
             let lib = library.read(cx);
             // Board columns also change when only a status, rank, or label changes.
-            if lib.scope == crate::model::Scope::Board {
+            if this.view == LibraryView::Board {
                 this.board.refresh(lib);
             }
             let visible = lib.visible.clone();
@@ -175,6 +177,12 @@ impl GameGrid {
         self.hovered = None;
         self.view = view;
         self.selection.clear();
+        if !self.saving {
+            self.status_edit = None;
+        }
+        if view == LibraryView::Board {
+            self.board.refresh(self.library.read(cx));
+        }
         self.minimum = px(if view == LibraryView::Cards {
             260.
         } else {
@@ -216,7 +224,10 @@ impl GameGrid {
                         } else {
                             match self.view {
                                 LibraryView::Cards => self.cell * 1.46 + GAP,
-                                LibraryView::Grid => self.cell * 1.5 + CAPTION + GAP,
+                                // The board does not use grid rows.
+                                LibraryView::Grid | LibraryView::Board => {
+                                    self.cell * 1.5 + CAPTION + GAP
+                                }
                                 LibraryView::Table => px(66.),
                             }
                         },
@@ -534,7 +545,7 @@ impl Render for GameGrid {
         .absolute()
         .size_full();
         let library = self.library.clone();
-        let board = library.read(cx).scope == crate::model::Scope::Board;
+        let board = self.view == LibraryView::Board;
         // The board keeps its columns visible for drops when a search finds nothing.
         let empty = if board {
             library.read(cx).games.is_empty()
@@ -570,7 +581,7 @@ impl Render for GameGrid {
                     }
                     return;
                 }
-                if this.library.read(cx).scope == crate::model::Scope::Board {
+                if this.view == LibraryView::Board {
                     if !this.board_key(event, cx) {
                         cx.propagate();
                     }

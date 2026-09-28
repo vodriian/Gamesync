@@ -98,7 +98,7 @@ Dropbox moves files; it does not resolve application-level edits. See
 - **Cards:** large framed game cards. Front: artwork and title. Back: personal edits and game details.
 - **Grid:** compact portrait covers, title, status, and rating. Multiselect and context actions follow later.
 - **Table:** sortable, resizable, reorderable columns; inline edits; bulk status, tag, and rating changes.
-- **Board:** sidebar row under Favorites; one column per status; create, rename, and reorder statuses there; drag to change status; persistent manual order within columns; menu and keyboard alternatives. See [Kanban board](kanban-board.md).
+- **Board:** fourth view in the switch after Table; one column per status over the current scope; create, rename, and reorder statuses there; drag to change status; persistent manual order within columns; menu and keyboard alternatives. See [Kanban board](kanban-board.md).
 
 Cards, Grid, and Table share a right-click menu for favorite, status, collection
 membership, notes, and Hide/Unhide. Hidden games stay saved and sync normally but

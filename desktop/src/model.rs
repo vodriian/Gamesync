@@ -66,8 +66,6 @@ impl Game {
 pub enum Scope {
     All,
     Favorites,
-    /// Status columns over the same games as `All`.
-    Board,
     Hidden,
     Collection(Uuid),
 }
@@ -86,7 +84,7 @@ impl Scope {
                 .record
                 .as_ref()
                 .is_some_and(|r| r.game.personal.collections.contains(id)),
-            Self::All | Self::Board => true,
+            Self::All => true,
             Self::Favorites => game.favorite,
         }
     }
@@ -234,7 +232,6 @@ impl Library {
                 .unwrap_or_else(|| "Collection".into()),
             Scope::All => "All games".into(),
             Scope::Favorites => "Favorites".into(),
-            Scope::Board => "Board".into(),
             Scope::Hidden => "Hidden games".into(),
         }
     }
@@ -332,7 +329,8 @@ impl Library {
         self.recompute();
     }
 
-    /// Columns in status definition order over the visible games.
+    /// Columns in status definition order over the visible games, so the board
+    /// follows the sidebar scope, search, and filters like the other views.
     pub fn board_columns(&self) -> Vec<BoardColumn> {
         let column = |key: Option<&str>| {
             let mut games: Vec<usize> = self
@@ -768,9 +766,6 @@ mod tests {
     #[test]
     fn board_columns_follow_statuses_ranks_and_sort_order() {
         let mut lib = library();
-        lib.set_scope(Scope::Board);
-        let total = lib.count(&Scope::All);
-        assert_eq!(lib.count(&Scope::Board), total);
         let (a, b, c, d) = (
             lib.games[0].clone(),
             lib.games[1].clone(),
@@ -871,7 +866,6 @@ mod tests {
         assert_eq!(lib.count(&Scope::Hidden), 1);
         assert_eq!(lib.count(&Scope::Collection(collection)), 0);
         assert!(!Scope::Favorites.contains(&lib.games[0]));
-        assert!(!Scope::Board.contains(&lib.games[0]));
         assert!(lib.selected.is_none());
         lib.set_show_hidden_games(true);
         lib.set_scope(Scope::Hidden);

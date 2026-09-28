@@ -283,13 +283,25 @@ impl GameSyncApp {
                     .bg(cx.theme().secondary.opacity(0.70))
                     .children(
                         [
-                            (LibraryView::Cards, "Cards", IconName::GalleryVerticalEnd),
-                            (LibraryView::Grid, "Grid", IconName::LayoutDashboard),
-                            (LibraryView::Table, "Table", IconName::Menu),
+                            (
+                                LibraryView::Cards,
+                                "Cards",
+                                Icon::new(IconName::GalleryVerticalEnd),
+                            ),
+                            (
+                                LibraryView::Grid,
+                                "Grid",
+                                Icon::new(IconName::LayoutDashboard),
+                            ),
+                            (LibraryView::Table, "Table", Icon::new(IconName::Menu)),
+                            (
+                                LibraryView::Board,
+                                "Board",
+                                Icon::new(crate::assets::BoardIcon),
+                            ),
                         ]
                         .into_iter()
                         .map(|(view, label, icon)| {
-                            let board = self.library.read(cx).scope == crate::model::Scope::Board;
                             Button::new(label)
                                 .ghost()
                                 .small()
@@ -298,15 +310,8 @@ impl GameSyncApp {
                                 .rounded(crate::theme::pill_radius(cx))
                                 .w(px(36.))
                                 .h(px(30.))
-                                .selected(!board && self.view == view)
+                                .selected(self.view == view)
                                 .on_click(cx.listener(move |this, _, window, cx| {
-                                    // A presentation choice leaves the board for All games.
-                                    this.library.update(cx, |lib, cx| {
-                                        if lib.scope == crate::model::Scope::Board {
-                                            lib.set_scope(crate::model::Scope::All);
-                                            cx.notify();
-                                        }
-                                    });
                                     this.view = view;
                                     this.grid.update(cx, |grid, cx| grid.set_view(view, cx));
                                     window.focus(&this.grid.focus_handle(cx));

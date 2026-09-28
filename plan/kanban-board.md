@@ -4,8 +4,8 @@ Branch: `kanban-board`, created from `omarchy-cards-3d-render`.
 
 ## Goal
 
-Add a **Board** row under **Favorites** in the sidebar. The board shows one
-column for each status, in library definition order. The user can move games
+**Board** is the fourth presentation in the toolbar view switch, after Cards,
+Grid, and Table. It shows one column for each status, in library definition order. The user can move games
 between columns and create, rename, and reorder statuses on the board.
 
 The sidebar Status section was a transition feature. The board replaced it on
@@ -13,10 +13,11 @@ September 28. Status filtering remains in the toolbar Filter menu.
 
 ## Decisions
 
-- **Board is a sidebar scope.** `Scope::Board` contains every game that is not
-  hidden, like `All`. The sidebar row uses the existing active and count logic.
-  Other scope rows leave the board. The toolbar view switcher stays; choosing
-  Cards, Grid, or Table leaves the board and shows All games.
+- **Board is a view, not a scope.** `LibraryView::Board` shows the games of the
+  current sidebar scope (All games, Favorites, a collection, or Hidden games)
+  as status columns. It started as a sidebar row under Favorites; on September
+  28 the user moved it into the view switch. Changing view closes an open
+  status editor.
 - **One status source.** Library definitions own statuses. After each definition
   save, `Library::apply_definitions` replaces the manifest, the status list,
   status labels, and collection labels in one step. The board, Filter menu,
@@ -41,8 +42,7 @@ September 28. Status filtering remains in the toolbar Filter menu.
 - **Status removal stays deferred.** The store refuses to remove a key because
   games on other computers can still use it. Removal needs game reassignment.
 - **Filters and search compose with the board**, like other views. Group by
-  does not apply; the columns are the groups. Choosing Cards, Grid, or Table
-  leaves the board and shows All games. A search with no results keeps the
+  does not apply; the columns are the groups. A search with no results keeps the
   columns so the user can still drop games and add statuses.
 - **Cross-platform.** Board cards are flat on every platform. They do not use
   the macOS Metal or Omarchy Blade card compositor. Drag and drop is in-app

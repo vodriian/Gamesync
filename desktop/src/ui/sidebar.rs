@@ -1,5 +1,5 @@
-//! Eagle's sidebar row geometry. Statuses live on the Board; the sidebar keeps
-//! library scopes and collections.
+//! Eagle's sidebar row geometry. Statuses live on the board view; the sidebar
+//! keeps library scopes and collections.
 
 use crate::model::{Library, Scope};
 use gpui::{div, prelude::*, px, Entity, Window};
@@ -58,7 +58,7 @@ impl LibrarySidebar {
         cx.notify();
     }
 
-    fn row(&self, scope: Scope, icon: impl Into<Icon>, cx: &mut Context<Self>) -> impl IntoElement {
+    fn row(&self, scope: Scope, icon: IconName, cx: &mut Context<Self>) -> impl IntoElement {
         let active = self.library.read(cx).scope == scope;
         let count = self.library.read(cx).count(&scope);
         let label = self.library.read(cx).scope_label(&scope);
@@ -96,7 +96,7 @@ impl LibrarySidebar {
                     cx.notify();
                 });
             }))
-            .child(icon.into().size_4())
+            .child(Icon::new(icon).size_4())
             .child(div().flex_1().min_w_0().truncate().child(label))
             .child(div().text_xs().child(count.to_string()))
     }
@@ -149,7 +149,6 @@ impl Render for LibrarySidebar {
                     .gap_1()
                     .child(self.row(Scope::All, IconName::LayoutDashboard, cx))
                     .child(self.row(Scope::Favorites, IconName::Star, cx))
-                    .child(self.row(Scope::Board, crate::assets::BoardIcon, cx))
                     .when(self.library.read(cx).show_hidden_games, |column| {
                         column.child(self.row(Scope::Hidden, IconName::EyeOff, cx))
                     }),
