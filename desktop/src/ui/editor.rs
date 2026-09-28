@@ -9,7 +9,6 @@ use gpui::{
 };
 use gpui_component::{
     button::{Button, ButtonVariants as _},
-    checkbox::Checkbox,
     h_flex,
     input::{Input, InputEvent, InputState},
     menu::{DropdownMenu as _, PopupMenuItem},
@@ -486,6 +485,7 @@ impl Render for InspectorEditor {
             .unwrap_or(selected.clone());
         let target = cx.entity();
         let rating = self.personal.rating;
+        let favorite = self.personal.favorite;
         v_flex()
             .id("inspector-editor")
             .on_action(cx.listener(|this, _: &crate::SaveDetails, _, cx| this.save(cx)))
@@ -550,57 +550,84 @@ impl Render for InspectorEditor {
                                 menu
                             }),
                     )
-                    .child(hint("Your rating", cx))
-                    .child(h_flex().children((1u8..=5).map(|stars| {
-                        let value = stars * 2;
-                        // Keep old half-star values visible; new choices use whole stars.
-                        let fill = rating.unwrap_or(0).saturating_sub(value - 2).min(2);
-                        Button::new(("rating-star", usize::from(stars)))
-                            .ghost()
-                            .w(px(36.))
-                            .h(px(36.))
-                            .p_0()
-                            .tooltip(if rating == Some(value) {
-                                "Clear rating".to_owned()
-                            } else {
-                                format!(
-                                    "Rate {stars} {}",
-                                    if stars == 1 { "star" } else { "stars" }
-                                )
-                            })
-                            .child(
-                                div()
-                                    .relative()
-                                    .w(px(24.))
-                                    .h(px(28.))
-                                    .text_size(px(26.))
-                                    .line_height(px(28.))
-                                    .child("☆")
-                                    .child(
-                                        div()
-                                            .absolute()
-                                            .top_0()
-                                            .left_0()
-                                            .overflow_hidden()
-                                            .w(px(f32::from(fill) * 12.))
-                                            .h_full()
-                                            .child(div().w(px(24.)).child("★")),
-                                    ),
-                            )
-                            .on_click(cx.listener(move |this, _, _, cx| {
-                                this.personal.rating =
-                                    (this.personal.rating != Some(value)).then_some(value);
-                                this.change_now(cx);
-                            }))
-                    })))
+                    // Rating and favorite share one row: a small label above each control.
                     .child(
-                        Checkbox::new("edit-favorite")
-                            .label("Favorite")
-                            .checked(self.personal.favorite)
-                            .on_click(cx.listener(|this, value: &bool, _, cx| {
-                                this.personal.favorite = *value;
-                                this.change_now(cx);
-                            })),
+                        // Wraps on a narrow card so the heart never overflows.
+                        h_flex()
+                            .flex_wrap()
+                            .gap_x_6()
+                            .gap_y_2()
+                            .items_start()
+                            .child(v_flex().gap_1().child(hint("Your rating", cx)).child(
+                                h_flex().children((1u8..=5).map(|stars| {
+                                    let value = stars * 2;
+                                    // Keep old half-star values visible; new choices use whole stars.
+                                    let fill = rating.unwrap_or(0).saturating_sub(value - 2).min(2);
+                                    Button::new(("rating-star", usize::from(stars)))
+                                        .ghost()
+                                        .w(px(36.))
+                                        .h(px(36.))
+                                        .p_0()
+                                        .tooltip(if rating == Some(value) {
+                                            "Clear rating".to_owned()
+                                        } else {
+                                            format!(
+                                                "Rate {stars} {}",
+                                                if stars == 1 { "star" } else { "stars" }
+                                            )
+                                        })
+                                        .child(
+                                            div()
+                                                .relative()
+                                                .w(px(24.))
+                                                .h(px(28.))
+                                                .text_size(px(26.))
+                                                .line_height(px(28.))
+                                                .child("☆")
+                                                .child(
+                                                    div()
+                                                        .absolute()
+                                                        .top_0()
+                                                        .left_0()
+                                                        .overflow_hidden()
+                                                        .w(px(f32::from(fill) * 12.))
+                                                        .h_full()
+                                                        .child(div().w(px(24.)).child("★")),
+                                                ),
+                                        )
+                                        .on_click(cx.listener(move |this, _, _, cx| {
+                                            this.personal.rating = (this.personal.rating
+                                                != Some(value))
+                                            .then_some(value);
+                                            this.change_now(cx);
+                                        }))
+                                })),
+                            ))
+                            .child(
+                                v_flex().gap_1().child(hint("Favorite", cx)).child(
+                                    Button::new("edit-favorite")
+                                        .ghost()
+                                        .w(px(36.))
+                                        .h(px(36.))
+                                        .p_0()
+                                        .tooltip(if favorite {
+                                            "Remove from favorites"
+                                        } else {
+                                            "Add to favorites"
+                                        })
+                                        // Glyphs match the rating stars: outlined off, filled on.
+                                        .child(
+                                            div()
+                                                .text_size(px(26.))
+                                                .line_height(px(28.))
+                                                .child(if favorite { "♥" } else { "♡" }),
+                                        )
+                                        .on_click(cx.listener(|this, _, _, cx| {
+                                            this.personal.favorite = !this.personal.favorite;
+                                            this.change_now(cx);
+                                        })),
+                                ),
+                            ),
                     )
                     .child(hint("Collections", cx))
                     .child(
