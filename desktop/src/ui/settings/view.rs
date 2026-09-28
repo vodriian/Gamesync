@@ -42,7 +42,10 @@ impl Render for SettingsView {
         let radius = cx.theme().radius_lg;
         let group = || v_flex().p_5().gap_4().rounded(radius).bg(surface);
         let appearance = group()
-            .child(self.omarchy_controls(cx))
+            // Omarchy is a Linux desktop integration, not a generic theme.
+            .when(self.omarchy_available || self.omarchy_mode, |group| {
+                group.child(self.omarchy_controls(cx))
+            })
             .child(self.appearance_controls(cx))
             .child(
                 Checkbox::new("reduce-motion")

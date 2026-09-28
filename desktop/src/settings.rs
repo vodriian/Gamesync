@@ -26,6 +26,18 @@ pub enum GroupBy {
     Status,
     Collections,
 }
+
+/// A library presentation saved independently for each sidebar section.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LibraryView {
+    Cards,
+    #[default]
+    Grid,
+    Table,
+    Board,
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(default)]
 pub struct LibraryDisplay {
@@ -38,6 +50,9 @@ pub struct LibraryDisplay {
 pub struct Settings {
     #[serde(default)]
     pub library_display: LibraryDisplay,
+    /// Device-local view choice for each library section.
+    #[serde(default)]
+    pub section_views: BTreeMap<String, LibraryView>,
     pub library_path: Option<PathBuf>,
     #[serde(default = "system_theme")]
     pub theme: String,
@@ -116,6 +131,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             library_display: LibraryDisplay::default(),
+            section_views: Default::default(),
             library_path: None,
             theme: system_theme(),
             appearance: None,
@@ -195,15 +211,23 @@ mod display_tests {
         let old: Settings =
             serde_json::from_str(r#"{"library_path":null,"future_setting":42}"#).unwrap();
         assert_eq!(old.library_display, LibraryDisplay::default());
+        assert!(old.section_views.is_empty());
         let mut settings = old;
         settings.library_display = LibraryDisplay {
             sort: SortBy::Hours,
             descending: true,
             group: GroupBy::Collections,
         };
+        settings
+            .section_views
+            .insert("favorites".into(), LibraryView::Cards);
         let saved = serde_json::to_vec(&settings).unwrap();
         let restored: Settings = serde_json::from_slice(&saved).unwrap();
         assert_eq!(restored.library_display, settings.library_display);
+        assert_eq!(
+            restored.section_views.get("favorites"),
+            Some(&LibraryView::Cards)
+        );
         assert_eq!(
             restored.extra.get("future_setting"),
             Some(&serde_json::json!(42))

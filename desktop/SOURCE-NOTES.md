@@ -82,3 +82,8 @@ same icon family that gpui-component bundles. The bundled set has no board icon.
 
 `icons/house.svg` is Lucide's `house` icon (ISC license), from the same family.
 The bundled set has no home icon.
+
+## Wishlist discount icon
+
+`icons/badge-percent.svg` is Lucide's `badge-percent` icon (ISC license), from
+the same family. The bundled set has no discount-badge icon.

@@ -38,12 +38,12 @@ fn store_tags_resolve_to_names_and_skip_unknown_apps() {
 #[test]
 #[ignore = "Reads public Steam prices; no account or API key is used"]
 fn store_quotes_include_paid_free_and_missing_apps() {
-    use gamesync_desktop::prices::Quote;
+    use gamesync_desktop::prices::{Quote, DEFAULT_COUNTRY};
     let quotes = SteamClient::new()
         .unwrap()
-        .quotes(&[1091500, 570, 1], "DE")
+        .quotes(&[1091500, 570, 1], DEFAULT_COUNTRY)
         .unwrap();
-    assert!(matches!(&quotes[&1091500], Quote::Price(p) if p.formatted_final.contains('€')));
+    assert!(matches!(&quotes[&1091500], Quote::Price(p) if p.formatted_final.contains('₴')));
     assert_eq!(quotes[&570], Quote::Free);
     assert!(!quotes.contains_key(&1));
 }

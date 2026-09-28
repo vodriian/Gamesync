@@ -305,31 +305,17 @@ impl InspectorEditor {
         )
     }
 
-    /// Wishlist price details: current price, the regular price during a
-    /// discount, and when the sale ends.
+    /// Wishlist price details use the same compact treatment as library views.
     fn price_block(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let library = self.library.read(cx);
         let game = library.games.iter().find(|g| g.id == self.base.game_id);
-        let (price, sale) =
-            game.map_or_else(|| ("Price loading…".into(), None), |g| g.price_parts());
-        let regular = game
-            .and_then(|g| match &g.price {
-                Some(gamesync_desktop::prices::Quote::Price(p)) if p.discount_pct > 0 => {
-                    p.formatted_original.clone()
-                }
-                _ => None,
-            })
-            .map(|original| format!("Regular price {original}"));
         v_flex()
             .gap_1()
             .child(hint("Price", cx))
-            .child(div().text_lg().font_semibold().child(price))
-            .children(
-                [regular, sale]
-                    .into_iter()
-                    .flatten()
-                    .map(|line| hint(&line, cx).into_any_element()),
-            )
+            .child(game.map_or_else(
+                || div().text_lg().child("Price loading…").into_any_element(),
+                |game| super::price::wishlist_price(game, cx),
+            ))
     }
 
     /// Picker rows for the current search. See `suggest_tags`.

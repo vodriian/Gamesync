@@ -66,9 +66,11 @@ matching its shell surfaces instead of using a separate dark shade. These change
 apply only while Omarchy mode is on; normal GameSync surfaces return when it is
 turned off.
 
-The checkbox is off by default. While it is on, bundled palette controls are
-disabled but their saved values stay unchanged. Turning it off restores those
-values. If Omarchy state disappears, the user can still turn the mode off.
+The checkbox is off by default and appears only when Omarchy state is available,
+or while the mode is already on so the user can still turn it off if that state
+disappears. It is hidden on macOS and other non-Omarchy systems. While it is on,
+bundled palette controls are disabled but their saved values stay unchanged.
+Turning it off restores those values.
 
 ## Sources and regeneration
 

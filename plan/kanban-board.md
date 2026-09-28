@@ -50,7 +50,12 @@ September 28. Status filtering remains in the toolbar Filter menu.
   Storage has no new platform code. Windows remains deferred with the store.
 - **Performance.** Each column is a virtual list with fixed card height, so a
   10,000-game column builds only visible cards. Covers use the shared image
-  cache. The board scrolls horizontally when columns do not fit.
+  cache. Each column scrolls vertically under the pointer. The board scrolls
+  horizontally when columns do not fit and does not capture vertical wheel
+  input from a column.
+- **Card metadata.** Board cards show the first collection as a compact badge
+  and a `+N` count for additional collections. Cover artwork is clipped by the
+  rounded thumbnail container so unusual source aspect ratios cannot escape it.
 
 ## Order inside a column
 

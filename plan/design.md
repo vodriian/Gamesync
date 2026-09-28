@@ -13,7 +13,7 @@ feel physical. Avoid motion that delays work.
 
 The September 21 card references replace the inspector with a focused card.
 Keep the useful left navigation sidebar while browsing. Treat games as physical cards: artwork and title on the front, personal
-and provider details on the back. Use Cards, Grid, and Table presentations.
+and provider details on the back. Use Cards, Grid, Table, and Board presentations.
 See [physical cards](physical-cards.md) for scope and native rendering limits.
 Eagle remains a source for infrastructure, not the visual target for this UI.
 
@@ -62,8 +62,15 @@ Use system fonts and platform conventions. Keep controls readable in light
 and dark themes. Use a shared spacing and color scale from Eagle before adding
 new values. Give icons accessible labels and visible focus states.
 
-Keep view selection and search near the library. Open game details on the back of a focused card without losing library scroll position. Keep one selection model across
-the grid, table, and board. For game behavior, use the app plan.
+Keep view selection and search near the library. Each sidebar section remembers
+its own view on this device, so returning to a section is predictable after a
+restart. Open game details on the back of a focused card without losing library
+scroll position. Keep one selection model across the grid, table, and board. For
+game behavior, use the app plan.
+
+Keep primary navigation at the top of the sidebar. Place the subdued GameSync
+wordmark and Settings control together in a fixed footer; do not add a tagline
+that competes with the library navigation.
 
 ## Motion and input
 

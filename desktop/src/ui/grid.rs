@@ -5,6 +5,7 @@ use crate::{
     model::{Game, Library},
     ui::thumb_cache::LruImageCache,
 };
+pub use gamesync_desktop::settings::LibraryView;
 use gpui::{
     canvas, div, image_cache, img, prelude::*, px, size, Bounds, Entity, FocusHandle, Focusable,
     ObjectFit, Pixels, ScrollStrategy, Size, Window,
@@ -27,14 +28,6 @@ const GAP: Pixels = px(24.);
 const CONTENT_INSET: Pixels = px(20.);
 const CAPTION: Pixels = px(52.);
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum LibraryView {
-    Cards,
-    Grid,
-    Table,
-    /// Status columns with manual order. See `board`.
-    Board,
-}
 /// The source library identity prevents drops into a different loaded store.
 #[derive(Clone)]
 pub(super) struct DraggedGame {
@@ -110,6 +103,14 @@ impl Focusable for GameGrid {
 }
 
 impl GameGrid {
+    fn minimum_for(view: LibraryView) -> Pixels {
+        px(if view == LibraryView::Cards {
+            260.
+        } else {
+            145.
+        })
+    }
+
     pub fn new(
         library: Entity<Library>,
         cache: Entity<LruImageCache>,
@@ -160,7 +161,7 @@ impl GameGrid {
             width: px(0.),
             columns: 1,
             cell: px(150.),
-            minimum: px(260.),
+            minimum: Self::minimum_for(LibraryView::Grid),
             row_sizes: Rc::new(Vec::new()),
             groups: library.read(cx).groups.clone(),
             rows: Vec::new(),
@@ -183,11 +184,7 @@ impl GameGrid {
         if view == LibraryView::Board {
             self.board.refresh(self.library.read(cx));
         }
-        self.minimum = px(if view == LibraryView::Cards {
-            260.
-        } else {
-            145.
-        });
+        self.minimum = Self::minimum_for(view);
         self.measure(self.width);
         self.rebuild_rows();
         if let Some(slot) = self.library.read(cx).visible.iter().position(|&i| {
@@ -778,11 +775,10 @@ fn cell(
                         .justify_between()
                         .text_xs()
                         .text_color(muted)
-                        // Wishlist games show price and sale end, not status and rating.
+                        // Wishlist games show price and discount, not status and rating.
                         .map(|row| {
                             if data.game.wishlisted() {
-                                let (price, sale) = data.game.price_parts();
-                                row.child(price).child(sale.unwrap_or_default())
+                                row.child(super::price::wishlist_price(&data.game, cx))
                             } else {
                                 row.child(data.game.status_label.clone()).child(
                                     data.game.rating.map_or(String::new(), |rating| {
@@ -858,17 +854,24 @@ fn table_row(
             })),
         )
         .child(
-            img(data
-                .game
-                .cover_path
-                .clone()
-                .map(gpui::ImageSource::from)
-                .unwrap_or_else(|| data.game.cover.clone().into()))
-            .w(px(30.))
-            .h(px(44.))
-            .rounded(crate::theme::interface_radius(cx, px(4.)))
-            .object_fit(ObjectFit::Cover)
-            .with_fallback(|| div().w(px(30.)).h(px(44.)).child("✦").into_any_element()),
+            div()
+                .w(px(30.))
+                .h(px(44.))
+                .flex_shrink_0()
+                .overflow_hidden()
+                .rounded(crate::theme::interface_radius(cx, px(4.)))
+                .bg(cx.theme().muted)
+                .child(
+                    img(data
+                        .game
+                        .cover_path
+                        .clone()
+                        .map(gpui::ImageSource::from)
+                        .unwrap_or_else(|| data.game.cover.clone().into()))
+                    .size_full()
+                    .object_fit(ObjectFit::Cover)
+                    .with_fallback(|| div().size_full().child("✦").into_any_element()),
+                ),
         )
         .child(
             div()
@@ -879,13 +882,15 @@ fn table_row(
                 .font_medium()
                 .child(data.game.title.clone()),
         )
-        // Wishlist rows: price in the status column, then one wide sale column.
+        // Wishlist rows replace the owned-game columns with one wide price cell.
         .map(|row| {
             if data.game.wishlisted() {
-                let (price, sale) = data.game.price_parts();
-                return row
-                    .child(div().w(px(140.)).text_sm().child(price))
-                    .child(div().w(px(200.)).text_sm().child(sale.unwrap_or_default()));
+                return row.child(
+                    div()
+                        .w(px(340.))
+                        .text_sm()
+                        .child(super::price::wishlist_price(&data.game, cx)),
+                );
             }
             row.child(
                 div()

@@ -249,6 +249,11 @@ impl GameGrid {
                             .id("board")
                             .size_full()
                             .overflow_x_scroll()
+                            // Keep vertical wheel input for the column under the pointer.
+                            .map(|mut board| {
+                                board.style().restrict_scroll_to_axis = Some(true);
+                                board
+                            })
                             .track_scroll(&self.board.horizontal)
                             .items_start()
                             .gap(COLUMN_GAP)
@@ -473,27 +478,32 @@ impl GameGrid {
                         }
                     })
                     .child(
-                        img(game
-                            .cover_path
-                            .clone()
-                            .map(gpui::ImageSource::from)
-                            .unwrap_or_else(|| game.cover.clone().into()))
-                        .w(px(44.))
-                        .h(px(66.))
-                        .flex_shrink_0()
-                        .rounded(crate::theme::interface_radius(cx, px(4.)))
-                        .object_fit(ObjectFit::Cover)
-                        .with_fallback(move || {
-                            div()
-                                .w(px(44.))
-                                .h(px(66.))
-                                .flex()
-                                .items_center()
-                                .justify_center()
-                                .text_color(muted)
-                                .child(Icon::new(IconName::File).size_4())
-                                .into_any_element()
-                        }),
+                        div()
+                            .w(px(44.))
+                            .h(px(66.))
+                            .flex_shrink_0()
+                            .overflow_hidden()
+                            .rounded(crate::theme::interface_radius(cx, px(4.)))
+                            .bg(cx.theme().muted)
+                            .child(
+                                img(game
+                                    .cover_path
+                                    .clone()
+                                    .map(gpui::ImageSource::from)
+                                    .unwrap_or_else(|| game.cover.clone().into()))
+                                .size_full()
+                                .object_fit(ObjectFit::Cover)
+                                .with_fallback(move || {
+                                    div()
+                                        .size_full()
+                                        .flex()
+                                        .items_center()
+                                        .justify_center()
+                                        .text_color(muted)
+                                        .child(Icon::new(IconName::File).size_4())
+                                        .into_any_element()
+                                }),
+                            ),
                     )
                     .child(
                         v_flex()
@@ -504,9 +514,37 @@ impl GameGrid {
                                 div()
                                     .text_sm()
                                     .font_medium()
-                                    .line_clamp(2)
+                                    .truncate()
                                     .child(game.title.clone()),
                             )
+                            .when(!game.collections.is_empty(), |details| {
+                                details.child(
+                                    h_flex()
+                                        .min_w_0()
+                                        .gap_1()
+                                        .overflow_hidden()
+                                        .child(
+                                            div()
+                                                .min_w_0()
+                                                .max_w(px(120.))
+                                                .px_1()
+                                                .rounded(crate::theme::pill_radius(cx))
+                                                .bg(cx.theme().muted_foreground.opacity(0.10))
+                                                .text_xs()
+                                                .text_color(cx.theme().foreground.opacity(0.75))
+                                                .truncate()
+                                                .child(game.collections[0].clone()),
+                                        )
+                                        .when(game.collections.len() > 1, |row| {
+                                            row.child(
+                                                div().flex_shrink_0().text_xs().child(format!(
+                                                    "+{}",
+                                                    game.collections.len() - 1
+                                                )),
+                                            )
+                                        }),
+                                )
+                            })
                             .child(
                                 h_flex()
                                     .gap_2()

@@ -25,7 +25,7 @@ use gpui_component::{
     input::{Input, InputEvent, InputState},
     v_flex, ActiveTheme as _, Icon, IconName, Selectable as _, Sizable as _, StyledExt as _,
 };
-use std::path::PathBuf;
+use std::{collections::BTreeMap, path::PathBuf};
 
 pub struct GameSyncApp {
     library: Entity<Library>,
@@ -44,6 +44,8 @@ pub struct GameSyncApp {
     search: Entity<InputState>,
     detail_shown: bool,
     view: LibraryView,
+    section_views: BTreeMap<String, LibraryView>,
+    active_section: Option<String>,
     restore_grid_focus: bool,
     last_sync: Option<u64>,
     theme: gamesync_desktop::appearance::Appearance,
@@ -63,6 +65,7 @@ pub struct GameSyncApp {
     refreshing: bool,
     notice: String,
     display_save: Option<Task<()>>,
+    view_save: Option<Task<()>>,
     price_task: Option<Task<()>>,
     /// Detects opening the Wishlist scope, which triggers a price refresh.
     in_wishlist: bool,
@@ -81,13 +84,12 @@ impl GameSyncApp {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        if let Ok(settings) = crate::settings::load() {
-            library.display = settings.library_display;
-            library.recompute();
-        }
-        library.show_hidden_games = crate::settings::load().is_ok_and(|s| s.show_hidden_games);
+        let settings = crate::settings::load().unwrap_or_default();
+        library.display = settings.library_display.clone();
+        library.recompute();
+        library.show_hidden_games = settings.show_hidden_games;
         cx.set_global(super::motion::MotionPreferences {
-            reduced: crate::settings::load().is_ok_and(|s| s.reduce_motion),
+            reduced: settings.reduce_motion,
         });
         let library = cx.new(|_| library);
         let cache = LruImageCache::new(DEFAULT_BUDGET_BYTES, cx);
@@ -148,16 +150,30 @@ impl GameSyncApp {
                     .update(cx, |sidebar, cx| sidebar.show_toast(&event.0, cx));
             });
         let library_subscription = cx.observe(&library, |this, library, cx| {
-            let lib = library.read(cx);
-            let in_wishlist = !lib.home && lib.scope == crate::model::Scope::Wishlist;
+            let (section, in_wishlist) = {
+                let lib = library.read(cx);
+                (
+                    (!lib.home).then(|| lib.scope.view_key()),
+                    !lib.home && lib.scope == crate::model::Scope::Wishlist,
+                )
+            };
+            if section != this.active_section {
+                this.active_section = section.clone();
+                if let Some(section) = section {
+                    let mut preferred = this
+                        .section_views
+                        .get(&section)
+                        .copied()
+                        .unwrap_or_default();
+                    // Wishlist games have no status, so the Board does not apply.
+                    if in_wishlist && preferred == LibraryView::Board {
+                        preferred = LibraryView::Grid;
+                    }
+                    this.apply_view(preferred, cx);
+                }
+            }
             if in_wishlist && !this.in_wishlist {
                 this.refresh_prices(cx);
-                // Wishlist games have no status, so the Board does not apply.
-                if this.view == LibraryView::Board {
-                    this.view = LibraryView::Grid;
-                    this.grid
-                        .update(cx, |grid, cx| grid.set_view(LibraryView::Grid, cx));
-                }
             }
             this.in_wishlist = in_wishlist;
             cx.notify();
@@ -181,6 +197,8 @@ impl GameSyncApp {
             detail_shown: false,
             last_sync: None,
             view: LibraryView::Grid,
+            section_views: settings.section_views,
+            active_section: None,
             restore_grid_focus: false,
             theme: initial_theme,
             omarchy_mode,
@@ -206,6 +224,7 @@ impl GameSyncApp {
             refreshing: false,
             notice: String::new(),
             display_save: None,
+            view_save: None,
             price_task: None,
             in_wishlist: false,
             display_pending: 0,
@@ -328,6 +347,43 @@ impl GameSyncApp {
             .when(!home, |toolbar| toolbar.child(self.library_controls(cx)))
     }
 
+    fn apply_view(&mut self, view: LibraryView, cx: &mut Context<Self>) {
+        if self.view == view {
+            return;
+        }
+        self.view = view;
+        self.grid.update(cx, |grid, cx| grid.set_view(view, cx));
+    }
+
+    fn choose_view(&mut self, view: LibraryView, cx: &mut Context<Self>) {
+        let section = self.library.read(cx).scope.view_key();
+        self.section_views.insert(section.clone(), view);
+        self.apply_view(view, cx);
+
+        // Serialize rapid choices so the newest view is the final disk write.
+        let previous = self.view_save.take();
+        self.display_pending += 1;
+        self.view_save = Some(cx.spawn(async move |app, cx| {
+            if let Some(previous) = previous {
+                previous.await;
+            }
+            let result = cx
+                .background_spawn(async move {
+                    crate::settings::update(move |settings| {
+                        settings.section_views.insert(section, view);
+                    })
+                })
+                .await;
+            let _ = app.update(cx, |app, cx| {
+                app.display_pending = app.display_pending.saturating_sub(1);
+                if let Err(error) = result {
+                    app.notice = format!("Could not save section view: {error}");
+                }
+                cx.notify();
+            });
+        }));
+    }
+
     fn library_controls(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let wishlist = self.library.read(cx).scope == crate::model::Scope::Wishlist;
         h_flex()
@@ -371,8 +427,7 @@ impl GameSyncApp {
                                 .h(px(30.))
                                 .selected(self.view == view)
                                 .on_click(cx.listener(move |this, _, window, cx| {
-                                    this.view = view;
-                                    this.grid.update(cx, |grid, cx| grid.set_view(view, cx));
+                                    this.choose_view(view, cx);
                                     window.focus(&this.grid.focus_handle(cx));
                                     cx.notify();
                                 }))

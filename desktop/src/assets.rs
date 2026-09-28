@@ -58,6 +58,10 @@ const ICONS: &[(&str, &[u8])] = &[
         include_bytes!("../icons/square-kanban.svg"),
     ),
     ("icons/house.svg", include_bytes!("../icons/house.svg")),
+    (
+        "icons/badge-percent.svg",
+        include_bytes!("../icons/badge-percent.svg"),
+    ),
 ];
 
 /// App icons that the bundled component icon set does not include.
@@ -72,6 +76,13 @@ pub struct HomeIcon;
 impl gpui_component::IconNamed for HomeIcon {
     fn path(self) -> SharedString {
         "icons/house.svg".into()
+    }
+}
+
+pub struct DiscountIcon;
+impl gpui_component::IconNamed for DiscountIcon {
+    fn path(self) -> SharedString {
+        "icons/badge-percent.svg".into()
     }
 }
 
