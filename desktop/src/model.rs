@@ -69,7 +69,6 @@ pub enum Scope {
     /// Status columns over the same games as `All`.
     Board,
     Hidden,
-    Status(String),
     Collection(Uuid),
 }
 impl Scope {
@@ -89,7 +88,6 @@ impl Scope {
                 .is_some_and(|r| r.game.personal.collections.contains(id)),
             Self::All | Self::Board => true,
             Self::Favorites => game.favorite,
-            Self::Status(status) => game.status == *status,
         }
     }
 }
@@ -238,12 +236,6 @@ impl Library {
             Scope::Favorites => "Favorites".into(),
             Scope::Board => "Board".into(),
             Scope::Hidden => "Hidden games".into(),
-            Scope::Status(key) => self
-                .statuses
-                .iter()
-                .find(|status| status.key == *key)
-                .map(|status| status.label.clone())
-                .unwrap_or_else(|| key.clone()),
         }
     }
 
@@ -258,10 +250,12 @@ impl Library {
             next.query = self.query.clone();
             next.scope = self.scope.clone();
             next.selected = self.selected;
-            if let Scope::Status(key) = &next.scope {
-                if !next.statuses.iter().any(|status| status.key == *key) {
-                    next.scope = Scope::All;
-                }
+            if next
+                .filter_status
+                .as_ref()
+                .is_some_and(|key| !next.statuses.iter().any(|status| status.key == *key))
+            {
+                next.filter_status = None;
             }
             if let Scope::Collection(id) = &next.scope {
                 if !next.source.as_ref().is_some_and(|(_, m)| {
@@ -317,7 +311,6 @@ impl Library {
                 .collect();
         }
         let scope_exists = match &self.scope {
-            Scope::Status(key) => saved.definitions.status(key).is_some(),
             Scope::Collection(id) => saved
                 .definitions
                 .collections
@@ -680,7 +673,8 @@ mod tests {
         assert_eq!(lib.visible.len(), 1);
         lib.select_slot(0);
         assert_eq!(lib.selected, Some(Uuid::from_u128(1145360)));
-        lib.set_scope(Scope::Status("completed".into()));
+        lib.filter_status = Some("completed".into());
+        lib.recompute();
         assert!(lib.visible.is_empty());
         assert!(lib.selected_game().is_none());
     }
@@ -746,9 +740,10 @@ mod tests {
             extra: Default::default(),
         });
         lib.games[0].status = "weekend".into();
-        lib.set_scope(Scope::Status("weekend".into()));
+        lib.filter_status = Some("weekend".into());
+        lib.recompute();
         assert_eq!(lib.visible.len(), 1);
-        assert_eq!(lib.scope_label(&lib.scope), "For the weekend");
+        assert_eq!(lib.board_columns().last().unwrap().label, "For the weekend");
     }
     fn record(
         game: &Game,
@@ -836,7 +831,7 @@ mod tests {
             definitions,
             extra: Default::default(),
         };
-        lib.set_scope(Scope::Status("gone".into()));
+        lib.set_scope(Scope::Collection(Uuid::new_v4()));
         lib.filter_status = Some("gone".into());
         lib.apply_definitions(PathBuf::from("/library"), saved.clone());
         assert_eq!(lib.statuses, saved.definitions.statuses);
@@ -876,7 +871,7 @@ mod tests {
         assert_eq!(lib.count(&Scope::Hidden), 1);
         assert_eq!(lib.count(&Scope::Collection(collection)), 0);
         assert!(!Scope::Favorites.contains(&lib.games[0]));
-        assert!(!Scope::Status(game.status).contains(&lib.games[0]));
+        assert!(!Scope::Board.contains(&lib.games[0]));
         assert!(lib.selected.is_none());
         lib.set_show_hidden_games(true);
         lib.set_scope(Scope::Hidden);

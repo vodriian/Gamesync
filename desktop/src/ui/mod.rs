@@ -1,6 +1,7 @@
 pub mod app;
 mod card;
 mod conflicts;
+mod definitions;
 mod detail;
 mod editor;
 mod grid;

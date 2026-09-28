@@ -19,8 +19,8 @@ use gpui_component::{menu::ContextMenuExt as _, Disableable as _};
 use std::{rc::Rc, sync::Arc};
 mod actions;
 mod board;
+mod board_status;
 mod bulk;
-pub use board::StatusRequest;
 
 const GAP: Pixels = px(24.);
 // Keep spacing inside the full-width scroll mask so shadows can use the gutter.
@@ -98,6 +98,7 @@ pub struct GameGrid {
     groups: Vec<(String, Vec<usize>)>,
     rows: Vec<(Option<String>, Vec<usize>)>,
     board: board::BoardState,
+    status_edit: Option<board_status::StatusEdit>,
 }
 
 impl Focusable for GameGrid {
@@ -162,6 +163,7 @@ impl GameGrid {
             groups: library.read(cx).groups.clone(),
             rows: Vec::new(),
             board: Default::default(),
+            status_edit: None,
         }
     }
 
@@ -544,7 +546,15 @@ impl Render for GameGrid {
             .track_focus(&self.focus)
             .relative()
             .size_full()
-            .on_key_down(cx.listener(|this, event: &gpui::KeyDownEvent, _, cx| {
+            .on_key_down(cx.listener(|this, event: &gpui::KeyDownEvent, window, cx| {
+                if this.status_edit.is_some() {
+                    if event.keystroke.key == "escape" {
+                        this.cancel_status(window, cx);
+                    } else {
+                        cx.propagate();
+                    }
+                    return;
+                }
                 if this.note.is_some() {
                     cx.propagate();
                     return;
@@ -626,21 +636,25 @@ impl Render for GameGrid {
                 |view| view.child(self.bulk_panel(cx)),
             )
             .when(self.note.is_some(), |view| view.child(self.note_dialog(cx)))
-            .when(self.note.is_none() && !self.feedback.is_empty(), |view| {
-                view.child(
-                    div()
-                        .absolute()
-                        .bottom(px(if self.selection.is_empty() { 16. } else { 70. }))
-                        .left_4()
-                        .right_4()
-                        .p_3()
-                        .rounded(cx.theme().radius_lg)
-                        .bg(cx.theme().popover)
-                        .text_color(cx.theme().popover_foreground)
-                        .text_sm()
-                        .child(self.feedback.clone()),
-                )
-            })
+            // An open status editor shows its own message.
+            .when(
+                self.note.is_none() && self.status_edit.is_none() && !self.feedback.is_empty(),
+                |view| {
+                    view.child(
+                        div()
+                            .absolute()
+                            .bottom(px(if self.selection.is_empty() { 16. } else { 70. }))
+                            .left_4()
+                            .right_4()
+                            .p_3()
+                            .rounded(cx.theme().radius_lg)
+                            .bg(cx.theme().popover)
+                            .text_color(cx.theme().popover_foreground)
+                            .text_sm()
+                            .child(self.feedback.clone()),
+                    )
+                },
+            )
     }
 }
 

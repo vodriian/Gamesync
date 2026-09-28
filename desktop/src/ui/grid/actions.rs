@@ -181,7 +181,7 @@ pub(super) fn menu(
 
 impl GameGrid {
     pub fn busy(&self) -> bool {
-        self.saving || self.note.is_some()
+        self.saving || self.note.is_some() || self.status_edit.is_some()
     }
 
     /// The revisions one game edit is checked against, or a message for the user.

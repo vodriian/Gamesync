@@ -1,7 +1,8 @@
 //! Status board. Columns come from `Library::board_columns`, so they follow the
-//! same status definitions as the sidebar. Moves write one game through the
-//! grid's guarded save. Cards stay flat on every platform: the board does not use
+//! library status definitions. Moves write one game through the grid's guarded
+//! save; status edits are in `board_status`. Cards stay flat on every platform: the board does not use
 //! the macOS Metal or Linux Blade card compositor.
+use super::board_status::StatusTarget;
 use super::*;
 use crate::model::BoardColumn;
 use gamesync_desktop::board::rank_for_drop;
@@ -16,16 +17,6 @@ const COLUMN_WIDTH: Pixels = px(280.);
 const CARD_HEIGHT: Pixels = px(84.);
 const CARD_GAP: Pixels = px(8.);
 const COLUMN_GAP: Pixels = px(16.);
-
-/// Status definition requests. The sidebar owns the one inline name editor and
-/// the definition writes, so the app forwards these to it.
-pub enum StatusRequest {
-    New,
-    Rename(String),
-    /// Key, and `true` to move it later in the order.
-    Move(String, bool),
-}
-impl gpui::EventEmitter<StatusRequest> for GameGrid {}
 
 /// Per-column scroll handles and the horizontal board scroll.
 #[derive(Default)]
@@ -240,10 +231,12 @@ impl GameGrid {
 
     pub(super) fn render_board(&mut self, cx: &mut Context<Self>) -> gpui::AnyElement {
         let columns = self.board.columns.clone();
-        let editable = {
+        let writable = {
             let lib = self.library.read(cx);
-            lib.source.is_some() && lib.write_issue.is_none() && !self.busy()
+            lib.source.is_some() && lib.write_issue.is_none()
         };
+        // Drops and menus wait while a save runs or an editor is open.
+        let editable = writable && !self.busy();
         let count = columns.iter().filter(|c| c.key.is_some()).count();
         image_cache(self.cache.clone())
             .size_full()
@@ -265,7 +258,7 @@ impl GameGrid {
                             .children(columns.into_iter().enumerate().map(|(index, column)| {
                                 self.board_column(index, column, count, editable, cx)
                             }))
-                            .when(editable, |board| board.child(add_status_column(cx))),
+                            .when(writable, |board| board.child(self.add_status_column(cx))),
                     )
                     .horizontal_scrollbar(&self.board.horizontal),
             )
@@ -366,8 +359,15 @@ impl GameGrid {
         editable: bool,
         cx: &mut Context<Self>,
     ) -> gpui::AnyElement {
-        let grid = cx.entity();
         let key = column.key.clone();
+        if key.is_some()
+            && self.status_edit.as_ref().is_some_and(|edit| {
+                edit.target == StatusTarget::Rename(key.clone().unwrap_or_default())
+            })
+        {
+            return self.status_editor(cx);
+        }
+        let grid = cx.entity();
         h_flex()
             .h(px(44.))
             .flex_shrink_0()
@@ -575,34 +575,58 @@ fn column_menu(
     index: usize,
     count: usize,
 ) -> PopupMenu {
-    let event = |event: fn(String) -> StatusRequest| {
-        let grid = grid.clone();
-        let key = key.to_owned();
-        move |_: &gpui::ClickEvent, _: &mut Window, cx: &mut gpui::App| {
-            grid.update(cx, |_, cx| cx.emit(event(key.clone())))
-        }
-    };
-    menu.item(PopupMenuItem::new("Rename").on_click(event(StatusRequest::Rename)))
-        .separator()
-        .item(
-            PopupMenuItem::new("Move left")
-                .disabled(index == 0)
-                .on_click(event(|key| StatusRequest::Move(key, false))),
-        )
-        .item(
-            PopupMenuItem::new("Move right")
-                .disabled(index + 1 >= count)
-                .on_click(event(|key| StatusRequest::Move(key, true))),
-        )
+    let (rename, left, right) = (grid.clone(), grid.clone(), grid.clone());
+    let (rename_key, left_key, right_key) = (key.to_owned(), key.to_owned(), key.to_owned());
+    menu.item(PopupMenuItem::new("Rename").on_click(move |_, window, cx| {
+        rename.update(cx, |grid, cx| {
+            grid.begin_status(StatusTarget::Rename(rename_key.clone()), window, cx)
+        })
+    }))
+    .separator()
+    .item(
+        PopupMenuItem::new("Move left")
+            .disabled(index == 0)
+            .on_click(move |_, _, cx| {
+                left.update(cx, |grid, cx| grid.move_status(&left_key, false, cx))
+            }),
+    )
+    .item(
+        PopupMenuItem::new("Move right")
+            .disabled(index + 1 >= count)
+            .on_click(move |_, _, cx| {
+                right.update(cx, |grid, cx| grid.move_status(&right_key, true, cx))
+            }),
+    )
 }
 
-fn add_status_column(cx: &mut Context<GameGrid>) -> impl IntoElement {
-    div().w(COLUMN_WIDTH).flex_shrink_0().child(
-        Button::new("board-add-status")
-            .ghost()
-            .w_full()
-            .icon(IconName::Plus)
-            .label("Add status")
-            .on_click(cx.listener(|_, _, _, cx| cx.emit(StatusRequest::New))),
-    )
+impl GameGrid {
+    fn add_status_column(&self, cx: &mut Context<Self>) -> gpui::AnyElement {
+        let editing = self
+            .status_edit
+            .as_ref()
+            .is_some_and(|edit| edit.target == StatusTarget::New);
+        div()
+            .w(COLUMN_WIDTH)
+            .flex_shrink_0()
+            .when(editing, |column| {
+                column
+                    .rounded(crate::theme::interface_radius(cx, px(12.)))
+                    .bg(cx.theme().secondary.opacity(0.55))
+                    .child(self.status_editor(cx))
+            })
+            .when(!editing, |column| {
+                column.child(
+                    Button::new("board-add-status")
+                        .ghost()
+                        .w_full()
+                        .icon(IconName::Plus)
+                        .label("Add status")
+                        .disabled(self.busy())
+                        .on_click(cx.listener(|this, _, window, cx| {
+                            this.begin_status(StatusTarget::New, window, cx)
+                        })),
+                )
+            })
+            .into_any_element()
+    }
 }
