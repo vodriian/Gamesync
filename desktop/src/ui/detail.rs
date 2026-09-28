@@ -200,6 +200,7 @@ impl DetailPanel {
             match event {
                 EditorEvent::Closed => this.review = None,
                 EditorEvent::Saved => cx.emit(EditorEvent::Saved),
+                EditorEvent::ShowScope(_) => {}
             }
             cx.notify();
         })
@@ -350,6 +351,7 @@ impl DetailPanel {
             match event {
                 EditorEvent::Closed => this.editor = None,
                 EditorEvent::Saved => cx.emit(EditorEvent::Saved),
+                EditorEvent::ShowScope(scope) => cx.emit(EditorEvent::ShowScope(scope.clone())),
             }
             cx.notify();
         })

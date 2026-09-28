@@ -113,6 +113,15 @@ impl GameSyncApp {
                 this.restore_grid_focus = true;
                 cx.notify();
             }
+            if let super::editor::EditorEvent::ShowScope(scope) = event {
+                this.library.update(cx, |lib, cx| {
+                    lib.set_scope(scope.clone());
+                    cx.notify();
+                });
+                this.detail_shown = false;
+                this.restore_grid_focus = true;
+                cx.notify();
+            }
             if matches!(event, super::editor::EditorEvent::Saved) {
                 if let Some(sender) = &mut this.refresh {
                     let _ = sender.try_send(Ok(()));

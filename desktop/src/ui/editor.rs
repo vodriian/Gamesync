@@ -21,6 +21,8 @@ use std::path::PathBuf;
 pub enum EditorEvent {
     Saved,
     Closed,
+    /// Leave the card and show a library scope, for example a genre.
+    ShowScope(crate::model::Scope),
 }
 
 pub struct InspectorEditor {
@@ -174,6 +176,53 @@ impl InspectorEditor {
         let mut value = self.personal.clone();
         value.notes = self.notes.read(cx).value().to_string();
         value
+    }
+
+    /// Steam facts under the description: year and reviews as text, then
+    /// genre badges that open the genre's smart collection.
+    fn steam_facts(&self, cx: &mut Context<Self>) -> Option<impl IntoElement> {
+        let metadata = self.base.game.steam.as_ref()?.metadata.as_ref()?;
+        let mut facts: Vec<String> = metadata.release_year.iter().cloned().collect();
+        match (&metadata.review_label, metadata.review_percent) {
+            (Some(label), Some(percent)) => facts.push(format!("{label}, {percent}%")),
+            (Some(label), None) => facts.push(label.clone()),
+            (None, Some(percent)) => facts.push(format!("{percent}% positive")),
+            (None, None) => {}
+        }
+        if facts.is_empty() && metadata.genres.is_empty() {
+            return None;
+        }
+        Some(
+            v_flex()
+                .gap_2()
+                .when(!facts.is_empty(), |column| {
+                    column.child(
+                        div()
+                            .text_sm()
+                            .text_color(cx.theme().muted_foreground)
+                            .child(facts.join(" · ")),
+                    )
+                })
+                .child(
+                    h_flex()
+                        .flex_wrap()
+                        .gap_1()
+                        .children(metadata.genres.iter().map(|genre| {
+                            let rule = gamesync_desktop::smart::SmartRule::Genre(genre.clone());
+                            Button::new(gpui::SharedString::from(format!("genre-{genre}")))
+                                .xsmall()
+                                .outline()
+                                .rounded(px(12.))
+                                .label(genre.clone())
+                                .tooltip(format!("Show all {genre} games"))
+                                .on_click(cx.listener(move |_, _, _, cx| {
+                                    cx.emit(EditorEvent::ShowScope(crate::model::Scope::Smart(
+                                        rule.clone(),
+                                    )))
+                                }))
+                        })),
+                ),
+        )
     }
 
     /// Picker rows for the current search. See `suggest_tags`.
@@ -478,6 +527,7 @@ impl Render for InspectorEditor {
                                 .to_owned(),
                         ),
                     )
+                    .children(self.steam_facts(cx))
                     .child(hint("Status", cx))
                     .child(
                         Button::new("edit-status")
@@ -598,23 +648,6 @@ impl Render for InspectorEditor {
                             .flex_shrink_0()
                             .small()
                             .disabled(false),
-                    )
-                    .children(
-                        self.base
-                            .game
-                            .steam
-                            .as_ref()
-                            .and_then(|s| s.metadata.as_ref())
-                            .map(|metadata| {
-                                let mut facts = Vec::new();
-                                facts.extend(metadata.release_year.clone());
-                                facts.extend(metadata.review_label.clone());
-                                if let Some(percent) = metadata.review_percent {
-                                    facts.push(format!("{percent}% positive"));
-                                }
-                                facts.extend(metadata.genres.clone());
-                                hint(&facts.join(" · "), cx)
-                            }),
                     ),
             )
             .child(
