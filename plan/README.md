@@ -24,7 +24,7 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 - Desktop implementation: native Cards, Grid, Table, and focused game details use app-managed Steam storage on macOS.
 - Milestone 1: Linux runtime verification remains pending.
 - Milestone 2: file records, definitions, folder loading, and a local index are in place. Inspector draft edits, guarded saves, and saved-game conflict review are implemented.
-- Working branch: `omarchy-desktop` for the opt-in Omarchy theme integration.
+- Working branch: `omarchy-cards-3d-render` for the Omarchy card compositor POC.
 - Runtime targets: macOS and Linux. Windows follows later.
 - Existing React/Express app: retained as a reference.
 
