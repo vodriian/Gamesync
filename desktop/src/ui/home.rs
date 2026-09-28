@@ -392,7 +392,12 @@ impl Render for HomeView {
                     .child(
                         h_flex()
                             .flex_wrap()
-                            .items_start()
+                            // Panels in one row share the taller panel's height.
+                            // GPUI has no `items_stretch` helper, so set the style.
+                            .map(|mut row| {
+                                row.style().align_items = Some(gpui::AlignItems::Stretch);
+                                row
+                            })
                             .gap_4()
                             .child(self.panel("Playtime by platform", cx).child(platforms))
                             .child(self.panel("Favorite genres", cx).child(genres)),
