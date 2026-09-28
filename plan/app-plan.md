@@ -237,7 +237,7 @@ milestones require them.
 
 ## Deferred
 
-Windows, mobile, Steam wishlist sync, other store sync, automatic session
+Windows, mobile, other store sync, automatic session
 tracking, social features, live Obsidian sync, and automatic conflict merging.
 Default audience: one person using several computers. Do not add team or
 multi-account infrastructure in v1.
@@ -248,6 +248,10 @@ multi-account infrastructure in v1.
 The user moved collections, core Settings, and Steam sync ahead of tuning and
 the picker. These features are implemented; live account sync and Linux checks
 remain. See [implementation and limits](collections-settings-steam.md).
+
+On September 28 the user added Steam data, Smart collections, a Home
+dashboard, and wishlist prices before tuning and the picker. Wishlist sync is
+no longer deferred. See [Dashboard and smart collections](dashboard-tags.md).
 
 ## Physical card UI
 
