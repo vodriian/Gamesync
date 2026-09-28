@@ -40,10 +40,32 @@ pub struct SteamData {
     pub description: Option<String>,
     pub playtime_minutes: u32,
     pub owned: bool,
+    /// Unix seconds reported by Steam. None when Steam reports no play.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_played: Option<i64>,
+    #[serde(default, skip_serializing_if = "PlatformMinutes::is_empty")]
+    pub platform_minutes: PlatformMinutes,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metadata: Option<SteamMetadata>,
     #[serde(flatten)]
     pub extra: ExtraFields,
+}
+
+/// Steam playtime by platform. The sum can be less than `playtime_minutes`
+/// because Steam does not assign offline play to a platform.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PlatformMinutes {
+    pub windows: u32,
+    pub mac: u32,
+    pub linux: u32,
+    pub deck: u32,
+}
+
+impl PlatformMinutes {
+    pub fn is_empty(&self) -> bool {
+        *self == Self::default()
+    }
 }
 
 /// Provider metadata and stage completion. Failed stages remain eligible for retry.
@@ -54,9 +76,14 @@ pub struct SteamMetadata {
     pub review_label: Option<String>,
     pub review_percent: Option<u8>,
     pub cover: Option<String>,
+    /// Steam store tag names, highest community weight first. Never personal tags.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
     pub details_complete: bool,
     pub reviews_complete: bool,
     pub cover_complete: bool,
+    #[serde(default)]
+    pub tags_complete: bool,
     #[serde(flatten)]
     pub extra: ExtraFields,
 }

@@ -56,6 +56,8 @@ pub fn prepare(root: &Path, samples: &[Game]) -> Result<()> {
             description: Some(sample.description.clone()),
             playtime_minutes: sample.playtime_minutes,
             owned: false,
+            last_played: None,
+            platform_minutes: Default::default(),
             metadata: None,
             extra: Default::default(),
         });

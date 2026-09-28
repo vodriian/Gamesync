@@ -21,3 +21,16 @@ fn battlefield_cover_is_real_artwork() {
         std::fs::write(path, bytes).unwrap();
     }
 }
+
+#[test]
+#[ignore = "Reads public Steam tags; no account or API key is used"]
+fn store_tags_resolve_to_names_and_skip_unknown_apps() {
+    let client = SteamClient::new().unwrap();
+    let names = client.tag_names().unwrap();
+    // App 1 does not exist and must stay retryable, not complete with no tags.
+    let tags = client.store_tags(&[620, 1]).unwrap();
+    assert!(!tags.contains_key(&1));
+    let portal = &tags[&620];
+    assert!(!portal.is_empty() && portal.len() <= 20);
+    assert!(portal.iter().any(|id| names.contains_key(id)));
+}

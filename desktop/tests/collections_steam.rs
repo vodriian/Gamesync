@@ -110,6 +110,7 @@ fn steam_import_is_idempotent_and_preserves_archived_games_and_manual_changes() 
         appid: 42,
         name: "Test".into(),
         playtime_forever: 5,
+        ..Default::default()
     };
     let game = library.import_steam(ACCOUNT, &input).unwrap();
     let again = library.import_steam(ACCOUNT, &input).unwrap();
@@ -145,6 +146,7 @@ fn duplicate_steam_id_blocks_import_instead_of_guessing() {
         appid: 42,
         name: "Test".into(),
         playtime_forever: 5,
+        ..Default::default()
     };
     let game = library.import_steam(ACCOUNT, &input).unwrap();
     RecordStore::open(library.root())

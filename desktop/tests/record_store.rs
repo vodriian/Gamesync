@@ -35,6 +35,8 @@ impl Library {
             description: Some("Store description".into()),
             playtime_minutes: 90,
             owned: true,
+            last_played: None,
+            platform_minutes: Default::default(),
             extra: Default::default(),
         });
         let first = store.create(game).unwrap();

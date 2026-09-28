@@ -37,6 +37,8 @@ fn main() -> Result<()> {
             description: Some(demo.description),
             playtime_minutes: demo.playtime_minutes,
             owned: true,
+            last_played: None,
+            platform_minutes: Default::default(),
             extra: Default::default(),
         });
         game.personal.status = demo.status.to_lowercase();

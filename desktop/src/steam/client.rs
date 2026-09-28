@@ -3,14 +3,40 @@ use anyhow::{bail, ensure, Context, Result};
 use reqwest::blocking::Client;
 use serde::Deserialize;
 use serde_json::Value;
-use std::{io::Read, time::Duration};
+use std::{collections::BTreeMap, io::Read, time::Duration};
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Default, Deserialize)]
 pub struct OwnedGame {
     pub appid: u32,
     pub name: String,
     #[serde(default)]
     pub playtime_forever: u32,
+    /// Unix seconds; Steam sends 0 for a game that was never played.
+    #[serde(default)]
+    pub rtime_last_played: i64,
+    #[serde(default)]
+    pub playtime_windows_forever: u32,
+    #[serde(default)]
+    pub playtime_mac_forever: u32,
+    #[serde(default)]
+    pub playtime_linux_forever: u32,
+    #[serde(default)]
+    pub playtime_deck_forever: u32,
+}
+
+impl OwnedGame {
+    pub fn last_played(&self) -> Option<i64> {
+        (self.rtime_last_played > 0).then_some(self.rtime_last_played)
+    }
+
+    pub fn platform_minutes(&self) -> crate::records::PlatformMinutes {
+        crate::records::PlatformMinutes {
+            windows: self.playtime_windows_forever,
+            mac: self.playtime_mac_forever,
+            linux: self.playtime_linux_forever,
+            deck: self.playtime_deck_forever,
+        }
+    }
 }
 pub struct SteamClient {
     client: Client,
@@ -128,6 +154,27 @@ impl SteamClient {
         );
         Ok(data["query_summary"].clone())
     }
+    /// Tag IDs per app, highest weight first. The call takes at most
+    /// `TAG_BATCH` apps. An app that is missing from the result must be retried.
+    pub fn store_tags(&self, ids: &[u32]) -> Result<BTreeMap<u32, Vec<u32>>> {
+        ensure!(ids.len() <= TAG_BATCH, "Too many apps in one tag request");
+        let request = serde_json::json!({
+            "ids": ids.iter().map(|id| serde_json::json!({"appid": id})).collect::<Vec<_>>(),
+            "context": {"language": "english", "country_code": "US"},
+            "data_request": {"include_tag_count": TAG_LIMIT}
+        });
+        parse_store_tags(&self.json(
+            "https://api.steampowered.com/IStoreBrowseService/GetItems/v1/",
+            &[("input_json", &request.to_string())],
+        )?)
+    }
+    /// English names for store tag IDs. `GetItems` returns only IDs.
+    pub fn tag_names(&self) -> Result<BTreeMap<u32, String>> {
+        parse_tag_names(&self.json(
+            "https://api.steampowered.com/IStoreService/GetTagList/v1/",
+            &[("language", "english")],
+        )?)
+    }
     pub fn cover(&self, id: u32) -> Result<Vec<u8>> {
         let request = serde_json::json!({
             "ids": [{"appid": id}],
@@ -212,6 +259,56 @@ pub fn parse_owned(data: Value) -> Result<Vec<OwnedGame>> {
         "Owned games response has invalid or duplicate games"
     );
     Ok(games)
+}
+
+/// Apps per `GetItems` tag request. Keeps the query string well below URL limits.
+pub const TAG_BATCH: usize = 50;
+/// Tags kept per game.
+pub const TAG_LIMIT: usize = 20;
+
+pub fn parse_store_tags(data: &Value) -> Result<BTreeMap<u32, Vec<u32>>> {
+    let items = data["response"]["store_items"]
+        .as_array()
+        .context("Store tags response is incomplete")?;
+    let mut tags = BTreeMap::new();
+    for item in items {
+        let Some(id) = item["appid"].as_u64().and_then(|id| u32::try_from(id).ok()) else {
+            continue;
+        };
+        // Unknown or removed apps come back without a successful result. Omit
+        // them so the stage stays incomplete and retries on the next sync.
+        if item["success"].as_u64() != Some(1) {
+            continue;
+        }
+        let mut weighted = item["tags"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|tag| {
+                let id = u32::try_from(tag["tagid"].as_u64()?).ok()?;
+                Some((tag["weight"].as_u64().unwrap_or(0), id))
+            })
+            .collect::<Vec<_>>();
+        weighted.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
+        weighted.truncate(TAG_LIMIT);
+        tags.insert(id, weighted.into_iter().map(|(_, id)| id).collect());
+    }
+    Ok(tags)
+}
+
+pub fn parse_tag_names(data: &Value) -> Result<BTreeMap<u32, String>> {
+    let names = data["response"]["tags"]
+        .as_array()
+        .context("Steam tag list is incomplete")?
+        .iter()
+        .filter_map(|tag| {
+            let id = u32::try_from(tag["tagid"].as_u64()?).ok()?;
+            let name = tag["name"].as_str()?.trim();
+            (!name.is_empty()).then(|| (id, name.to_owned()))
+        })
+        .collect::<BTreeMap<_, _>>();
+    ensure!(!names.is_empty(), "Steam tag list is empty");
+    Ok(names)
 }
 
 /// Decode before recording success; a partial download must remain retryable.

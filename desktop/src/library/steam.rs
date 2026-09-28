@@ -75,6 +75,8 @@ impl LibraryStore {
         if let Some(id) = matches.first() {
             return store.update_steam(*id, game.appid, |steam| {
                 steam.playtime_minutes = game.playtime_forever;
+                steam.last_played = game.last_played();
+                steam.platform_minutes = game.platform_minutes();
                 steam.owned = true;
             });
         }
@@ -85,6 +87,8 @@ impl LibraryStore {
             description: None,
             playtime_minutes: game.playtime_forever,
             owned: true,
+            last_played: game.last_played(),
+            platform_minutes: game.platform_minutes(),
             metadata: None,
             extra: Default::default(),
         });

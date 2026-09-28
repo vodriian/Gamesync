@@ -18,6 +18,9 @@ steps before it. The user chose this order on September 28.
 
 ## 1. Steam data
 
+Status: implemented on September 28. The UI does not show these fields yet;
+steps 2 and 3 use them.
+
 ### Owned-games fields
 
 `GetOwnedGames` already returns these fields. The sync ignores them today.
@@ -159,7 +162,9 @@ Do not add these in the first version.
 - Source: `GetItems` with `include_all_purchase_options` and the user's
   country code. `best_purchase_option` gives `final_price_in_cents`,
   `original_price_in_cents`, `discount_pct`, and formatted prices.
-  Checked live on September 28.
+  Checked live on September 28. The cent values are JSON strings, not
+  numbers. `original_price_in_cents` and `discount_pct` are present only
+  during a discount.
 - Prices are device-local cache data, not library data. Store them outside the
   library folder with the fetch time. Prices change often; writing them into
   records would add a revision for every price change on every computer.

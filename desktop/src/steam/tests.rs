@@ -8,6 +8,10 @@ struct Source {
     details_calls: Cell<usize>,
     review_calls: Cell<usize>,
     cover_calls: Cell<usize>,
+    tag_calls: Cell<usize>,
+    /// The store omits game 43 from tag results, like a removed app.
+    omit_tags_for_43: bool,
+    last_played: i64,
     cancel_after_details: Option<Cancellation>,
 }
 impl SteamSource for Source {
@@ -16,15 +20,31 @@ impl SteamSource for Source {
             appid: 42,
             name: "Test game".into(),
             playtime_forever: 60,
+            rtime_last_played: self.last_played,
+            playtime_linux_forever: 40,
+            playtime_deck_forever: 15,
+            ..Default::default()
         }];
         if self.extra_game {
             games.push(OwnedGame {
                 appid: 43,
                 name: "New game".into(),
-                playtime_forever: 0,
+                ..Default::default()
             });
         }
         Ok(games)
+    }
+    fn store_tags(&self, ids: &[u32]) -> Result<BTreeMap<u32, Vec<u32>>> {
+        self.tag_calls.set(self.tag_calls.get() + 1);
+        // Tag 99 has no name in the tag list and must be skipped.
+        Ok(ids
+            .iter()
+            .filter(|id| !(self.omit_tags_for_43 && **id == 43))
+            .map(|id| (*id, vec![20, 99, 10]))
+            .collect())
+    }
+    fn tag_names(&self) -> Result<BTreeMap<u32, String>> {
+        Ok(BTreeMap::from([(10, "Puzzle".into()), (20, "Cozy".into())]))
     }
     fn details(&self, _: u32) -> Result<serde_json::Value> {
         self.details_calls.set(self.details_calls.get() + 1);
@@ -61,8 +81,19 @@ fn source(fail_details: bool) -> Source {
         details_calls: Cell::new(0),
         review_calls: Cell::new(0),
         cover_calls: Cell::new(0),
+        tag_calls: Cell::new(0),
+        omit_tags_for_43: false,
+        last_played: 1_700_000_000,
         cancel_after_details: None,
     }
+}
+fn current(library: &LibraryStore, app_id: u32) -> crate::records::GameRevision {
+    let store = RecordStore::open(library.root()).unwrap();
+    let id = uuid::Uuid::new_v5(
+        &library.inspect().unwrap().current().unwrap().library_id,
+        format!("steam:{app_id}").as_bytes(),
+    );
+    store.inspect(id).unwrap().current().unwrap().clone()
 }
 fn run(store: &LibraryStore, source: &Source) -> SyncProgress {
     run_sync(
@@ -278,5 +309,98 @@ fn repeat_sync_does_not_download_cached_metadata_or_covers() {
             source.cover_calls.get()
         ),
         (2, 2, 2)
+    );
+    // One batched tag request per sync that has games without tags.
+    assert_eq!(source.tag_calls.get(), 2);
+}
+
+#[test]
+fn sync_stores_activity_and_steam_tags_apart_from_personal_tags() {
+    let (_temp, library) = library();
+    let mut source = source(false);
+    run(&library, &source);
+    let game = current(&library, 42);
+    let store = RecordStore::open(library.root()).unwrap();
+    let mut personal = game.game.personal.clone();
+    personal.tags = vec!["Weekend".into()];
+    store
+        .edit_personal(game.game_id, game.revision_id, personal)
+        .unwrap();
+
+    let saved = current(&library, 42);
+    let steam = saved.game.steam.as_ref().unwrap();
+    assert_eq!(steam.last_played, Some(1_700_000_000));
+    assert_eq!(
+        (steam.platform_minutes.linux, steam.platform_minutes.deck),
+        (40, 15)
+    );
+    let metadata = steam.metadata.as_ref().unwrap();
+    assert_eq!(metadata.tags, ["Cozy", "Puzzle"]);
+    assert!(metadata.tags_complete);
+
+    // An unchanged sync writes nothing; new activity updates only Steam data.
+    run(&library, &source);
+    assert_eq!(current(&library, 42).revision_id, saved.revision_id);
+    source.last_played = 1_800_000_000;
+    run(&library, &source);
+    let updated = current(&library, 42);
+    assert_eq!(
+        updated.game.steam.as_ref().unwrap().last_played,
+        Some(1_800_000_000)
+    );
+    assert_eq!(updated.game.personal.tags, ["Weekend"]);
+    assert_eq!(
+        updated
+            .game
+            .steam
+            .as_ref()
+            .unwrap()
+            .metadata
+            .as_ref()
+            .unwrap()
+            .tags,
+        ["Cozy", "Puzzle"]
+    );
+}
+
+#[test]
+fn a_game_missing_from_tag_results_retries_on_the_next_sync() {
+    let (_temp, library) = library();
+    let mut source = source(false);
+    source.extra_game = true;
+    source.omit_tags_for_43 = true;
+    assert_eq!(run(&library, &source).failures, 1);
+    let tagged = |library: &LibraryStore| {
+        current(library, 43)
+            .game
+            .steam
+            .unwrap()
+            .metadata
+            .is_some_and(|m| m.tags_complete)
+    };
+    assert!(!tagged(&library));
+    source.omit_tags_for_43 = false;
+    assert_eq!(run(&library, &source).failures, 0);
+    assert!(tagged(&library));
+    assert_eq!(source.tag_calls.get(), 2);
+}
+
+#[test]
+fn tag_parsers_order_by_weight_and_skip_failed_apps() {
+    let tags = client::parse_store_tags(&json!({"response":{"store_items":[
+        {"appid":42,"success":1,"tags":[{"tagid":10,"weight":5},{"tagid":20,"weight":9}]},
+        {"appid":43,"success":1},
+        {"appid":44,"success":2}
+    ]}}))
+    .unwrap();
+    assert_eq!(tags[&42], [20, 10]);
+    assert!(tags[&43].is_empty());
+    assert!(!tags.contains_key(&44));
+    assert!(client::parse_store_tags(&json!({"response":{}})).is_err());
+    assert!(client::parse_tag_names(&json!({"response":{"tags":[]}})).is_err());
+    assert_eq!(
+        client::parse_tag_names(&json!({"response":{"tags":[{"tagid":10,"name":"Puzzle"}]}}))
+            .unwrap()[&10],
+        "Puzzle"
     );
 }

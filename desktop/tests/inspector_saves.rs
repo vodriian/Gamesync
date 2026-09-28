@@ -23,6 +23,8 @@ fn personal_edits_survive_reload_and_keep_provider_and_extension_fields() {
         description: Some("Steam text".into()),
         playtime_minutes: 42,
         owned: true,
+        last_played: None,
+        platform_minutes: Default::default(),
         extra: Default::default(),
     });
     game.personal
