@@ -201,6 +201,7 @@ mod tests {
             owned: true,
             last_played: None,
             platform_minutes: Default::default(),
+            wishlist: None,
             metadata: Some(SteamMetadata {
                 genres: vec!["Puzzle".into()],
                 tags: vec!["Cozy".into(), "Relaxing".into()],

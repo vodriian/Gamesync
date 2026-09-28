@@ -38,6 +38,15 @@ impl OwnedGame {
         }
     }
 }
+/// One Steam wishlist entry. `priority` is the user's order; lower is first.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WishlistItem {
+    pub appid: u32,
+    pub priority: u32,
+    /// Unix seconds.
+    pub date_added: i64,
+}
+
 pub struct SteamClient {
     client: Client,
 }
@@ -168,6 +177,26 @@ impl SteamClient {
             &[("input_json", &request.to_string())],
         )?)
     }
+    /// A public wishlist needs no key. Steam answers a private wishlist and an
+    /// empty one the same way, so both are errors: removals need a real list.
+    pub fn wishlist(&self, account: &str) -> Result<Vec<WishlistItem>> {
+        parse_wishlist(&self.json(
+            "https://api.steampowered.com/IWishlistService/GetWishlist/v1/",
+            &[("steamid", account)],
+        )?)
+    }
+    /// Store names for up to `TAG_BATCH` apps. Missing apps are omitted.
+    pub fn store_names(&self, ids: &[u32]) -> Result<BTreeMap<u32, String>> {
+        ensure!(ids.len() <= TAG_BATCH, "Too many apps in one name request");
+        let request = serde_json::json!({
+            "ids": ids.iter().map(|id| serde_json::json!({"appid": id})).collect::<Vec<_>>(),
+            "context": {"language": "english", "country_code": "US"}
+        });
+        parse_store_names(&self.json(
+            "https://api.steampowered.com/IStoreBrowseService/GetItems/v1/",
+            &[("input_json", &request.to_string())],
+        )?)
+    }
     /// English names for store tag IDs. `GetItems` returns only IDs.
     pub fn tag_names(&self) -> Result<BTreeMap<u32, String>> {
         parse_tag_names(&self.json(
@@ -294,6 +323,48 @@ pub fn parse_store_tags(data: &Value) -> Result<BTreeMap<u32, Vec<u32>>> {
         tags.insert(id, weighted.into_iter().map(|(_, id)| id).collect());
     }
     Ok(tags)
+}
+
+pub fn parse_wishlist(data: &Value) -> Result<Vec<WishlistItem>> {
+    let items = data["response"]["items"]
+        .as_array()
+        .filter(|items| !items.is_empty())
+        .context("Steam did not return a wishlist. Make it public in Steam privacy settings, or add a game to it.")?;
+    let mut seen = std::collections::BTreeSet::new();
+    items
+        .iter()
+        .map(|item| {
+            let appid = item["appid"]
+                .as_u64()
+                .and_then(|id| u32::try_from(id).ok())
+                .filter(|id| *id > 0)
+                .context("Wishlist has an invalid game")?;
+            ensure!(seen.insert(appid), "Wishlist has a duplicate game");
+            Ok(WishlistItem {
+                appid,
+                priority: item["priority"]
+                    .as_u64()
+                    .and_then(|p| u32::try_from(p).ok())
+                    .unwrap_or(u32::MAX),
+                date_added: item["date_added"].as_i64().unwrap_or(0),
+            })
+        })
+        .collect()
+}
+
+pub fn parse_store_names(data: &Value) -> Result<BTreeMap<u32, String>> {
+    let items = data["response"]["store_items"]
+        .as_array()
+        .context("Store names response is incomplete")?;
+    Ok(items
+        .iter()
+        .filter(|item| item["success"].as_u64() == Some(1))
+        .filter_map(|item| {
+            let id = u32::try_from(item["appid"].as_u64()?).ok()?;
+            let name = item["name"].as_str()?.trim();
+            (!name.is_empty()).then(|| (id, name.to_owned()))
+        })
+        .collect())
 }
 
 pub fn parse_tag_names(data: &Value) -> Result<BTreeMap<u32, String>> {

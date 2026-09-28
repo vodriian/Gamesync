@@ -39,6 +39,7 @@ fn main() -> Result<()> {
             owned: true,
             last_played: None,
             platform_minutes: Default::default(),
+            wishlist: None,
             extra: Default::default(),
         });
         game.personal.status = demo.status.to_lowercase();

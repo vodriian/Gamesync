@@ -188,7 +188,10 @@
         "Fantasy",
         "Story Rich"
       ],
-      "platform_minutes": {}
+      "platform_minutes": {},
+      "wishlist": {
+        "priority": 0
+      }
     }
   },
   {
@@ -251,7 +254,10 @@
         "Puzzle",
         "Atmospheric"
       ],
-      "platform_minutes": {}
+      "platform_minutes": {},
+      "wishlist": {
+        "priority": 1
+      }
     }
   },
   {
@@ -381,7 +387,11 @@
         "Difficult",
         "Dark Fantasy"
       ],
-      "platform_minutes": {}
+      "platform_minutes": {},
+      "wishlist": {
+        "priority": 2,
+        "removed": true
+      }
     }
   }
 ]

@@ -242,6 +242,7 @@ mod tests {
                 deck: minutes / 4,
                 ..Default::default()
             },
+            wishlist: None,
             metadata: Some(SteamMetadata {
                 genres: spec.genres.iter().map(|g| g.to_string()).collect(),
                 ..Default::default()

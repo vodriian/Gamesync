@@ -68,6 +68,8 @@ pub enum Scope {
     All,
     Favorites,
     Hidden,
+    /// Wishlisted games that are not owned. They appear in no other scope.
+    Wishlist,
     Collection(Uuid),
     /// Computed membership. See `gamesync_desktop::smart`.
     Smart(SmartRule),
@@ -120,8 +122,11 @@ impl Scope {
         if hidden {
             return false;
         }
+        let wishlisted = game.record.as_ref().is_some_and(|r| r.game.wishlisted());
         match self {
             Self::Hidden => unreachable!(),
+            Self::Wishlist => wishlisted,
+            _ if wishlisted => false,
             Self::Collection(id) => game
                 .record
                 .as_ref()
@@ -284,6 +289,7 @@ impl Library {
             Scope::All => "All games".into(),
             Scope::Favorites => "Favorites".into(),
             Scope::Hidden => "Hidden games".into(),
+            Scope::Wishlist => "Wishlist".into(),
             Scope::Smart(rule) => rule.label().into(),
         }
     }
@@ -601,6 +607,27 @@ impl Library {
         });
         self.groups.clear();
         match self.display.group {
+            // Games that left the Steam wishlist stay apart until the user archives them.
+            GroupBy::None if self.scope == Scope::Wishlist => {
+                let removed = |i: usize| {
+                    self.games[i].record.as_ref().is_some_and(|r| {
+                        r.game
+                            .steam
+                            .as_ref()
+                            .and_then(|s| s.wishlist)
+                            .is_some_and(|w| w.removed)
+                    })
+                };
+                let (gone, listed): (Vec<usize>, Vec<usize>) =
+                    (0..self.visible.len()).partition(|&slot| removed(self.visible[slot]));
+                if !gone.is_empty() {
+                    if !listed.is_empty() {
+                        self.groups.push(("On wishlist".into(), listed));
+                    }
+                    self.groups
+                        .push(("Removed from Steam wishlist".into(), gone));
+                }
+            }
             GroupBy::None => {}
             GroupBy::Status => {
                 for status in &self.statuses {
@@ -919,6 +946,55 @@ mod tests {
         let sidebar: Vec<_> = lib.statuses.iter().map(|s| s.label.clone()).collect();
         assert_eq!(labels, sidebar);
         assert_eq!(labels[labels.len() - 2], "On hold");
+    }
+
+    #[test]
+    fn wishlist_games_stay_out_of_the_library_and_removed_ones_group_apart() {
+        use gamesync_desktop::records::{SteamData, WishlistEntry};
+        let mut lib = library();
+        let total = lib.count(&Scope::All);
+        let wish = |game: &Game, removed: bool| {
+            let mut record = record(game, &game.status, None);
+            record.game.personal.favorite = true;
+            record.game.personal.tags = vec!["Wanted".into()];
+            record.game.steam = Some(SteamData {
+                app_id: 1,
+                description: None,
+                playtime_minutes: 0,
+                owned: false,
+                last_played: None,
+                platform_minutes: Default::default(),
+                wishlist: Some(WishlistEntry {
+                    priority: 0,
+                    added: 0,
+                    removed,
+                }),
+                metadata: None,
+                extra: Default::default(),
+            });
+            record
+        };
+        let records = vec![wish(&lib.games[0], false), wish(&lib.games[1], true)];
+        lib.apply_personal_records(records);
+        assert_eq!(lib.count(&Scope::All), total - 2);
+        assert_eq!(lib.count(&Scope::Wishlist), 2);
+        assert!(!Scope::Favorites.contains(&lib.games[0]));
+        // Smart groups and Home use All games, so wishlist tags do not appear.
+        assert!(lib
+            .smart
+            .iter()
+            .flat_map(|g| &g.values)
+            .all(|(rule, _)| *rule != SmartRule::MyTag("Wanted".into())));
+        lib.set_scope(Scope::Wishlist);
+        let labels: Vec<_> = lib
+            .groups
+            .iter()
+            .map(|(l, s)| (l.as_str(), s.len()))
+            .collect();
+        assert_eq!(
+            labels,
+            [("On wishlist", 1), ("Removed from Steam wishlist", 1)]
+        );
     }
 
     #[test]

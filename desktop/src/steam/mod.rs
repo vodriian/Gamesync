@@ -7,7 +7,7 @@ use crate::{
     records::{GameRevision, SteamMetadata},
 };
 use anyhow::{Context, Result};
-pub use client::{OwnedGame, SteamClient};
+pub use client::{OwnedGame, SteamClient, WishlistItem};
 use std::{
     collections::BTreeMap,
     fs::OpenOptions,
@@ -67,8 +67,16 @@ trait SteamSource {
     fn cover(&self, id: u32) -> Result<Vec<u8>>;
     fn store_tags(&self, ids: &[u32]) -> Result<BTreeMap<u32, Vec<u32>>>;
     fn tag_names(&self) -> Result<BTreeMap<u32, String>>;
+    fn wishlist(&self, account: &str) -> Result<Vec<WishlistItem>>;
+    fn store_names(&self, ids: &[u32]) -> Result<BTreeMap<u32, String>>;
 }
 impl SteamSource for SteamClient {
+    fn wishlist(&self, account: &str) -> Result<Vec<WishlistItem>> {
+        self.wishlist(account)
+    }
+    fn store_names(&self, ids: &[u32]) -> Result<BTreeMap<u32, String>> {
+        self.store_names(ids)
+    }
     fn store_tags(&self, ids: &[u32]) -> Result<BTreeMap<u32, Vec<u32>>> {
         self.store_tags(ids)
     }
@@ -138,6 +146,10 @@ fn run_sync(
         progress(state.clone());
     }
     let store = RecordStore::open(root)?;
+    let owned: std::collections::BTreeSet<u32> = games.iter().map(|g| g.appid).collect();
+    records.extend(sync_wishlist(
+        &library, &store, account, &owned, &cancel, client, delay, &mut state, progress,
+    ));
     sync_tags(
         &store, &records, &cancel, client, delay, &mut state, progress,
     );
@@ -265,6 +277,123 @@ fn note_issue(state: &mut SyncProgress, stages: usize, issue: String) {
     if state.issues.len() < 20 {
         state.issues.push(issue);
     }
+}
+
+/// Import the wishlist, then mark games that left it. Removal marks are written
+/// only after a complete, successful pass, so a failed request never removes
+/// anything. Returns wishlist records for the enrichment stages.
+#[allow(clippy::too_many_arguments)]
+fn sync_wishlist(
+    library: &LibraryStore,
+    store: &RecordStore,
+    account: &str,
+    owned: &std::collections::BTreeSet<u32>,
+    cancel: &Cancellation,
+    client: &impl SteamSource,
+    delay: Duration,
+    state: &mut SyncProgress,
+    progress: &mut impl FnMut(SyncProgress),
+) -> Vec<GameRevision> {
+    if cancelled(cancel) {
+        return Vec::new();
+    }
+    state.message = "Reading Steam wishlist…".into();
+    progress(state.clone());
+    let items = match client.wishlist(account) {
+        // Owned games are never wishlist records, even while Steam lists both.
+        Ok(items) => items
+            .into_iter()
+            .filter(|item| !owned.contains(&item.appid))
+            .collect::<Vec<_>>(),
+        Err(error) => {
+            note_issue(state, 1, format!("Wishlist: {error}"));
+            return Vec::new();
+        }
+    };
+    let existing = match library.steam_records() {
+        Ok(records) => records,
+        Err(error) => {
+            note_issue(state, 1, format!("Wishlist: {error}"));
+            return Vec::new();
+        }
+    };
+    let known: std::collections::BTreeSet<u32> = existing
+        .iter()
+        .filter_map(|r| r.game.steam.as_ref().map(|s| s.app_id))
+        .collect();
+    // Only new games need a store name.
+    let new_ids: Vec<u32> = items
+        .iter()
+        .map(|item| item.appid)
+        .filter(|id| !known.contains(id))
+        .collect();
+    let failures = state.failures;
+    let mut names = BTreeMap::new();
+    for batch in new_ids.chunks(client::TAG_BATCH) {
+        pause(cancel, delay);
+        if cancelled(cancel) {
+            return Vec::new();
+        }
+        match client.store_names(batch) {
+            Ok(found) => names.extend(found),
+            Err(error) => note_issue(
+                state,
+                batch.len(),
+                format!("Wishlist names for {} games: {error}", batch.len()),
+            ),
+        }
+    }
+    let mut imported = Vec::new();
+    for item in &items {
+        if cancelled(cancel) {
+            return imported;
+        }
+        let name = match names.get(&item.appid) {
+            Some(name) => name.as_str(),
+            // The update path never uses the title.
+            None if known.contains(&item.appid) => "",
+            None => {
+                note_issue(
+                    state,
+                    1,
+                    format!("Wishlist game {}: store name is unavailable", item.appid),
+                );
+                continue;
+            }
+        };
+        match library.import_wishlist(account, item, name) {
+            Ok(record) => imported.push(record),
+            Err(error) => note_issue(state, 1, format!("Wishlist game {}: {error}", item.appid)),
+        }
+    }
+    if state.failures == failures {
+        let listed: std::collections::BTreeSet<u32> = items.iter().map(|i| i.appid).collect();
+        for record in &existing {
+            let Some(steam) = &record.game.steam else {
+                continue;
+            };
+            let leaving = !steam.owned
+                && steam.wishlist.is_some_and(|w| !w.removed)
+                && !listed.contains(&steam.app_id);
+            if leaving {
+                let result = store.update_steam(record.game_id, steam.app_id, |steam| {
+                    if let Some(wishlist) = &mut steam.wishlist {
+                        wishlist.removed = true;
+                    }
+                });
+                if let Err(error) = result {
+                    note_issue(
+                        state,
+                        1,
+                        format!("{} · wishlist: {error}", record.game.title),
+                    );
+                }
+            }
+        }
+    }
+    state.message = format!("Wishlist · {} games", imported.len());
+    progress(state.clone());
+    imported
 }
 
 /// Store tags are batched: one request covers up to `TAG_BATCH` games. The tag

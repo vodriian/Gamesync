@@ -151,6 +151,9 @@ Do not add these in the first version.
 
 ## 4. Wishlist
 
+Status: 4a (wishlist data and scope) implemented on September 28. 4b (prices)
+is next.
+
 ### Source
 
 - `IWishlistService/GetWishlist` with the SteamID64 returns the wishlist app
@@ -200,13 +203,19 @@ Do not add these in the first version.
 Price history, lowest-price data, and sale notifications. Steam does not
 provide history; it needs a third-party service such as IsThereAnyDeal.
 
-## Open questions
+## Decisions from September 28
 
-- A game leaves the Steam wishlist and the user did not buy it. Proposed
-  default: clear its wishlist value and keep the record if it has personal
-  edits. Without personal edits, archive it with an explicit tombstone.
-- Confirm that the Board should include the Wishlist scope, or hide the Board
-  option there.
+- A game that leaves the Steam wishlist unbought keeps its record and its
+  wishlist value with `removed: true`. The Wishlist scope shows it in a
+  **Removed from Steam wishlist** group until the user archives it. Removal
+  marks are written only after a complete, successful wishlist pass.
+- The Board works in the Wishlist scope, like in other scopes.
+- The wishlist parser follows the documented fields (`appid`, `priority`,
+  `date_added`). A live check with a public wishlist is still open.
+- New wishlist records start as **Want to play** (`wanted`) when the library
+  has that status. An owned game is never a wishlist record.
+- `GetWishlist` gives only app IDs. New wishlist games get their names from
+  `GetItems`, 50 per request.
 
 ## Acceptance checks
 

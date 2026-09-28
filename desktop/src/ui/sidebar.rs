@@ -186,6 +186,7 @@ impl Render for LibrarySidebar {
                     .child(self.home_row(cx))
                     .child(self.row(Scope::All, IconName::LayoutDashboard, cx))
                     .child(self.row(Scope::Favorites, IconName::Star, cx))
+                    .child(self.row(Scope::Wishlist, IconName::Heart, cx))
                     .when(self.library.read(cx).show_hidden_games, |column| {
                         column.child(self.row(Scope::Hidden, IconName::EyeOff, cx))
                     }),

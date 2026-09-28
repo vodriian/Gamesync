@@ -5,7 +5,7 @@ use gamesync_desktop::{
     library::{CollectionDefinition, LibraryStore},
     library_reader::LoadedLibrary,
     record_store::RecordStore,
-    records::{GameData, PlatformMinutes, SteamData, SteamMetadata},
+    records::{GameData, PlatformMinutes, SteamData, SteamMetadata, WishlistEntry},
 };
 use gpui::AssetSource;
 use serde::Deserialize;
@@ -64,6 +64,7 @@ pub fn prepare(root: &Path, samples: &[Game]) -> Result<()> {
             owned: false,
             last_played: None,
             platform_minutes: Default::default(),
+            wishlist: None,
             metadata: None,
             extra: Default::default(),
         });
@@ -92,6 +93,14 @@ struct SampleSteam {
     last_played_days_ago: Option<i64>,
     platform_minutes: PlatformMinutes,
     collections: Vec<String>,
+    wishlist: Option<SampleWish>,
+}
+
+#[derive(Deserialize, Clone, Copy)]
+struct SampleWish {
+    priority: u32,
+    #[serde(default)]
+    removed: bool,
 }
 
 #[derive(Deserialize)]
@@ -128,10 +137,23 @@ pub fn fill_samples(root: &Path, loaded: &LoadedLibrary) -> Result<bool> {
         let Some(sample) = values.get(&steam.app_id) else {
             continue;
         };
-        if steam.metadata.is_some() {
+        // Each value fills once: a later sample edit is never overwritten.
+        let wish = sample.wishlist.filter(|_| steam.wishlist.is_none());
+        if steam.metadata.is_some() && wish.is_none() {
             continue;
         }
+        let fill_metadata = steam.metadata.is_none();
         store.update_steam(record.game_id, steam.app_id, |steam| {
+            if let Some(wish) = wish {
+                steam.wishlist = Some(WishlistEntry {
+                    priority: wish.priority,
+                    added: now - i64::from(wish.priority + 1) * 7 * 86_400,
+                    removed: wish.removed,
+                });
+            }
+            if !fill_metadata {
+                return;
+            }
             steam.last_played = sample.last_played_days_ago.map(|days| now - days * 86_400);
             steam.platform_minutes = sample.platform_minutes;
             steam.metadata = Some(SteamMetadata {
@@ -229,6 +251,13 @@ mod tests {
         assert!(steam.last_played.is_some());
         assert_eq!(steam.metadata.as_ref().unwrap().tags[0], "Card Game");
         assert_eq!(balatro.game.personal.collections.len(), 2);
+        let wishlisted: Vec<_> = filled
+            .games
+            .iter()
+            .filter(|g| g.game.wishlisted())
+            .map(|g| g.game.title.as_str())
+            .collect();
+        assert_eq!(wishlisted.len(), 3);
         assert!(filled
             .games
             .iter()

@@ -45,10 +45,26 @@ pub struct SteamData {
     pub last_played: Option<i64>,
     #[serde(default, skip_serializing_if = "PlatformMinutes::is_empty")]
     pub platform_minutes: PlatformMinutes,
+    /// Present while the game is on the Steam wishlist, or after it left the
+    /// wishlist unbought. Cleared when the game becomes owned.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wishlist: Option<WishlistEntry>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metadata: Option<SteamMetadata>,
     #[serde(flatten)]
     pub extra: ExtraFields,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WishlistEntry {
+    /// Steam wishlist order; lower is more wanted.
+    pub priority: u32,
+    /// Unix seconds when the game was added on Steam.
+    pub added: i64,
+    /// The game left the Steam wishlist without a purchase. The record stays
+    /// in the Wishlist scope until the user archives it.
+    #[serde(default)]
+    pub removed: bool,
 }
 
 /// Steam playtime by platform. The sum can be less than `playtime_minutes`
@@ -156,6 +172,13 @@ impl GameData {
             .cover
             .as_ref()
             .or_else(|| self.steam.as_ref()?.metadata.as_ref()?.cover.as_ref())
+    }
+
+    /// Wishlisted games live only in the Wishlist scope, apart from the library.
+    pub fn wishlisted(&self) -> bool {
+        self.steam
+            .as_ref()
+            .is_some_and(|steam| !steam.owned && steam.wishlist.is_some())
     }
 
     pub fn description(&self) -> Option<&str> {
