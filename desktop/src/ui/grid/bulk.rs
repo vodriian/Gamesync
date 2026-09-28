@@ -71,9 +71,19 @@ impl GameGrid {
             )
             .child(div().w(px(30.)))
             .child(div().flex_1().child("Title"))
-            .child(div().w(px(140.)).child("Status"))
-            .child(div().w(px(100.)).child("Rating"))
-            .child(div().w(px(100.)).child("Playtime"))
+            // Wishlist games are not owned: price and sale replace the owned columns.
+            .map(|header| {
+                if self.library.read(cx).scope == crate::model::Scope::Wishlist {
+                    header
+                        .child(div().w(px(140.)).child("Price"))
+                        .child(div().w(px(200.)).child("Sale"))
+                } else {
+                    header
+                        .child(div().w(px(140.)).child("Status"))
+                        .child(div().w(px(100.)).child("Rating"))
+                        .child(div().w(px(100.)).child("Playtime"))
+                }
+            })
             .into_any_element()
     }
 
@@ -86,6 +96,8 @@ impl GameGrid {
             .map(|(_, m)| m.definitions.collections.clone())
             .unwrap_or_default();
         let hidden = lib.scope == crate::model::Scope::Hidden;
+        // Wishlist games are not owned: no favorite, status, or collection edits.
+        let wishlist = lib.scope == crate::model::Scope::Wishlist;
         let disabled = self.busy() || lib.write_issue.is_some();
         let grid = cx.entity();
         let favorite_grid = grid.clone();
@@ -114,76 +126,80 @@ impl GameGrid {
                         format!("{} selected", self.selection.len())
                     }),
             )
-            .child(
-                Button::new("bulk-favorite")
-                    .small()
-                    .ghost()
-                    .label("Favorite")
-                    .disabled(disabled)
-                    .dropdown_menu(move |menu, _, _| {
-                        menu.item(action(
-                            "Add to favorites",
-                            Change::Favorite(true),
-                            &favorite_grid,
-                        ))
-                        .item(action(
-                            "Remove from favorites",
-                            Change::Favorite(false),
-                            &favorite_grid,
-                        ))
-                    }),
-            )
-            .child(
-                Button::new("bulk-status")
-                    .small()
-                    .ghost()
-                    .label("Status")
-                    .disabled(disabled)
-                    .dropdown_menu(move |mut menu, _, _| {
-                        for status in &statuses {
-                            menu = menu.item(action(
-                                status.label.clone(),
-                                Change::Status(status.key.clone()),
-                                &status_grid,
-                            ));
-                        }
-                        menu
-                    }),
-            )
-            .child(
-                Button::new("bulk-collection")
-                    .small()
-                    .ghost()
-                    .label("Collection")
-                    .disabled(disabled)
-                    .dropdown_menu(move |mut menu, window, cx| {
-                        for collection in collections.iter().filter(|c| !c.archived) {
-                            let grid = collection_grid.clone();
-                            let id = collection.id;
-                            menu = menu.submenu(
-                                collection.name.clone(),
-                                window,
-                                cx,
-                                move |menu, _, _| {
-                                    menu.item(action(
-                                        "Add to collection",
-                                        Change::Collection(id, true),
-                                        &grid,
-                                    ))
-                                    .item(action(
-                                        "Remove from collection",
-                                        Change::Collection(id, false),
-                                        &grid,
-                                    ))
-                                },
-                            );
-                        }
-                        if collections.iter().all(|c| c.archived) {
-                            menu = menu.label("No collections yet");
-                        }
-                        menu
-                    }),
-            )
+            .when(!wishlist, |panel| {
+                panel
+                    .child(
+                        Button::new("bulk-favorite")
+                            .small()
+                            .ghost()
+                            .label("Favorite")
+                            .disabled(disabled)
+                            .dropdown_menu(move |menu, _, _| {
+                                menu.item(action(
+                                    "Add to favorites",
+                                    Change::Favorite(true),
+                                    &favorite_grid,
+                                ))
+                                .item(action(
+                                    "Remove from favorites",
+                                    Change::Favorite(false),
+                                    &favorite_grid,
+                                ))
+                            }),
+                    )
+                    .child(
+                        Button::new("bulk-status")
+                            .small()
+                            .ghost()
+                            .label("Status")
+                            .disabled(disabled)
+                            .dropdown_menu(move |mut menu, _, _| {
+                                for status in &statuses {
+                                    menu = menu.item(action(
+                                        status.label.clone(),
+                                        Change::Status(status.key.clone()),
+                                        &status_grid,
+                                    ));
+                                }
+                                menu
+                            }),
+                    )
+                    .child(
+                        Button::new("bulk-collection")
+                            .small()
+                            .ghost()
+                            .label("Collection")
+                            .disabled(disabled)
+                            .dropdown_menu(move |mut menu, window, cx| {
+                                for collection in collections.iter().filter(|c| !c.archived) {
+                                    let grid = collection_grid.clone();
+                                    let id = collection.id;
+                                    menu =
+                                        menu.submenu(
+                                            collection.name.clone(),
+                                            window,
+                                            cx,
+                                            move |menu, _, _| {
+                                                menu.item(action(
+                                                    "Add to collection",
+                                                    Change::Collection(id, true),
+                                                    &grid,
+                                                ))
+                                                .item(action(
+                                                    "Remove from collection",
+                                                    Change::Collection(id, false),
+                                                    &grid,
+                                                ))
+                                            },
+                                        );
+                                }
+                                if collections.iter().all(|c| c.archived) {
+                                    menu = menu.label("No collections yet");
+                                }
+                                menu
+                            }),
+                    )
+            })
             .child(
                 Button::new("bulk-hide")
                     .small()

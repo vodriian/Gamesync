@@ -31,7 +31,7 @@ and create collections without affecting your Steam library.
 - Normal startup prepares your Steam store. Sample games require `--demo`.
 - Refresh automatically after file changes, or use Command-R / Control-R.
 - Filter by title, tag, status, or favorite.
-- Use Cards, Grid, Table, or Board. Click a game to open its card. Right-click for
+- Use Grid (the default), Cards, Table, or Board. Click a game to open its card. Right-click for
   favorite, status, collection membership, Add/Edit note, and Hide/Unhide.
 - Board shows the current sidebar scope as one column per status. Drag a card to
   another column to change its status, or onto a card to place it before that

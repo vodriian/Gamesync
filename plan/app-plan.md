@@ -95,8 +95,8 @@ Dropbox moves files; it does not resolve application-level edits. See
 
 ### Views
 
+- **Grid:** the default view and the first in the view switch. Compact portrait covers, title, status, and rating (price for wishlist games).
 - **Cards:** large framed game cards. Front: artwork and title. Back: personal edits and game details.
-- **Grid:** compact portrait covers, title, status, and rating. Multiselect and context actions follow later.
 - **Table:** sortable, resizable, reorderable columns; inline edits; bulk status, tag, and rating changes.
 - **Board:** fourth view in the switch after Table; one column per status over the current scope; create, rename, and reorder statuses there; drag to change status; persistent manual order within columns; menu and keyboard alternatives. See [Kanban board](kanban-board.md).
 
@@ -237,7 +237,7 @@ milestones require them.
 
 ## Deferred
 
-Windows, mobile, Steam wishlist sync, other store sync, automatic session
+Windows, mobile, other store sync, automatic session
 tracking, social features, live Obsidian sync, and automatic conflict merging.
 Default audience: one person using several computers. Do not add team or
 multi-account infrastructure in v1.
@@ -248,6 +248,10 @@ multi-account infrastructure in v1.
 The user moved collections, core Settings, and Steam sync ahead of tuning and
 the picker. These features are implemented; live account sync and Linux checks
 remain. See [implementation and limits](collections-settings-steam.md).
+
+On September 28 the user added Steam data, Smart collections, a Home
+dashboard, and wishlist prices before tuning and the picker. Wishlist sync is
+no longer deferred. See [Dashboard and smart collections](dashboard-tags.md).
 
 ## Physical card UI
 

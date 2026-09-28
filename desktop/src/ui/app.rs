@@ -1,6 +1,7 @@
 mod display;
 mod loading;
 mod omarchy;
+mod prices;
 mod windows;
 // A shared library model with three presentations and a focused game card.
 
@@ -10,6 +11,7 @@ use crate::{
     ui::{
         detail::DetailPanel,
         grid::{GameGrid, LibraryView, OpenGame},
+        home::{HomeView, OpenFromHome},
         sidebar::LibrarySidebar,
         thumb_cache::{LruImageCache, DEFAULT_BUDGET_BYTES},
     },
@@ -34,6 +36,7 @@ pub struct GameSyncApp {
     settings_window: Option<gpui::AnyWindowHandle>,
     settings_view: Option<Entity<super::settings::SettingsView>>,
     grid: Entity<GameGrid>,
+    home: Entity<HomeView>,
     sidebar: Entity<LibrarySidebar>,
     sidebar_shown: bool,
     sidebar_motion: super::motion::Motion,
@@ -60,6 +63,9 @@ pub struct GameSyncApp {
     refreshing: bool,
     notice: String,
     display_save: Option<Task<()>>,
+    price_task: Option<Task<()>>,
+    /// Detects opening the Wishlist scope, which triggers a price refresh.
+    in_wishlist: bool,
     display_pending: usize,
     last_issues: Vec<String>,
     main_window: gpui::AnyWindowHandle,
@@ -86,6 +92,7 @@ impl GameSyncApp {
         let library = cx.new(|_| library);
         let cache = LruImageCache::new(DEFAULT_BUDGET_BYTES, cx);
         let grid = cx.new(|cx| GameGrid::new(library.clone(), cache.clone(), cx));
+        let home = cx.new(|cx| HomeView::new(library.clone(), cache.clone(), cx));
         let sidebar = cx.new(|cx| LibrarySidebar::new(library.clone(), cx));
         let detail = cx.new(|cx| DetailPanel::new(library.clone(), cache.clone(), cx));
         let search = cx.new(|cx| InputState::new(window, cx).placeholder("Search games or tags…"));
@@ -106,6 +113,15 @@ impl GameSyncApp {
                 this.restore_grid_focus = true;
                 cx.notify();
             }
+            if let super::editor::EditorEvent::ShowScope(scope) = event {
+                this.library.update(cx, |lib, cx| {
+                    lib.set_scope(scope.clone());
+                    cx.notify();
+                });
+                this.detail_shown = false;
+                this.restore_grid_focus = true;
+                cx.notify();
+            }
             if matches!(event, super::editor::EditorEvent::Saved) {
                 if let Some(sender) = &mut this.refresh {
                     let _ = sender.try_send(Ok(()));
@@ -118,12 +134,34 @@ impl GameSyncApp {
             this.detail.update(cx, |detail, cx| detail.present(cx));
             cx.notify();
         });
+        let home_subscription = cx.subscribe(&home, |this, _, event: &OpenFromHome, cx| {
+            this.library
+                .update(cx, |lib, _| lib.select_from_home(event.0));
+            this.clear_search = true;
+            this.detail_shown = true;
+            this.detail.update(cx, |detail, cx| detail.present(cx));
+            cx.notify();
+        });
         let bulk_subscription =
             cx.subscribe(&grid, |this, _, event: &super::grid::BulkSaved, cx| {
                 this.sidebar
                     .update(cx, |sidebar, cx| sidebar.show_toast(&event.0, cx));
             });
-        let library_subscription = cx.observe(&library, |_, _, cx| cx.notify());
+        let library_subscription = cx.observe(&library, |this, library, cx| {
+            let lib = library.read(cx);
+            let in_wishlist = !lib.home && lib.scope == crate::model::Scope::Wishlist;
+            if in_wishlist && !this.in_wishlist {
+                this.refresh_prices(cx);
+                // Wishlist games have no status, so the Board does not apply.
+                if this.view == LibraryView::Board {
+                    this.view = LibraryView::Grid;
+                    this.grid
+                        .update(cx, |grid, cx| grid.set_view(LibraryView::Grid, cx));
+                }
+            }
+            this.in_wishlist = in_wishlist;
+            cx.notify();
+        });
         window.focus(&grid.focus_handle(cx));
         let mut app = Self {
             library,
@@ -134,6 +172,7 @@ impl GameSyncApp {
             settings_window: None,
             settings_view: None,
             grid,
+            home,
             sidebar,
             sidebar_shown: true,
             sidebar_motion: super::motion::Motion::new(1.),
@@ -141,7 +180,7 @@ impl GameSyncApp {
             search,
             detail_shown: false,
             last_sync: None,
-            view: LibraryView::Cards,
+            view: LibraryView::Grid,
             restore_grid_focus: false,
             theme: initial_theme,
             omarchy_mode,
@@ -150,6 +189,7 @@ impl GameSyncApp {
             appearance_revision: Default::default(),
             _subscriptions: vec![
                 grid_subscription,
+                home_subscription,
                 bulk_subscription,
                 search_subscription,
                 library_subscription,
@@ -166,6 +206,8 @@ impl GameSyncApp {
             refreshing: false,
             notice: String::new(),
             display_save: None,
+            price_task: None,
+            in_wishlist: false,
             display_pending: 0,
             last_issues: Vec::new(),
             main_window: window.window_handle(),
@@ -250,6 +292,7 @@ impl GameSyncApp {
     }
 
     fn toolbar(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let home = self.library.read(cx).home;
         h_flex()
             .h(px(68.))
             .px_5()
@@ -268,12 +311,27 @@ impl GameSyncApp {
                     })),
             )
             .child(
-                div().flex_1().min_w_0().truncate().font_medium().child(
-                    self.library
-                        .read(cx)
-                        .scope_label(&self.library.read(cx).scope),
-                ),
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .truncate()
+                    .font_medium()
+                    .child(if home {
+                        "Home".into()
+                    } else {
+                        self.library
+                            .read(cx)
+                            .scope_label(&self.library.read(cx).scope)
+                    }),
             )
+            // Home is not a list of games, so views, filters, and search do not apply.
+            .when(!home, |toolbar| toolbar.child(self.library_controls(cx)))
+    }
+
+    fn library_controls(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let wishlist = self.library.read(cx).scope == crate::model::Scope::Wishlist;
+        h_flex()
+            .gap_3()
             .child(
                 h_flex()
                     .h(px(38.))
@@ -284,14 +342,14 @@ impl GameSyncApp {
                     .children(
                         [
                             (
-                                LibraryView::Cards,
-                                "Cards",
-                                Icon::new(IconName::GalleryVerticalEnd),
-                            ),
-                            (
                                 LibraryView::Grid,
                                 "Grid",
                                 Icon::new(IconName::LayoutDashboard),
+                            ),
+                            (
+                                LibraryView::Cards,
+                                "Cards",
+                                Icon::new(IconName::GalleryVerticalEnd),
                             ),
                             (LibraryView::Table, "Table", Icon::new(IconName::Menu)),
                             (
@@ -301,6 +359,7 @@ impl GameSyncApp {
                             ),
                         ]
                         .into_iter()
+                        .filter(|(view, _, _)| !(wishlist && *view == LibraryView::Board))
                         .map(|(view, label, icon)| {
                             Button::new(label)
                                 .ghost()
@@ -380,7 +439,14 @@ impl Render for GameSyncApp {
             self.sidebar_motion.value()
         };
         let sidebar_width = px(255. * sidebar_progress);
-        let library_surface = div().size_full().child(self.grid.clone());
+        let home = self.library.read(cx).home;
+        let library_surface = div().size_full().map(|surface| {
+            if home {
+                surface.child(self.home.clone())
+            } else {
+                surface.child(self.grid.clone())
+            }
+        });
         let sync_status = if self.loading {
             "Opening library…".to_owned()
         } else {
@@ -443,25 +509,27 @@ impl Render for GameSyncApp {
                         )
                     }),
             )
-            .child(
-                div()
-                    .absolute()
-                    .bottom_0()
-                    .right_0()
-                    .occlude()
-                    .rounded_tl(crate::theme::interface_radius(cx, px(12.)))
-                    .bg(super::card::tabletop(cx))
-                    .child(
-                        Button::new("library-status")
-                            .ghost()
-                            .small()
-                            .label(format!("{} games · ⓘ", self.library.read(cx).visible.len()))
-                            .tooltip(format!(
-                                "Arrow keys to browse · Enter to open\n{}",
-                                sync_status
-                            )),
-                    ),
-            );
+            .when(!home, |content| {
+                content.child(
+                    div()
+                        .absolute()
+                        .bottom_0()
+                        .right_0()
+                        .occlude()
+                        .rounded_tl(crate::theme::interface_radius(cx, px(12.)))
+                        .bg(super::card::tabletop(cx))
+                        .child(
+                            Button::new("library-status")
+                                .ghost()
+                                .small()
+                                .label(format!("{} games · ⓘ", self.library.read(cx).visible.len()))
+                                .tooltip(format!(
+                                    "Arrow keys to browse · Enter to open\n{}",
+                                    sync_status
+                                )),
+                        ),
+                )
+            });
         h_flex()
             .relative()
             .size_full()

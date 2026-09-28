@@ -8,7 +8,9 @@ use gpui::{
 };
 use gpui_component::{
     button::{Button, ButtonVariants as _},
-    h_flex, v_flex, ActiveTheme as _, Disableable as _, IconName, Selectable as _, Sizable as _,
+    h_flex,
+    menu::{DropdownMenu as _, PopupMenuItem},
+    v_flex, ActiveTheme as _, Disableable as _, IconName, Selectable as _, Sizable as _,
 };
 
 pub struct DetailPanel {
@@ -32,7 +34,8 @@ pub struct DetailPanel {
     editor: Option<Entity<InspectorEditor>>,
     review: Option<Entity<ConflictReview>>,
     cover_refresh: Option<uuid::Uuid>,
-    cover_notice: Option<(uuid::Uuid, String)>,
+    details_resync: Option<uuid::Uuid>,
+    steam_notice: Option<(uuid::Uuid, String)>,
 }
 impl gpui::EventEmitter<EditorEvent> for DetailPanel {}
 
@@ -79,7 +82,8 @@ impl DetailPanel {
             editor: None,
             review: None,
             cover_refresh: None,
-            cover_notice: None,
+            details_resync: None,
+            steam_notice: None,
         }
     }
 }
@@ -161,6 +165,7 @@ impl DetailPanel {
 
     pub fn busy(&self, cx: &App) -> bool {
         self.cover_refresh.is_some()
+            || self.details_resync.is_some()
             || self
                 .review
                 .as_ref()
@@ -195,6 +200,7 @@ impl DetailPanel {
             match event {
                 EditorEvent::Closed => this.review = None,
                 EditorEvent::Saved => cx.emit(EditorEvent::Saved),
+                EditorEvent::ShowScope(_) => {}
             }
             cx.notify();
         })
@@ -219,7 +225,7 @@ impl DetailPanel {
             return;
         };
         self.cover_refresh = Some(id);
-        self.cover_notice = Some((id, "Getting cover from Steam…".into()));
+        self.steam_notice = Some((id, "Getting cover from Steam…".into()));
         cx.spawn(async move |this, cx| {
             let result = cx
                 .background_spawn(
@@ -228,7 +234,7 @@ impl DetailPanel {
                 .await;
             let _ = this.update(cx, |this, cx| {
                 this.cover_refresh = None;
-                this.cover_notice = Some((
+                this.steam_notice = Some((
                     id,
                     match result {
                         Ok(record) => {
@@ -247,6 +253,83 @@ impl DetailPanel {
         })
         .detach();
         cx.notify();
+    }
+
+    /// Refetch store details, reviews, and Steam tags for the open game.
+    fn resync_details(&mut self, cx: &mut Context<Self>) {
+        if self.details_resync.is_some() {
+            return;
+        }
+        let Some((root, _)) = self.library.read(cx).source.clone() else {
+            return;
+        };
+        let Some(id) = self.viewed else {
+            return;
+        };
+        self.details_resync = Some(id);
+        self.steam_notice = Some((id, "Getting details from Steam…".into()));
+        cx.spawn(async move |this, cx| {
+            let result = cx
+                .background_spawn(async move { gamesync_desktop::steam::resync_game(&root, id) })
+                .await;
+            let _ = this.update(cx, |this, cx| {
+                this.details_resync = None;
+                let notice = match result {
+                    Ok(failures) if failures.is_empty() => "Details updated from Steam.".into(),
+                    Ok(failures) => format!("Some details did not update: {}", failures.join("; ")),
+                    Err(error) => format!("Details not changed: {error}"),
+                };
+                // The watcher also refreshes, but an explicit request makes it prompt.
+                cx.emit(EditorEvent::Saved);
+                this.steam_notice = Some((id, notice));
+                cx.notify();
+            });
+        })
+        .detach();
+        cx.notify();
+    }
+
+    /// Store page, cover refresh, and details resync for a Steam game.
+    fn actions_menu(&self, app_id: u32, cx: &mut Context<Self>) -> impl IntoElement {
+        let cover = cx.entity();
+        let details = cx.entity();
+        let refreshing = self.cover_refresh.is_some();
+        let resyncing = self.details_resync.is_some();
+        Button::new("card-actions")
+            .ghost()
+            .xsmall()
+            .icon(IconName::Ellipsis)
+            .tooltip("Game actions")
+            .dropdown_menu(move |menu, _, _| {
+                let cover = cover.clone();
+                let details = details.clone();
+                menu.item(
+                    PopupMenuItem::new("Open store page").on_click(move |_, _, cx| {
+                        cx.open_url(&format!("https://store.steampowered.com/app/{app_id}/"))
+                    }),
+                )
+                .separator()
+                .item(
+                    PopupMenuItem::new(if refreshing {
+                        "Refreshing cover…"
+                    } else {
+                        "Refresh cover"
+                    })
+                    .disabled(refreshing)
+                    .on_click(move |_, _, cx| cover.update(cx, |this, cx| this.refresh_cover(cx))),
+                )
+                .item(
+                    PopupMenuItem::new(if resyncing {
+                        "Resyncing details…"
+                    } else {
+                        "Resync details"
+                    })
+                    .disabled(resyncing)
+                    .on_click(move |_, _, cx| {
+                        details.update(cx, |this, cx| this.resync_details(cx))
+                    }),
+                )
+            })
     }
 
     fn edit(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -268,6 +351,7 @@ impl DetailPanel {
             match event {
                 EditorEvent::Closed => this.editor = None,
                 EditorEvent::Saved => cx.emit(EditorEvent::Saved),
+                EditorEvent::ShowScope(scope) => cx.emit(EditorEvent::ShowScope(scope.clone())),
             }
             cx.notify();
         })
@@ -370,8 +454,25 @@ impl Render for DetailPanel {
                     .text_xs()
                     .text_color(cx.theme().muted_foreground)
                     .child("GameSync / Card details")
-                    .child("02"),
+                    .children(
+                        game.as_ref()
+                            .and_then(|g| g.record.as_ref()?.game.steam.as_ref())
+                            .map(|steam| self.actions_menu(steam.app_id, cx)),
+                    ),
             );
+            // Menu results show under the header, next to the menu that ran them.
+            if let Some((id, notice)) = &self.steam_notice {
+                if game.as_ref().is_some_and(|g| g.id == *id) {
+                    body = body.child(
+                        div()
+                            .px_4()
+                            .pb_2()
+                            .text_xs()
+                            .text_color(cx.theme().muted_foreground)
+                            .child(notice.clone()),
+                    );
+                }
+            }
             if let Some(editor) = &self.editor {
                 body = body.child(div().flex_1().min_h_0().child(editor.clone()));
             } else if let Some(game) = &game {
@@ -403,28 +504,6 @@ impl Render for DetailPanel {
                                 .child("Preview card. Changes are unavailable in this preview."),
                         ),
                 );
-            }
-            if game
-                .as_ref()
-                .is_some_and(|g| g.record.as_ref().is_some_and(|r| r.game.steam.is_some()))
-            {
-                body = body.child(
-                    Button::new("refresh-cover")
-                        .ghost()
-                        .small()
-                        .label(if self.cover_refresh.is_some() {
-                            "Refreshing cover…"
-                        } else {
-                            "Refresh cover from Steam"
-                        })
-                        .disabled(self.cover_refresh.is_some())
-                        .on_click(cx.listener(|this, _, _, cx| this.refresh_cover(cx))),
-                );
-            }
-            if let Some((id, notice)) = &self.cover_notice {
-                if game.as_ref().is_some_and(|g| g.id == *id) {
-                    body = body.child(div().p_3().text_xs().child(notice.clone()));
-                }
             }
         }
         let dimensions = gpui::size(px(width), px(width * 1.46));

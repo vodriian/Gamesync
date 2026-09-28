@@ -4,8 +4,8 @@ Branch: `kanban-board`, created from `omarchy-cards-3d-render`.
 
 ## Goal
 
-**Board** is the fourth presentation in the toolbar view switch, after Cards,
-Grid, and Table. It shows one column for each status, in library definition order. The user can move games
+**Board** is the fourth presentation in the toolbar view switch, after Grid,
+Cards, and Table. It shows one column for each status, in library definition order. The user can move games
 between columns and create, rename, and reorder statuses on the board.
 
 The sidebar Status section was a transition feature. The board replaced it on

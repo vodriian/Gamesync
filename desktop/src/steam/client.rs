@@ -3,15 +3,50 @@ use anyhow::{bail, ensure, Context, Result};
 use reqwest::blocking::Client;
 use serde::Deserialize;
 use serde_json::Value;
-use std::{io::Read, time::Duration};
+use std::{collections::BTreeMap, io::Read, time::Duration};
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Default, Deserialize)]
 pub struct OwnedGame {
     pub appid: u32,
     pub name: String,
     #[serde(default)]
     pub playtime_forever: u32,
+    /// Unix seconds; Steam sends 0 for a game that was never played.
+    #[serde(default)]
+    pub rtime_last_played: i64,
+    #[serde(default)]
+    pub playtime_windows_forever: u32,
+    #[serde(default)]
+    pub playtime_mac_forever: u32,
+    #[serde(default)]
+    pub playtime_linux_forever: u32,
+    #[serde(default)]
+    pub playtime_deck_forever: u32,
 }
+
+impl OwnedGame {
+    pub fn last_played(&self) -> Option<i64> {
+        (self.rtime_last_played > 0).then_some(self.rtime_last_played)
+    }
+
+    pub fn platform_minutes(&self) -> crate::records::PlatformMinutes {
+        crate::records::PlatformMinutes {
+            windows: self.playtime_windows_forever,
+            mac: self.playtime_mac_forever,
+            linux: self.playtime_linux_forever,
+            deck: self.playtime_deck_forever,
+        }
+    }
+}
+/// One Steam wishlist entry. `priority` is the user's order; lower is first.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WishlistItem {
+    pub appid: u32,
+    pub priority: u32,
+    /// Unix seconds.
+    pub date_added: i64,
+}
+
 pub struct SteamClient {
     client: Client,
 }
@@ -128,6 +163,76 @@ impl SteamClient {
         );
         Ok(data["query_summary"].clone())
     }
+    /// Tag IDs per app, highest weight first. The call takes at most
+    /// `TAG_BATCH` apps. An app that is missing from the result must be retried.
+    pub fn store_tags(&self, ids: &[u32]) -> Result<BTreeMap<u32, Vec<u32>>> {
+        ensure!(ids.len() <= TAG_BATCH, "Too many apps in one tag request");
+        let request = serde_json::json!({
+            "ids": ids.iter().map(|id| serde_json::json!({"appid": id})).collect::<Vec<_>>(),
+            "context": {"language": "english", "country_code": "US"},
+            "data_request": {"include_tag_count": TAG_LIMIT}
+        });
+        parse_store_tags(&self.json(
+            "https://api.steampowered.com/IStoreBrowseService/GetItems/v1/",
+            &[("input_json", &request.to_string())],
+        )?)
+    }
+    /// A public wishlist needs no key. Steam answers a private wishlist and an
+    /// empty one the same way, so both are errors: removals need a real list.
+    pub fn wishlist(&self, account: &str) -> Result<Vec<WishlistItem>> {
+        parse_wishlist(&self.json(
+            "https://api.steampowered.com/IWishlistService/GetWishlist/v1/",
+            &[("steamid", account)],
+        )?)
+    }
+    /// Store names for up to `TAG_BATCH` apps. Missing apps are omitted.
+    pub fn store_names(&self, ids: &[u32]) -> Result<BTreeMap<u32, String>> {
+        ensure!(ids.len() <= TAG_BATCH, "Too many apps in one name request");
+        let request = serde_json::json!({
+            "ids": ids.iter().map(|id| serde_json::json!({"appid": id})).collect::<Vec<_>>(),
+            "context": {"language": "english", "country_code": "US"}
+        });
+        parse_store_names(&self.json(
+            "https://api.steampowered.com/IStoreBrowseService/GetItems/v1/",
+            &[("input_json", &request.to_string())],
+        )?)
+    }
+    /// Prices for up to `TAG_BATCH` apps in one store country.
+    pub fn quotes(
+        &self,
+        ids: &[u32],
+        country: &str,
+    ) -> Result<BTreeMap<u32, crate::prices::Quote>> {
+        ensure!(ids.len() <= TAG_BATCH, "Too many apps in one price request");
+        ensure!(valid_country(country), "Store country must be two letters");
+        let request = serde_json::json!({
+            "ids": ids.iter().map(|id| serde_json::json!({"appid": id})).collect::<Vec<_>>(),
+            "context": {"language": "english", "country_code": country},
+            "data_request": {"include_all_purchase_options": true}
+        });
+        crate::prices::parse_quotes(&self.json(
+            "https://api.steampowered.com/IStoreBrowseService/GetItems/v1/",
+            &[("input_json", &request.to_string())],
+        )?)
+    }
+    /// The profile country, when the profile shows it. Used for store prices.
+    pub fn country(&self, key: &str, account: &str) -> Result<Option<String>> {
+        let data = self.json(
+            "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/",
+            &[("key", key), ("steamids", account)],
+        )?;
+        Ok(data["response"]["players"][0]["loccountrycode"]
+            .as_str()
+            .filter(|code| valid_country(code))
+            .map(str::to_owned))
+    }
+    /// English names for store tag IDs. `GetItems` returns only IDs.
+    pub fn tag_names(&self) -> Result<BTreeMap<u32, String>> {
+        parse_tag_names(&self.json(
+            "https://api.steampowered.com/IStoreService/GetTagList/v1/",
+            &[("language", "english")],
+        )?)
+    }
     pub fn cover(&self, id: u32) -> Result<Vec<u8>> {
         let request = serde_json::json!({
             "ids": [{"appid": id}],
@@ -212,6 +317,103 @@ pub fn parse_owned(data: Value) -> Result<Vec<OwnedGame>> {
         "Owned games response has invalid or duplicate games"
     );
     Ok(games)
+}
+
+/// Apps per `GetItems` tag request. Keeps the query string well below URL limits.
+pub const TAG_BATCH: usize = 50;
+/// Tags kept per game.
+pub const TAG_LIMIT: usize = 20;
+
+pub fn parse_store_tags(data: &Value) -> Result<BTreeMap<u32, Vec<u32>>> {
+    let items = data["response"]["store_items"]
+        .as_array()
+        .context("Store tags response is incomplete")?;
+    let mut tags = BTreeMap::new();
+    for item in items {
+        let Some(id) = item["appid"].as_u64().and_then(|id| u32::try_from(id).ok()) else {
+            continue;
+        };
+        // Unknown or removed apps come back without a successful result. Omit
+        // them so the stage stays incomplete and retries on the next sync.
+        if item["success"].as_u64() != Some(1) {
+            continue;
+        }
+        let mut weighted = item["tags"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|tag| {
+                let id = u32::try_from(tag["tagid"].as_u64()?).ok()?;
+                Some((tag["weight"].as_u64().unwrap_or(0), id))
+            })
+            .collect::<Vec<_>>();
+        weighted.sort_by(|a, b| b.0.cmp(&a.0).then(a.1.cmp(&b.1)));
+        weighted.truncate(TAG_LIMIT);
+        tags.insert(id, weighted.into_iter().map(|(_, id)| id).collect());
+    }
+    Ok(tags)
+}
+
+/// ISO 3166-1 alpha-2 in upper case, as Steam expects.
+pub fn valid_country(code: &str) -> bool {
+    code.len() == 2 && code.bytes().all(|b| b.is_ascii_uppercase())
+}
+
+pub fn parse_wishlist(data: &Value) -> Result<Vec<WishlistItem>> {
+    let items = data["response"]["items"]
+        .as_array()
+        .filter(|items| !items.is_empty())
+        .context("Steam did not return a wishlist. Make it public in Steam privacy settings, or add a game to it.")?;
+    let mut seen = std::collections::BTreeSet::new();
+    items
+        .iter()
+        .map(|item| {
+            let appid = item["appid"]
+                .as_u64()
+                .and_then(|id| u32::try_from(id).ok())
+                .filter(|id| *id > 0)
+                .context("Wishlist has an invalid game")?;
+            ensure!(seen.insert(appid), "Wishlist has a duplicate game");
+            Ok(WishlistItem {
+                appid,
+                priority: item["priority"]
+                    .as_u64()
+                    .and_then(|p| u32::try_from(p).ok())
+                    .unwrap_or(u32::MAX),
+                date_added: item["date_added"].as_i64().unwrap_or(0),
+            })
+        })
+        .collect()
+}
+
+pub fn parse_store_names(data: &Value) -> Result<BTreeMap<u32, String>> {
+    let items = data["response"]["store_items"]
+        .as_array()
+        .context("Store names response is incomplete")?;
+    Ok(items
+        .iter()
+        .filter(|item| item["success"].as_u64() == Some(1))
+        .filter_map(|item| {
+            let id = u32::try_from(item["appid"].as_u64()?).ok()?;
+            let name = item["name"].as_str()?.trim();
+            (!name.is_empty()).then(|| (id, name.to_owned()))
+        })
+        .collect())
+}
+
+pub fn parse_tag_names(data: &Value) -> Result<BTreeMap<u32, String>> {
+    let names = data["response"]["tags"]
+        .as_array()
+        .context("Steam tag list is incomplete")?
+        .iter()
+        .filter_map(|tag| {
+            let id = u32::try_from(tag["tagid"].as_u64()?).ok()?;
+            let name = tag["name"].as_str()?.trim();
+            (!name.is_empty()).then(|| (id, name.to_owned()))
+        })
+        .collect::<BTreeMap<_, _>>();
+    ensure!(!names.is_empty(), "Steam tag list is empty");
+    Ok(names)
 }
 
 /// Decode before recording success; a partial download must remain retryable.

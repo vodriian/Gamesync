@@ -84,64 +84,70 @@ pub(super) fn menu(
     let collection_grid = grid.clone();
     let note_target = target.clone();
     let note_grid = grid.clone();
-    menu.item(item(
-        if favorite {
-            "Remove from favorites"
-        } else {
-            "Add to favorites"
-        }
-        .into(),
-        favorite,
-        Change::Favorite(!favorite),
-        &target,
-        &grid,
-    ))
-    .submenu("Status", window, cx, move |mut menu, _, _| {
-        for status in &status_target.manifest.definitions.statuses {
-            menu = menu.item(item(
-                status.label.clone(),
-                status.key == status_target.base.game.personal.status,
-                Change::Status(status.key.clone()),
-                &status_target,
-                &status_grid,
-            ));
-        }
+    // Wishlisted games are not owned: only notes and hiding apply.
+    let wishlisted = target.base.game.wishlisted();
+    let menu = if wishlisted {
         menu
-    })
-    .submenu("Collections", window, cx, move |mut menu, _, _| {
-        let collections: Vec<_> = collection_target
-            .manifest
-            .definitions
-            .collections
-            .iter()
-            .filter(|c| !c.archived)
-            .collect();
-        if collections.is_empty() {
-            return menu.item(PopupMenuItem::new("No collections yet").disabled(true));
-        }
-        for collection in collections {
-            let member = collection_target
-                .base
-                .game
-                .personal
+    } else {
+        menu.item(item(
+            if favorite {
+                "Remove from favorites"
+            } else {
+                "Add to favorites"
+            }
+            .into(),
+            favorite,
+            Change::Favorite(!favorite),
+            &target,
+            &grid,
+        ))
+        .submenu("Status", window, cx, move |mut menu, _, _| {
+            for status in &status_target.manifest.definitions.statuses {
+                menu = menu.item(item(
+                    status.label.clone(),
+                    status.key == status_target.base.game.personal.status,
+                    Change::Status(status.key.clone()),
+                    &status_target,
+                    &status_grid,
+                ));
+            }
+            menu
+        })
+        .submenu("Collections", window, cx, move |mut menu, _, _| {
+            let collections: Vec<_> = collection_target
+                .manifest
+                .definitions
                 .collections
-                .contains(&collection.id);
-            menu = menu.item(item(
-                format!(
-                    "{} {}",
-                    if member { "Remove from" } else { "Add to" },
-                    collection.name
-                ),
-                member,
-                Change::Collection(collection.id, !member),
-                &collection_target,
-                &collection_grid,
-            ));
-        }
-        menu
-    })
-    .separator()
-    .item(
+                .iter()
+                .filter(|c| !c.archived)
+                .collect();
+            if collections.is_empty() {
+                return menu.item(PopupMenuItem::new("No collections yet").disabled(true));
+            }
+            for collection in collections {
+                let member = collection_target
+                    .base
+                    .game
+                    .personal
+                    .collections
+                    .contains(&collection.id);
+                menu = menu.item(item(
+                    format!(
+                        "{} {}",
+                        if member { "Remove from" } else { "Add to" },
+                        collection.name
+                    ),
+                    member,
+                    Change::Collection(collection.id, !member),
+                    &collection_target,
+                    &collection_grid,
+                ));
+            }
+            menu
+        })
+        .separator()
+    };
+    menu.item(
         PopupMenuItem::new(if has_note {
             "Edit note…"
         } else {

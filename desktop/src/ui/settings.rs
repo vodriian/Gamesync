@@ -55,6 +55,8 @@ pub struct SettingsView {
     library: Entity<Library>,
     profile: Entity<InputState>,
     key: Entity<InputState>,
+    /// Two-letter store country for wishlist prices; empty uses the profile.
+    country: Entity<InputState>,
     library_id: Option<Uuid>,
     ai: Entity<ai::AiSettings>,
     key_saved: bool,
@@ -88,6 +90,17 @@ impl SettingsView {
             library,
             profile: Self::masked_input("Steam profile link or SteamID64", window, cx),
             key: Self::masked_input("Enter a key to save or replace", window, cx),
+            country: {
+                let saved = settings::load()
+                    .ok()
+                    .and_then(|s| s.store_country)
+                    .unwrap_or_default();
+                cx.new(|cx| {
+                    InputState::new(window, cx)
+                        .placeholder("From your Steam profile")
+                        .default_value(saved)
+                })
+            },
             library_id: None,
             ai: cx.new(|cx| ai::AiSettings::new(window, cx)),
             key_saved: false,
@@ -124,6 +137,32 @@ impl SettingsView {
         })
         .detach();
         input
+    }
+    /// Empty clears the choice, so the profile country applies again.
+    fn save_country(&mut self, cx: &mut Context<Self>) {
+        let code = self.country.read(cx).value().trim().to_uppercase();
+        if !code.is_empty() && !steam::client::valid_country(&code) {
+            self.message = "Enter a two-letter country code, for example US or DE.".into();
+            cx.notify();
+            return;
+        }
+        let choice = (!code.is_empty()).then_some(code);
+        cx.spawn(async move |this, cx| {
+            let result = cx
+                .background_spawn(async move { settings::update(|s| s.store_country = choice) })
+                .await;
+            let _ = this.update(cx, |this, cx| {
+                this.message = match result {
+                    Ok(()) => {
+                        "Store country saved. Wishlist prices refresh when you open Wishlist."
+                            .into()
+                    }
+                    Err(error) => format!("Could not save the store country: {error}"),
+                };
+                cx.notify();
+            });
+        })
+        .detach();
     }
     pub fn show_general(&mut self, cx: &mut Context<Self>) {
         self.section = Section::General;

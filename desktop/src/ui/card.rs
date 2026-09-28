@@ -113,28 +113,39 @@ pub fn front(
                 .gap_2()
                 .text_size(px(10.))
                 .text_color(cx.theme().muted_foreground)
-                .child(
-                    h_flex()
-                        .flex_1()
-                        .min_w_0()
-                        .gap_1()
-                        .overflow_hidden()
-                        .child(badge(game.status_label.clone(), cx))
-                        .children(game.collections.first().map(|name| badge(name.clone(), cx)))
-                        .when(game.collections.len() > 1, |row| {
-                            row.child(
-                                div()
-                                    .flex_shrink_0()
-                                    .child(format!("+{}", game.collections.len() - 1)),
-                            )
-                        }),
-                )
-                .child(
-                    div().flex_shrink_0().child(
-                        game.rating
-                            .map_or("✦".to_owned(), |r| format!("★ {:.1}", f32::from(r) / 2.)),
-                    ),
-                ),
+                // A wishlisted game is not owned: price and sale end replace
+                // status, collections, and rating.
+                .map(|row| {
+                    if game.wishlisted() {
+                        let (price, sale) = game.price_parts();
+                        return row
+                            .child(badge(price, cx))
+                            .children(sale.map(|sale| div().flex_shrink_0().child(sale)));
+                    }
+                    row.child(
+                        h_flex()
+                            .flex_1()
+                            .min_w_0()
+                            .gap_1()
+                            .overflow_hidden()
+                            .child(badge(game.status_label.clone(), cx))
+                            .children(game.collections.first().map(|name| badge(name.clone(), cx)))
+                            .when(game.collections.len() > 1, |row| {
+                                row.child(
+                                    div()
+                                        .flex_shrink_0()
+                                        .child(format!("+{}", game.collections.len() - 1)),
+                                )
+                            }),
+                    )
+                    .child(
+                        div().flex_shrink_0().child(
+                            game.rating.map_or("✦".to_owned(), |r| {
+                                format!("★ {:.1}", f32::from(r) / 2.)
+                            }),
+                        ),
+                    )
+                }),
         )
 }
 

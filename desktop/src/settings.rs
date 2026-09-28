@@ -51,6 +51,15 @@ pub struct Settings {
     pub show_hidden_games: bool,
     #[serde(default)]
     pub last_sync: BTreeMap<String, u64>,
+    /// Expanded sidebar smart groups on this device. Empty keeps all collapsed.
+    #[serde(default)]
+    pub smart_groups_open: Vec<crate::smart::SmartKind>,
+    /// Profile country found during Steam sync, for store prices.
+    #[serde(default)]
+    pub detected_country: Option<String>,
+    /// The user's choice; it wins over the detected country.
+    #[serde(default)]
+    pub store_country: Option<String>,
     #[serde(flatten)]
     extra: std::collections::BTreeMap<String, serde_json::Value>,
 }
@@ -114,6 +123,9 @@ impl Default for Settings {
             reduce_motion: false,
             show_hidden_games: false,
             last_sync: Default::default(),
+            smart_groups_open: Vec::new(),
+            detected_country: None,
+            store_country: None,
             extra: Default::default(),
         }
     }
@@ -139,6 +151,14 @@ pub fn sync_label(time: Option<u64>) -> String {
 }
 
 impl Settings {
+    /// The store country for wishlist prices.
+    pub fn price_country(&self) -> String {
+        self.store_country
+            .clone()
+            .or_else(|| self.detected_country.clone())
+            .unwrap_or_else(|| crate::prices::DEFAULT_COUNTRY.into())
+    }
+
     pub fn appearance(&self) -> crate::appearance::Appearance {
         self.appearance
             .clone()

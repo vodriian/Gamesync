@@ -27,7 +27,15 @@ impl GameSyncApp {
                         .to_owned();
                     std::fs::create_dir_all(&cache)?;
                     let mut reader = LibraryReader::open(&root, &cache)?;
-                    let loaded = reader.refresh()?;
+                    let mut loaded = reader.refresh()?;
+                    if sample_mode {
+                        match crate::managed_storage::fill_samples(&root, &loaded) {
+                            Ok(true) => loaded = reader.refresh()?,
+                            Ok(false) => {}
+                            // Sample values are optional; the demo still opens.
+                            Err(error) => log::warn!("Could not fill sample values: {error:#}"),
+                        }
+                    }
                     let mut model = Library::from_loaded(&loaded);
                     model.demo = sample_mode;
                     let (watcher, warning) = match crate::watcher::watch(&root, sender) {

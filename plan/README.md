@@ -18,6 +18,7 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 | [Source notes](../desktop/SOURCE-NOTES.md) | Eagle code reuse and demo artwork sources |
 | [Record format](storage-format.md) | Versioned game records and conflict rules |
 | [Kanban board](kanban-board.md) | Status board, manual order, and status editing |
+| [Dashboard and smart collections](dashboard-tags.md) | Steam data, Smart collections, Home dashboard, and wishlist prices |
 
 ## Current state
 
@@ -25,7 +26,8 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 - Desktop implementation: native Cards, Grid, Table, Board, and focused game details use app-managed Steam storage on macOS.
 - Milestone 1: Linux runtime verification remains pending.
 - Milestone 2: file records, definitions, folder loading, and a local index are in place. Inspector draft edits, guarded saves, and saved-game conflict review are implemented.
-- Working branch: `kanban-board` (from `omarchy-cards-3d-render`) for the status board.
+- Desktop v1 merged to `main` in PR #1 on September 28.
+- Working branch: `dashboard-tags` (from `main`) for Steam data, Smart collections, Home, and wishlist.
 - Runtime targets: macOS and Linux. Windows follows later.
 - Existing React/Express app: retained as a reference.
 
@@ -37,6 +39,8 @@ Linux keeps flat cards outside Omarchy mode. The Omarchy branch has an
 experimental Blade/Vulkan card projection for Cards and focused fronts.
 
 ## Next task
+
+Build [Dashboard and smart collections](dashboard-tags.md), step 1: Steam data.
 
 Collections, core Settings, and Steam sync are implemented. See
 [Collections, Settings, and Steam](collections-settings-steam.md) for use and limits.

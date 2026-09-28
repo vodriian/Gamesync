@@ -11,7 +11,30 @@
     ],
     "playtime_minutes": 1830,
     "favorite": true,
-    "cover": "covers/1145360.jpg"
+    "cover": "covers/1145360.jpg",
+    "sample_steam": {
+      "genres": [
+        "Action",
+        "Indie",
+        "RPG"
+      ],
+      "tags": [
+        "Roguelike",
+        "Action",
+        "Hack and Slash",
+        "Great Soundtrack",
+        "Mythology"
+      ],
+      "platform_minutes": {
+        "windows": 400,
+        "linux": 830,
+        "deck": 600
+      },
+      "last_played_days_ago": 1,
+      "collections": [
+        "Roguelike runs"
+      ]
+    }
   },
   {
     "id": 413150,
@@ -25,7 +48,30 @@
     ],
     "playtime_minutes": 4200,
     "favorite": true,
-    "cover": "covers/413150.jpg"
+    "cover": "covers/413150.jpg",
+    "sample_steam": {
+      "genres": [
+        "Indie",
+        "RPG",
+        "Simulation"
+      ],
+      "tags": [
+        "Farming Sim",
+        "Cozy",
+        "Relaxing",
+        "Pixel Graphics",
+        "Multiplayer"
+      ],
+      "platform_minutes": {
+        "windows": 1500,
+        "linux": 1200,
+        "deck": 1300
+      },
+      "last_played_days_ago": 3,
+      "collections": [
+        "Cozy evenings"
+      ]
+    }
   },
   {
     "id": 367520,
@@ -39,7 +85,25 @@
     ],
     "playtime_minutes": 1240,
     "favorite": false,
-    "cover": "covers/367520.jpg"
+    "cover": "covers/367520.jpg",
+    "sample_steam": {
+      "genres": [
+        "Action",
+        "Adventure",
+        "Indie"
+      ],
+      "tags": [
+        "Metroidvania",
+        "Souls-like",
+        "Difficult",
+        "2D",
+        "Atmospheric"
+      ],
+      "platform_minutes": {
+        "windows": 1240
+      },
+      "last_played_days_ago": 40
+    }
   },
   {
     "id": 620,
@@ -53,7 +117,24 @@
     ],
     "playtime_minutes": 720,
     "favorite": true,
-    "cover": "covers/620.jpg"
+    "cover": "covers/620.jpg",
+    "sample_steam": {
+      "genres": [
+        "Action",
+        "Adventure"
+      ],
+      "tags": [
+        "Puzzle",
+        "Co-op",
+        "First-Person",
+        "Comedy",
+        "Sci-fi"
+      ],
+      "platform_minutes": {
+        "mac": 720
+      },
+      "last_played_days_ago": 400
+    }
   },
   {
     "id": 1091500,
@@ -67,7 +148,20 @@
     ],
     "playtime_minutes": 0,
     "favorite": false,
-    "cover": "covers/1091500.jpg"
+    "cover": "covers/1091500.jpg",
+    "sample_steam": {
+      "genres": [
+        "RPG"
+      ],
+      "tags": [
+        "Open World",
+        "Cyberpunk",
+        "RPG",
+        "Story Rich",
+        "Sci-fi"
+      ],
+      "platform_minutes": {}
+    }
   },
   {
     "id": 990080,
@@ -81,7 +175,24 @@
     ],
     "playtime_minutes": 0,
     "favorite": false,
-    "cover": "covers/990080.jpg"
+    "cover": "covers/990080.jpg",
+    "sample_steam": {
+      "genres": [
+        "Action",
+        "Adventure",
+        "RPG"
+      ],
+      "tags": [
+        "Open World",
+        "Magic",
+        "Fantasy",
+        "Story Rich"
+      ],
+      "platform_minutes": {},
+      "wishlist": {
+        "priority": 0
+      }
+    }
   },
   {
     "id": 646570,
@@ -95,7 +206,28 @@
     ],
     "playtime_minutes": 2870,
     "favorite": true,
-    "cover": "covers/646570.jpg"
+    "cover": "covers/646570.jpg",
+    "sample_steam": {
+      "genres": [
+        "Indie",
+        "Strategy"
+      ],
+      "tags": [
+        "Card Game",
+        "Roguelike",
+        "Deckbuilding",
+        "Strategy",
+        "Turn-Based"
+      ],
+      "platform_minutes": {
+        "linux": 1500,
+        "deck": 1370
+      },
+      "last_played_days_ago": 2,
+      "collections": [
+        "Roguelike runs"
+      ]
+    }
   },
   {
     "id": 753640,
@@ -109,7 +241,24 @@
     ],
     "playtime_minutes": 0,
     "favorite": false,
-    "cover": "covers/753640.jpg"
+    "cover": "covers/753640.jpg",
+    "sample_steam": {
+      "genres": [
+        "Action",
+        "Adventure"
+      ],
+      "tags": [
+        "Exploration",
+        "Space",
+        "Mystery",
+        "Puzzle",
+        "Atmospheric"
+      ],
+      "platform_minutes": {},
+      "wishlist": {
+        "priority": 1
+      }
+    }
   },
   {
     "id": 2379780,
@@ -123,7 +272,29 @@
     ],
     "playtime_minutes": 980,
     "favorite": false,
-    "cover": "covers/2379780.jpg"
+    "cover": "covers/2379780.jpg",
+    "sample_steam": {
+      "genres": [
+        "Casual",
+        "Indie",
+        "Strategy"
+      ],
+      "tags": [
+        "Card Game",
+        "Roguelike",
+        "Deckbuilding",
+        "Poker",
+        "Relaxing"
+      ],
+      "platform_minutes": {
+        "deck": 980
+      },
+      "last_played_days_ago": 0,
+      "collections": [
+        "Cozy evenings",
+        "Roguelike runs"
+      ]
+    }
   },
   {
     "id": 1055540,
@@ -137,7 +308,27 @@
     ],
     "playtime_minutes": 180,
     "favorite": true,
-    "cover": "covers/1055540.jpg"
+    "cover": "covers/1055540.jpg",
+    "sample_steam": {
+      "genres": [
+        "Adventure",
+        "Indie"
+      ],
+      "tags": [
+        "Cozy",
+        "Exploration",
+        "Relaxing",
+        "Cute",
+        "Short"
+      ],
+      "platform_minutes": {
+        "linux": 180
+      },
+      "last_played_days_ago": 90,
+      "collections": [
+        "Cozy evenings"
+      ]
+    }
   },
   {
     "id": 632360,
@@ -151,7 +342,26 @@
     ],
     "playtime_minutes": 240,
     "favorite": false,
-    "cover": "covers/632360.jpg"
+    "cover": "covers/632360.jpg",
+    "sample_steam": {
+      "genres": [
+        "Action",
+        "Indie"
+      ],
+      "tags": [
+        "Roguelike",
+        "Co-op",
+        "Third-Person Shooter",
+        "Action"
+      ],
+      "platform_minutes": {
+        "windows": 240
+      },
+      "last_played_days_ago": 200,
+      "collections": [
+        "Roguelike runs"
+      ]
+    }
   },
   {
     "id": 1245620,
@@ -165,6 +375,23 @@
     ],
     "playtime_minutes": 0,
     "favorite": false,
-    "cover": "covers/1245620.jpg"
+    "cover": "covers/1245620.jpg",
+    "sample_steam": {
+      "genres": [
+        "Action",
+        "RPG"
+      ],
+      "tags": [
+        "Souls-like",
+        "Open World",
+        "Difficult",
+        "Dark Fantasy"
+      ],
+      "platform_minutes": {},
+      "wishlist": {
+        "priority": 2,
+        "removed": true
+      }
+    }
   }
 ]
