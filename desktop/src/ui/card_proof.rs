@@ -120,13 +120,20 @@ impl Render for Proof {
 }
 pub fn run() -> anyhow::Result<()> {
     gpui::set_linux_card_compositor_enabled(true);
+    #[cfg(target_os = "linux")]
+    anyhow::ensure!(
+        std::env::var_os("DISPLAY").is_some()
+            || (std::env::var_os("WAYLAND_DISPLAY").is_some()
+                && std::env::var_os("XDG_RUNTIME_DIR").is_some()),
+        "GameSync card proof needs a graphical session. Start it from an Omarchy terminal, or set XDG_RUNTIME_DIR and WAYLAND_DISPLAY to the active Wayland session."
+    );
     let game = crate::fixtures::games()?.into_iter().next().unwrap();
     Application::new()
         .with_assets(crate::assets::Assets)
         .run(move |cx| {
             gpui_component::init(cx);
             cx.activate(true);
-            cx.open_window(
+            let result = cx.open_window(
                 WindowOptions {
                     window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
                         None,
@@ -148,8 +155,11 @@ pub fn run() -> anyhow::Result<()> {
                     window.focus(&proof.read(cx).focus);
                     cx.new(|cx| Root::new(proof, window, cx))
                 },
-            )
-            .unwrap();
+            );
+            if let Err(error) = result {
+                log::error!("Could not open GameSync card proof: {error}");
+                cx.quit();
+            }
         });
     Ok(())
 }

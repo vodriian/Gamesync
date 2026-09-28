@@ -166,6 +166,14 @@ Run `--card-proof` for the isolated real-card renderer check. Use
 Add `GAMESYNC_FRAME_TRACE=1` to measure native layout and paint CPU time.
 These opt-in debug traces are diagnostics, not a release benchmark.
 
+Start GUI proofs from an Omarchy terminal. Agent or SSH shells can omit the
+desktop environment. On this workstation, use:
+
+```sh
+XDG_RUNTIME_DIR=/run/user/1000 WAYLAND_DISPLAY=wayland-1 \
+  ./desktop/target/release/gamesync-desktop --card-proof
+```
+
 For repeatable native geometry checks, launch the built executable directly:
 
 ```sh
