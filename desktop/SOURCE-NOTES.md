@@ -77,3 +77,8 @@ upstream CSS or browser runtime is loaded by the app. See
 
 `icons/square-kanban.svg` is Lucide's `square-kanban` icon (ISC license), the
 same icon family that gpui-component bundles. The bundled set has no board icon.
+
+## Home icon
+
+`icons/house.svg` is Lucide's `house` icon (ISC license), from the same family.
+The bundled set has no home icon.
