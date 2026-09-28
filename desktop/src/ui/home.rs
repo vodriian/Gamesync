@@ -62,7 +62,7 @@ fn hours(minutes: u64) -> String {
     if minutes < 600 {
         format!("{:.1} h", minutes as f64 / 60.)
     } else {
-        format!("{} h", minutes / 60)
+        format!("{} h", (minutes + 30) / 60)
     }
 }
 

@@ -100,7 +100,8 @@ impl RecordStore {
     }
 
     /// Apply provider data to the latest personal state under the same game lock.
-    pub(crate) fn update_steam(
+    /// Callers are Steam sync and demo sample values. Never use it for user edits.
+    pub fn update_steam(
         &self,
         id: Uuid,
         app_id: u32,
