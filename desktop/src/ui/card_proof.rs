@@ -5,16 +5,19 @@ use gpui_component::{v_flex, Root};
 struct Proof {
     game: crate::model::Game,
     turn: Spring,
+    pitch: Spring,
+    yaw: Spring,
+    hover_bounds: Bounds<Pixels>,
     back: bool,
     focus: FocusHandle,
 }
 impl Render for Proof {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        if self.turn.active() {
+        if self.turn.active() || self.pitch.active() || self.yaw.active() {
             window.request_animation_frame();
         }
-        let yaw = self.turn.value();
-        let back = yaw > std::f32::consts::FRAC_PI_2;
+        let turn = self.turn.value();
+        let back = turn > std::f32::consts::FRAC_PI_2;
         let face = if back {
             v_flex()
                 .w(px(380.))
@@ -36,6 +39,7 @@ impl Render for Proof {
         } else {
             super::card::front(&self.game, 380., None, false, cx).into_any_element()
         };
+        let entity = cx.entity();
         v_flex()
             .id("proof")
             .track_focus(&self.focus)
@@ -60,24 +64,62 @@ impl Render for Proof {
                 };
                 cx.notify();
             }))
-            .child(card_layer(
-                1,
-                size(px(380.), px(554.8)),
-                CardPose {
-                    pitch: 0.,
-                    yaw,
-                    back,
-                    material: true,
-                    frosted_top: 0.,
-                },
-                crate::theme::interface_radius(cx, px(17.)),
-                face,
-            ))
+            .child(
+                div()
+                    .id("proof-card")
+                    .relative()
+                    .w(px(380.))
+                    .h(px(554.8))
+                    .child(card_layer(
+                        1,
+                        size(px(380.), px(554.8)),
+                        CardPose {
+                            pitch: self.pitch.value(),
+                            yaw: turn + self.yaw.value(),
+                            back,
+                            material: true,
+                            frosted_top: 0.,
+                        },
+                        crate::theme::interface_radius(cx, px(17.)),
+                        face,
+                    ))
+                    .child(
+                        canvas(
+                            move |bounds, _, cx| {
+                                entity.update(cx, |this, _| this.hover_bounds = bounds);
+                            },
+                            |_, _, _, _| {},
+                        )
+                        .absolute()
+                        .size_full(),
+                    )
+                    .on_mouse_move(cx.listener(|this, event: &MouseMoveEvent, _, cx| {
+                        if this.turn.active() {
+                            return;
+                        }
+                        let bounds = this.hover_bounds;
+                        let x = f32::from(event.position.x - bounds.origin.x)
+                            / f32::from(bounds.size.width).max(1.);
+                        let y = f32::from(event.position.y - bounds.origin.y)
+                            / f32::from(bounds.size.height).max(1.);
+                        this.pitch
+                            .set((0.5 - y.clamp(0., 1.)) * 10_f32.to_radians());
+                        this.yaw.set((x.clamp(0., 1.) - 0.5) * 16_f32.to_radians());
+                        cx.notify();
+                    }))
+                    .on_hover(cx.listener(|this, hovered, _, cx| {
+                        if !hovered {
+                            this.pitch.set(0.);
+                            this.yaw.set(0.);
+                            cx.notify();
+                        }
+                    })),
+            )
             .child("Space: turn · 1: perspective · 2: edge · 3: rear · Q: quit")
     }
 }
 pub fn run() -> anyhow::Result<()> {
-    gpui::enable_linux_card_proof();
+    gpui::set_linux_card_compositor_enabled(true);
     let game = crate::fixtures::games()?.into_iter().next().unwrap();
     Application::new()
         .with_assets(crate::assets::Assets)
@@ -97,6 +139,9 @@ pub fn run() -> anyhow::Result<()> {
                     let proof = cx.new(|cx| Proof {
                         game,
                         turn: Spring::new(0.6),
+                        pitch: Spring::new(0.),
+                        yaw: Spring::new(0.),
+                        hover_bounds: Bounds::default(),
                         back: false,
                         focus: cx.focus_handle(),
                     });

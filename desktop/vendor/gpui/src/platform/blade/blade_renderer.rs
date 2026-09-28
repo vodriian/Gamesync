@@ -16,6 +16,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 const MAX_FRAME_TIME_MS: u32 = 10000;
+#[cfg(target_os = "linux")]
+const CARD_TEXTURE_BUDGET: usize = 64 * 1024 * 1024;
 
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
@@ -368,6 +370,14 @@ struct CachedCardFace {
     width: u32,
     height: u32,
     content: Arc<crate::card_layer::CardLayer>,
+    used: u64,
+}
+
+#[cfg(target_os = "linux")]
+impl CachedCardFace {
+    fn bytes(&self) -> usize {
+        self.width as usize * self.height as usize * 4
+    }
 }
 
 pub struct BladeSurfaceConfig {
@@ -395,6 +405,8 @@ pub struct BladeRenderer {
     card_faces: HashMap<u64, CachedCardFace>,
     #[cfg(target_os = "linux")]
     retired_card_faces: Vec<CachedCardFace>,
+    #[cfg(target_os = "linux")]
+    card_frame: u64,
     #[cfg(target_os = "macos")]
     core_video_texture_cache: CVMetalTextureCache,
     path_intermediate_texture: gpu::Texture,
@@ -494,6 +506,8 @@ impl BladeRenderer {
             card_faces: HashMap::new(),
             #[cfg(target_os = "linux")]
             retired_card_faces: Vec::new(),
+            #[cfg(target_os = "linux")]
+            card_frame: 0,
             #[cfg(target_os = "macos")]
             core_video_texture_cache,
             path_intermediate_texture,
@@ -700,13 +714,33 @@ impl BladeRenderer {
         let card = surface.card.as_ref().expect("card surface");
         let width = surface.bounds.size.width.0.ceil().max(1.) as u32;
         let height = surface.bounds.size.height.0.ceil().max(1.) as u32;
-        let cached = self.card_faces.get(&card.id).is_some_and(|face| {
-            face.width == width
+        if let Some(face) = self.card_faces.get_mut(&card.id) {
+            let cached = face.width == width
                 && face.height == height
-                && face.content.scene.paint_operations == card.scene.paint_operations
-        });
-        if cached {
-            return;
+                && face.content.scene.paint_operations == card.scene.paint_operations;
+            if cached {
+                face.used = self.card_frame;
+                return;
+            }
+        }
+        self.retire_card_face(card.id);
+
+        let cost = width as usize * height as usize * 4;
+        while self.card_texture_bytes() + cost > CARD_TEXTURE_BUDGET {
+            let oldest = self
+                .card_faces
+                .iter()
+                .min_by_key(|(_, face)| face.used)
+                .map(|(&id, _)| id);
+            let Some(oldest) = oldest else {
+                log::error!(
+                    "Linux card texture budget exhausted: {} + {} bytes",
+                    self.card_texture_bytes(),
+                    cost
+                );
+                return;
+            };
+            self.retire_card_face(oldest);
         }
 
         let format = self.surface.info().format;
@@ -853,12 +887,43 @@ impl BladeRenderer {
             width,
             height,
             content: Arc::clone(card),
+            used: self.card_frame,
         };
         if let Some(old) = self.card_faces.insert(card.id, face) {
             // The previous frame can still reference this face. Release it after that
             // frame's sync point completes at the end of `draw`.
             self.retired_card_faces.push(old);
         }
+    }
+
+    #[cfg(target_os = "linux")]
+    fn begin_card_frame(&mut self) {
+        self.card_frame += 1;
+        let stale: Vec<_> = self
+            .card_faces
+            .iter()
+            .filter(|(_, face)| face.used + 2 < self.card_frame)
+            .map(|(&id, _)| id)
+            .collect();
+        for id in stale {
+            self.retire_card_face(id);
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    fn retire_card_face(&mut self, id: u64) {
+        if let Some(face) = self.card_faces.remove(&id) {
+            self.retired_card_faces.push(face);
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    fn card_texture_bytes(&self) -> usize {
+        self.card_faces
+            .values()
+            .chain(self.retired_card_faces.iter())
+            .map(CachedCardFace::bytes)
+            .sum()
     }
 
     #[cfg(target_os = "linux")]
@@ -902,6 +967,8 @@ impl BladeRenderer {
     }
 
     pub fn draw(&mut self, scene: &Scene) {
+        #[cfg(target_os = "linux")]
+        self.begin_card_frame();
         self.command_encoder.start();
         self.atlas.before_frame(&mut self.command_encoder);
 

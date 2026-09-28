@@ -32,7 +32,8 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 
 [Physical cards](physical-cards.md): framed covers, front/back details, and
 three library views, restored left navigation, and native Metal perspective.
-Linux keeps flat cards; Linux 3D remains pending.
+Linux keeps flat cards outside Omarchy mode. The Omarchy branch has an
+experimental Blade/Vulkan card projection for Cards and focused fronts.
 
 ## Next task
 

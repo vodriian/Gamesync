@@ -289,8 +289,7 @@ impl GameGrid {
     ) -> gpui::AnyElement {
         let slot = data.slot;
         let id = data.game.id;
-        let reduced = super::motion::reduced(cx) || !cfg!(target_os = "macos");
-        let hovering = self.hovered == Some(id) && !reduced;
+        let hovering = self.hovered == Some(id) && super::motion::card_3d_enabled(cx);
         let face_size = cell_size - px(24.);
         let face = super::card::front(&data.game, f32::from(face_size), None, active, cx);
         let face = if hovering {
@@ -350,10 +349,7 @@ impl GameGrid {
             }))
             .on_mouse_move(
                 cx.listener(move |this, event: &gpui::MouseMoveEvent, _, cx| {
-                    if this.hovered != Some(id)
-                        || super::motion::reduced(cx)
-                        || !cfg!(target_os = "macos")
-                    {
+                    if this.hovered != Some(id) || !super::motion::card_3d_enabled(cx) {
                         return;
                     }
                     let bounds = this.hover_bounds;

@@ -4,13 +4,15 @@ use crate::{Pixels, Size, prelude::*};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 #[cfg(target_os = "linux")]
-static LINUX_CARD_PROOF_ENABLED: AtomicBool = AtomicBool::new(false);
+static LINUX_CARD_COMPOSITOR_ENABLED: AtomicBool = AtomicBool::new(false);
 
-/// Enable the experimental Linux compositor for the isolated card proof process.
+/// Enable the experimental Linux compositor for Omarchy mode or its proof fixture.
 #[doc(hidden)]
-pub fn enable_linux_card_proof() {
+pub fn set_linux_card_compositor_enabled(enabled: bool) {
     #[cfg(target_os = "linux")]
-    LINUX_CARD_PROOF_ENABLED.store(true, Ordering::Relaxed);
+    LINUX_CARD_COMPOSITOR_ENABLED.store(enabled, Ordering::Relaxed);
+    #[cfg(not(target_os = "linux"))]
+    let _ = enabled;
 }
 
 /// Angles are radians. A back face is authored upright, then turned by PI before projection.
@@ -66,7 +68,7 @@ pub fn card_layer(
     // The Linux POC only captures material cards. Keeping mask-only layers flat avoids
     // recursive surfaces until the Blade compositor has a general offscreen scene stack.
     #[cfg(target_os = "linux")]
-    if !pose.material || !LINUX_CARD_PROOF_ENABLED.load(Ordering::Relaxed) {
+    if !pose.material || !LINUX_CARD_COMPOSITOR_ENABLED.load(Ordering::Relaxed) {
         return element;
     }
     #[cfg(any(

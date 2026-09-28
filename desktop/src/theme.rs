@@ -30,6 +30,7 @@ fn ink(background: Hsla) -> Hsla {
     .into()
 }
 pub fn apply_choice(choice: &Appearance, window: &mut Window, cx: &mut App) {
+    gpui::set_linux_card_compositor_enabled(false);
     let dark = matches!(
         window.appearance(),
         WindowAppearance::Dark | WindowAppearance::VibrantDark
@@ -46,6 +47,7 @@ pub fn apply_choice(choice: &Appearance, window: &mut Window, cx: &mut App) {
 }
 
 pub fn apply_omarchy(theme: &OmarchyTheme, window: &mut Window, cx: &mut App) {
+    gpui::set_linux_card_compositor_enabled(true);
     let palette = omarchy_palette(theme);
     let mode = if theme.mode == "dark" {
         ThemeMode::Dark
@@ -66,11 +68,15 @@ pub fn apply_omarchy(theme: &OmarchyTheme, window: &mut Window, cx: &mut App) {
 /// Keep each surface's current radius outside Omarchy, but square it when the
 /// global control radius marks the active Omarchy design language.
 pub fn interface_radius(cx: &App, normal: Pixels) -> Pixels {
-    if Theme::global(cx).radius == px(0.) {
+    if omarchy_mode(cx) {
         px(0.)
     } else {
         normal
     }
+}
+
+pub fn omarchy_mode(cx: &App) -> bool {
+    Theme::global(cx).radius == px(0.)
 }
 
 pub fn pill_radius(cx: &App) -> Pixels {

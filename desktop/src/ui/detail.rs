@@ -124,7 +124,7 @@ impl DetailPanel {
         window.focus(&self.focus);
         self.back = !self.back;
         let target = if self.back { std::f32::consts::PI } else { 0. };
-        if super::motion::reduced(cx) {
+        if !super::motion::card_3d_enabled(cx) {
             self.turn = super::card_motion::Spring::new(target);
         } else {
             self.turn.set(target);
@@ -323,7 +323,7 @@ impl Render for DetailPanel {
             window.viewport_size().height - px(50.)
         };
         let width = ((f32::from(available_height) - 270.) / 1.46).clamp(180., 460.);
-        let reduced = super::motion::reduced(cx) || !cfg!(target_os = "macos");
+        let reduced = !super::motion::card_3d_enabled(cx);
         let turning = !reduced && self.turn.active();
         let turn = if reduced {
             if self.back {
@@ -608,7 +608,7 @@ impl Render for DetailPanel {
                                                     |this, event: &gpui::MouseMoveEvent, _, cx| {
                                                         if this.back
                                                             || this.turn.active()
-                                                            || super::motion::reduced(cx)
+                                                            || !super::motion::card_3d_enabled(cx)
                                                         {
                                                             return;
                                                         }

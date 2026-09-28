@@ -54,9 +54,12 @@ is not painted or hit-tested while a card is focused.
 
 ## Platform boundary
 
-macOS Metal is the first 3D implementation. Other renderers retain native flat
-content and immediate face changes. Linux 3D is pending. A macOS build is not
-proof of Linux compilation or native behavior.
+macOS Metal remains the complete 3D implementation. Linux has a Blade/Vulkan
+POC that is enabled only in Omarchy mode and `--card-proof`; other Linux modes
+retain native flat content and immediate face changes. The Linux POC supports
+the card primitives used by Cards and the focused front. Nested surfaces and
+vector paths remain deferred. Linux compilation is not a visual or performance
+acceptance result.
 
 ## Validation
 

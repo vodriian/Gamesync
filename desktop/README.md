@@ -156,7 +156,9 @@ The network test reads public Steam metadata and needs no account or key.
 On macOS, Cards and focused fronts use GPU perspective, satin lighting and
 pointer tilt. Mouse and Space animate a full 180-degree turn. The settled back
 uses the existing native editor. Reduce motion disables tilt and spatial turns.
-Grid and Table stay still. Linux retains flat cards; Linux 3D is pending.
+Grid and Table stay still. Linux retains flat cards outside Omarchy mode.
+Omarchy mode has an experimental Blade/Vulkan implementation for Cards and
+focused fronts. Reduce motion disables it.
 
 The pinned GPUI 0.2.2 patch lives in `vendor/gpui`; see its `GAMESYNC-PATCH.md`.
 Run `--card-proof` for the isolated real-card renderer check. Use
