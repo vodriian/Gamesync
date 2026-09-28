@@ -406,26 +406,33 @@ impl GameGrid {
                                 // the shared model in one short borrow; building
                                 // elements needs `cx` mutably for the click
                                 // listeners.
+                                // Row sizes, rows, and `visible` can come from
+                                // different library updates for one frame. Skip
+                                // stale entries; the observer rebuilds the rows.
                                 let rows_data: Vec<(Option<String>, Vec<GameCell>)> = {
                                     let library = library.read(cx);
                                     rows.clone()
                                         .map(|row| {
-                                            let (header, slots) = &this.rows[row];
+                                            let Some((header, slots)) = this.rows.get(row) else {
+                                                return (None, Vec::new());
+                                            };
                                             (
                                                 header.clone(),
                                                 slots
                                                     .iter()
                                                     .copied()
-                                                    .map(|slot| {
-                                                        let idx = visible[slot];
-                                                        GameCell::new(
+                                                    .filter_map(|slot| {
+                                                        let game = visible
+                                                            .get(slot)
+                                                            .and_then(|&i| library.games.get(i))?;
+                                                        Some(GameCell::new(
                                                             slot,
-                                                            &library.games[idx],
+                                                            game,
                                                             library
                                                                 .source
                                                                 .as_ref()
                                                                 .map(|(_, m)| m.library_id),
-                                                        )
+                                                        ))
                                                     })
                                                     .collect(),
                                             )
