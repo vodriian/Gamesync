@@ -72,3 +72,8 @@ The native appearance catalog derives from obsidian-baseline revision
 The development-only importer resolves inherited colors into bundled data; no
 upstream CSS or browser runtime is loaded by the app. See
 [chrome and themes](../plan/chrome-themes.md) for regeneration and mapping rules.
+
+## Board icon
+
+`icons/square-kanban.svg` is Lucide's `square-kanban` icon (ISC license), the
+same icon family that gpui-component bundles. The bundled set has no board icon.

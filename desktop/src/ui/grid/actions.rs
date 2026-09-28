@@ -12,10 +12,10 @@ use std::path::PathBuf;
 use uuid::Uuid;
 
 #[derive(Clone)]
-struct Target {
+pub(super) struct Target {
     root: PathBuf,
     manifest: LibraryRevision,
-    base: GameRevision,
+    pub base: GameRevision,
 }
 
 pub(super) struct NoteDraft {
@@ -184,7 +184,35 @@ impl GameGrid {
         self.saving || self.note.is_some()
     }
 
-    fn save_personal(
+    /// The revisions one game edit is checked against, or a message for the user.
+    pub(super) fn target_for(&self, id: Uuid, cx: &gpui::App) -> Result<Target, String> {
+        let library = self.library.read(cx);
+        if self.busy() {
+            return Err("Wait for the current change to save.".into());
+        }
+        if library.write_issue.is_some() {
+            return Err("Changes are unavailable. Refresh and try again.".into());
+        }
+        if library.conflicts.contains_key(&id) {
+            return Err("Resolve this game's conflict before changing it.".into());
+        }
+        let Some((root, manifest)) = library.source.clone() else {
+            return Err("Games are still loading.".into());
+        };
+        let base = library
+            .games
+            .iter()
+            .find(|g| g.id == id)
+            .and_then(|g| g.record.clone())
+            .ok_or("This game is not saved in a library.")?;
+        Ok(Target {
+            root,
+            manifest,
+            base,
+        })
+    }
+
+    pub(super) fn save_personal(
         &mut self,
         target: Target,
         personal: PersonalData,

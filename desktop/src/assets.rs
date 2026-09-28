@@ -51,10 +51,24 @@ const COVERS: &[(&str, &[u8])] = &[
         include_bytes!("../fixtures/covers/990080.jpg"),
     ),
 ];
+/// Lucide `square-kanban` (ISC), the icon set gpui-component already bundles.
+const ICONS: &[(&str, &[u8])] = &[(
+    "icons/square-kanban.svg",
+    include_bytes!("../icons/square-kanban.svg"),
+)];
+
+/// App icons that the bundled component icon set does not include.
+pub struct BoardIcon;
+impl gpui_component::IconNamed for BoardIcon {
+    fn path(self) -> SharedString {
+        "icons/square-kanban.svg".into()
+    }
+}
+
 pub struct Assets;
 impl AssetSource for Assets {
     fn load(&self, path: &str) -> Result<Option<Cow<'static, [u8]>>> {
-        if let Some((_, bytes)) = COVERS.iter().find(|(name, _)| *name == path) {
+        if let Some((_, bytes)) = COVERS.iter().chain(ICONS).find(|(name, _)| *name == path) {
             return Ok(Some(Cow::Borrowed(bytes)));
         }
         gpui_component_assets::Assets.load(path)

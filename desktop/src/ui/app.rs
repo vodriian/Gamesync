@@ -123,6 +123,25 @@ impl GameSyncApp {
                 this.sidebar
                     .update(cx, |sidebar, cx| sidebar.show_toast(&event.0, cx));
             });
+        // The sidebar owns the status name editor and definition writes.
+        let board_subscription = cx.subscribe_in(
+            &grid,
+            window,
+            |this, _, event: &super::grid::StatusRequest, window, cx| {
+                use super::{grid::StatusRequest, sidebar::NameTarget};
+                if !matches!(event, StatusRequest::Move(..)) {
+                    this.sidebar_shown = true;
+                    this.sidebar_motion.set(1., cx);
+                }
+                this.sidebar.update(cx, |sidebar, cx| match event {
+                    StatusRequest::New => sidebar.begin_name(NameTarget::NewStatus, window, cx),
+                    StatusRequest::Rename(key) => {
+                        sidebar.begin_name(NameTarget::Status(key.clone()), window, cx)
+                    }
+                    StatusRequest::Move(key, later) => sidebar.move_status(key, *later, cx),
+                });
+            },
+        );
         let library_subscription = cx.observe(&library, |_, _, cx| cx.notify());
         window.focus(&grid.focus_handle(cx));
         let mut app = Self {
@@ -151,6 +170,7 @@ impl GameSyncApp {
             _subscriptions: vec![
                 grid_subscription,
                 bulk_subscription,
+                board_subscription,
                 search_subscription,
                 library_subscription,
                 editor_subscription,
@@ -213,7 +233,7 @@ impl GameSyncApp {
                 .as_ref()
                 .is_some_and(|v| v.read(cx).busy())
         {
-            self.notice = "Wait for the collection save to finish.".into();
+            self.notice = "Wait for the collection or status save to finish.".into();
             cx.notify();
             return false;
         }
@@ -289,6 +309,7 @@ impl GameSyncApp {
                         ]
                         .into_iter()
                         .map(|(view, label, icon)| {
+                            let board = self.library.read(cx).scope == crate::model::Scope::Board;
                             Button::new(label)
                                 .ghost()
                                 .small()
@@ -297,8 +318,15 @@ impl GameSyncApp {
                                 .rounded(crate::theme::pill_radius(cx))
                                 .w(px(36.))
                                 .h(px(30.))
-                                .selected(self.view == view)
+                                .selected(!board && self.view == view)
                                 .on_click(cx.listener(move |this, _, window, cx| {
+                                    // A presentation choice leaves the board for All games.
+                                    this.library.update(cx, |lib, cx| {
+                                        if lib.scope == crate::model::Scope::Board {
+                                            lib.set_scope(crate::model::Scope::All);
+                                            cx.notify();
+                                        }
+                                    });
                                     this.view = view;
                                     this.grid.update(cx, |grid, cx| grid.set_view(view, cx));
                                     window.focus(&this.grid.focus_handle(cx));
@@ -385,8 +413,13 @@ impl Render for GameSyncApp {
                     } else {
                         this.sidebar_shown = true;
                         this.sidebar_motion.set(1., cx);
-                        this.sidebar
-                            .update(cx, |sidebar, cx| sidebar.begin_name(None, window, cx));
+                        this.sidebar.update(cx, |sidebar, cx| {
+                            sidebar.begin_name(
+                                super::sidebar::NameTarget::NewCollection,
+                                window,
+                                cx,
+                            )
+                        });
                     }
                 }),
             )
@@ -460,8 +493,13 @@ impl Render for GameSyncApp {
                     } else {
                         this.sidebar_shown = true;
                         this.sidebar_motion.set(1., cx);
-                        this.sidebar
-                            .update(cx, |sidebar, cx| sidebar.begin_name(None, window, cx));
+                        this.sidebar.update(cx, |sidebar, cx| {
+                            sidebar.begin_name(
+                                super::sidebar::NameTarget::NewCollection,
+                                window,
+                                cx,
+                            )
+                        });
                     }
                 }),
             )

@@ -18,7 +18,9 @@ use gpui_component::{
 use gpui_component::{menu::ContextMenuExt as _, Disableable as _};
 use std::{rc::Rc, sync::Arc};
 mod actions;
+mod board;
 mod bulk;
+pub use board::StatusRequest;
 
 const GAP: Pixels = px(24.);
 // Keep spacing inside the full-width scroll mask so shadows can use the gutter.
@@ -95,6 +97,7 @@ pub struct GameGrid {
     row_sizes: Rc<Vec<Size<Pixels>>>,
     groups: Vec<(String, Vec<usize>)>,
     rows: Vec<(Option<String>, Vec<usize>)>,
+    board: board::BoardState,
 }
 
 impl Focusable for GameGrid {
@@ -111,6 +114,10 @@ impl GameGrid {
     ) -> Self {
         cx.observe(&library, |this, library, cx| {
             let lib = library.read(cx);
+            // Board columns also change when only a status, rank, or label changes.
+            if lib.scope == crate::model::Scope::Board {
+                this.board.refresh(lib);
+            }
             let visible = lib.visible.clone();
             let preserve_next_update = std::mem::take(&mut this.preserve_next_library_update);
             this.selection
@@ -154,6 +161,7 @@ impl GameGrid {
             row_sizes: Rc::new(Vec::new()),
             groups: library.read(cx).groups.clone(),
             rows: Vec::new(),
+            board: Default::default(),
         }
     }
 
@@ -524,7 +532,13 @@ impl Render for GameGrid {
         .absolute()
         .size_full();
         let library = self.library.clone();
-        let empty = library.read(cx).visible.is_empty();
+        let board = library.read(cx).scope == crate::model::Scope::Board;
+        // The board keeps its columns visible for drops when a search finds nothing.
+        let empty = if board {
+            library.read(cx).games.is_empty()
+        } else {
+            library.read(cx).visible.is_empty()
+        };
         div()
             .id("game-grid")
             .track_focus(&self.focus)
@@ -543,6 +557,12 @@ impl Render for GameGrid {
                 if event.keystroke.key == "enter" || event.keystroke.key == "space" {
                     if this.library.read(cx).selected.is_some() {
                         cx.emit(OpenGame);
+                    }
+                    return;
+                }
+                if this.library.read(cx).scope == crate::model::Scope::Board {
+                    if !this.board_key(event, cx) {
+                        cx.propagate();
                     }
                     return;
                 }
@@ -593,14 +613,16 @@ impl Render for GameGrid {
                         )
                     })
                     .into_any_element()
+            } else if board {
+                self.render_board(cx)
             } else {
                 self.render_grid(&library, cx)
             })
-            .when(self.view == LibraryView::Table, |view| {
+            .when(!board && self.view == LibraryView::Table, |view| {
                 view.child(self.table_header(cx))
             })
             .when(
-                self.view == LibraryView::Table && !self.selection.is_empty(),
+                !board && self.view == LibraryView::Table && !self.selection.is_empty(),
                 |view| view.child(self.bulk_panel(cx)),
             )
             .when(self.note.is_some(), |view| view.child(self.note_dialog(cx)))

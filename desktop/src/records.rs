@@ -78,6 +78,10 @@ pub struct PersonalData {
     pub description: Option<String>,
     /// Portable path within media/, never an absolute device path.
     pub cover: Option<String>,
+    /// Manual position inside this status's board column. See `crate::board`.
+    /// Invalid values from other writers are ignored, not rejected.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub board_rank: Option<String>,
     #[serde(flatten)]
     pub extra: ExtraFields,
 }
@@ -94,8 +98,19 @@ impl Default for PersonalData {
             notes: String::new(),
             description: None,
             cover: None,
+            board_rank: None,
             extra: ExtraFields::new(),
         }
+    }
+}
+
+impl PersonalData {
+    /// A board rank orders a game inside one column, so it resets with the status.
+    pub fn set_status(&mut self, status: String) {
+        if self.status != status {
+            self.board_rank = None;
+        }
+        self.status = status;
     }
 }
 
@@ -151,6 +166,7 @@ impl GameRevision {
                 "notes",
                 "description",
                 "cover",
+                "board_rank",
             ],
         )?;
         if let Some(steam) = &self.game.steam {

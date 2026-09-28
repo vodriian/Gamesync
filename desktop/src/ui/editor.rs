@@ -320,7 +320,7 @@ impl Render for InspectorEditor {
                                             .checked(key == selected)
                                             .on_click(move |_, _, cx| {
                                                 target.update(cx, |this, cx| {
-                                                    this.personal.status = key.clone();
+                                                    this.personal.set_status(key.clone());
                                                     this.change_now(cx);
                                                 })
                                             }),

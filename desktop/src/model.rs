@@ -43,6 +43,17 @@ pub struct Game {
 }
 
 impl Game {
+    /// Valid manual board position. Invalid ranks from other writers count as none.
+    pub fn board_rank(&self) -> Option<&str> {
+        self.record
+            .as_ref()?
+            .game
+            .personal
+            .board_rank
+            .as_deref()
+            .filter(|rank| gamesync_desktop::board::valid_rank(rank))
+    }
+
     pub fn rating_label(&self) -> String {
         self.rating.map_or_else(
             || "Unrated".into(),
@@ -55,6 +66,8 @@ impl Game {
 pub enum Scope {
     All,
     Favorites,
+    /// Status columns over the same games as `All`.
+    Board,
     Hidden,
     Status(String),
     Collection(Uuid),
@@ -74,11 +87,21 @@ impl Scope {
                 .record
                 .as_ref()
                 .is_some_and(|r| r.game.personal.collections.contains(id)),
-            Self::All => true,
+            Self::All | Self::Board => true,
             Self::Favorites => game.favorite,
             Self::Status(status) => game.status == *status,
         }
     }
+}
+
+/// One board column. `key` is `None` for games whose status is not defined here,
+/// for example a status added on another computer before its definitions arrive.
+#[derive(Debug, Clone, PartialEq)]
+pub struct BoardColumn {
+    pub key: Option<String>,
+    pub label: String,
+    /// Game indices, ranked games first, then the Sort menu order.
+    pub games: Vec<usize>,
 }
 
 /// One selection shared by the grid and inspector. IDs survive sorting/filtering.
@@ -213,6 +236,7 @@ impl Library {
                 .unwrap_or_else(|| "Collection".into()),
             Scope::All => "All games".into(),
             Scope::Favorites => "Favorites".into(),
+            Scope::Board => "Board".into(),
             Scope::Hidden => "Hidden games".into(),
             Scope::Status(key) => self
                 .statuses
@@ -262,6 +286,103 @@ impl Library {
             next.visible = self.visible.clone();
         }
         *self = next;
+    }
+
+    /// Apply saved library definitions in one step. The sidebar, board, menus,
+    /// and game labels all read these values, so they cannot disagree.
+    pub fn apply_definitions(
+        &mut self,
+        root: PathBuf,
+        saved: gamesync_desktop::library::LibraryRevision,
+    ) {
+        self.statuses = saved.definitions.statuses.clone();
+        for game in &mut self.games {
+            game.status_label = saved
+                .definitions
+                .status(&game.status)
+                .map(|status| status.label.clone())
+                .unwrap_or_else(|| game.status.clone());
+            game.collections = saved
+                .definitions
+                .collections
+                .iter()
+                .filter(|c| {
+                    !c.archived
+                        && game
+                            .record
+                            .as_ref()
+                            .is_some_and(|r| r.game.personal.collections.contains(&c.id))
+                })
+                .map(|c| c.name.clone())
+                .collect();
+        }
+        let scope_exists = match &self.scope {
+            Scope::Status(key) => saved.definitions.status(key).is_some(),
+            Scope::Collection(id) => saved
+                .definitions
+                .collections
+                .iter()
+                .any(|c| c.id == *id && !c.archived),
+            _ => true,
+        };
+        if !scope_exists {
+            self.scope = Scope::All;
+        }
+        if self
+            .filter_status
+            .as_ref()
+            .is_some_and(|key| saved.definitions.status(key).is_none())
+        {
+            self.filter_status = None;
+        }
+        self.source = Some((root, saved));
+        self.recompute();
+    }
+
+    /// Columns in status definition order over the visible games.
+    pub fn board_columns(&self) -> Vec<BoardColumn> {
+        let column = |key: Option<&str>| {
+            let mut games: Vec<usize> = self
+                .visible
+                .iter()
+                .copied()
+                .filter(|&i| {
+                    let status = self.games[i].status.as_str();
+                    key.map_or_else(
+                        || !self.statuses.iter().any(|s| s.key == status),
+                        |key| key == status,
+                    )
+                })
+                .collect();
+            // Stable: equal ranks and unranked games keep the Sort menu order.
+            games.sort_by(|&a, &b| {
+                match (self.games[a].board_rank(), self.games[b].board_rank()) {
+                    (Some(a), Some(b)) => a.cmp(b),
+                    (Some(_), None) => std::cmp::Ordering::Less,
+                    (None, Some(_)) => std::cmp::Ordering::Greater,
+                    (None, None) => std::cmp::Ordering::Equal,
+                }
+            });
+            games
+        };
+        let mut columns: Vec<_> = self
+            .statuses
+            .iter()
+            .map(|status| BoardColumn {
+                key: Some(status.key.clone()),
+                label: status.label.clone(),
+                games: column(Some(&status.key)),
+            })
+            .collect();
+        let other = column(None);
+        if !other.is_empty() {
+            columns.push(BoardColumn {
+                key: None,
+                label: "Other statuses".into(),
+                games: other,
+            });
+        }
+        columns
     }
 
     pub fn set_show_hidden_games(&mut self, show: bool) {
@@ -629,6 +750,105 @@ mod tests {
         assert_eq!(lib.visible.len(), 1);
         assert_eq!(lib.scope_label(&lib.scope), "For the weekend");
     }
+    fn record(
+        game: &Game,
+        status: &str,
+        rank: Option<&str>,
+    ) -> gamesync_desktop::records::GameRevision {
+        use gamesync_desktop::records::{GameData, GameRevision, SCHEMA_VERSION};
+        let mut data = GameData::new(game.title.clone());
+        data.personal.status = status.into();
+        data.personal.board_rank = rank.map(Into::into);
+        GameRevision {
+            schema_version: SCHEMA_VERSION,
+            game_id: game.id,
+            revision_id: Uuid::new_v4(),
+            parents: vec![],
+            deleted: false,
+            game: data,
+            extra: Default::default(),
+        }
+    }
+
+    #[test]
+    fn board_columns_follow_statuses_ranks_and_sort_order() {
+        let mut lib = library();
+        lib.set_scope(Scope::Board);
+        let total = lib.count(&Scope::All);
+        assert_eq!(lib.count(&Scope::Board), total);
+        let (a, b, c, d) = (
+            lib.games[0].clone(),
+            lib.games[1].clone(),
+            lib.games[2].clone(),
+            lib.games[3].clone(),
+        );
+        let mut hidden = record(&d, "playing", Some("a"));
+        hidden.game.personal.hidden = true;
+        lib.apply_personal_records(vec![
+            record(&a, "playing", Some("m")),
+            record(&b, "playing", Some("c")),
+            // An invalid rank from another writer counts as no rank.
+            record(&c, "retired", Some("BAD")),
+            hidden,
+        ]);
+        let columns = lib.board_columns();
+        let keys: Vec<_> = columns.iter().map(|c| c.key.clone()).collect();
+        let mut expected: Vec<_> = lib.statuses.iter().map(|s| Some(s.key.clone())).collect();
+        expected.push(None);
+        assert_eq!(keys, expected);
+        let playing = columns
+            .iter()
+            .find(|c| c.key.as_deref() == Some("playing"))
+            .unwrap();
+        let ids: Vec<_> = playing.games.iter().map(|&i| lib.games[i].id).collect();
+        assert_eq!(&ids[..2], &[b.id, a.id]);
+        assert!(!ids.contains(&d.id));
+        // Unranked games keep the Sort menu order after ranked games.
+        let rest: Vec<_> = playing.games[2..]
+            .iter()
+            .map(|&i| lib.games[i].title.to_lowercase())
+            .collect();
+        assert!(rest.windows(2).all(|w| w[0] <= w[1]));
+        let other = columns.last().unwrap();
+        assert_eq!(other.label, "Other statuses");
+        assert_eq!(other.games.len(), 1);
+        assert_eq!(
+            columns.iter().map(|c| c.games.len()).sum::<usize>(),
+            lib.visible.len()
+        );
+    }
+
+    #[test]
+    fn saved_definitions_update_statuses_labels_and_scope_together() {
+        use gamesync_desktop::library::{LibraryDefinitions, LibraryRevision};
+        let mut lib = library();
+        let game = lib.games[0].clone();
+        lib.apply_personal_record(record(&game, "playing", None));
+        let mut definitions = LibraryDefinitions::new("Test");
+        let key = gamesync_desktop::board::add_status(&mut definitions, "On hold").unwrap();
+        gamesync_desktop::board::rename_status(&mut definitions, "playing", "Now playing").unwrap();
+        gamesync_desktop::board::move_status(&mut definitions, &key, false);
+        let saved = LibraryRevision {
+            schema_version: 1,
+            library_id: Uuid::new_v4(),
+            revision_id: Uuid::new_v4(),
+            parents: vec![],
+            definitions,
+            extra: Default::default(),
+        };
+        lib.set_scope(Scope::Status("gone".into()));
+        lib.filter_status = Some("gone".into());
+        lib.apply_definitions(PathBuf::from("/library"), saved.clone());
+        assert_eq!(lib.statuses, saved.definitions.statuses);
+        assert_eq!(lib.games[0].status_label, "Now playing");
+        assert_eq!(lib.scope, Scope::All);
+        assert!(lib.filter_status.is_none());
+        let labels: Vec<_> = lib.board_columns().into_iter().map(|c| c.label).collect();
+        let sidebar: Vec<_> = lib.statuses.iter().map(|s| s.label.clone()).collect();
+        assert_eq!(labels, sidebar);
+        assert_eq!(labels[labels.len() - 2], "On hold");
+    }
+
     #[test]
     fn hidden_games_leave_normal_scopes_and_can_be_restored() {
         use gamesync_desktop::records::{GameData, GameRevision, SCHEMA_VERSION};

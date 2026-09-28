@@ -16,7 +16,7 @@ impl Change {
     pub fn apply(&self, personal: &mut PersonalData) {
         match self {
             Self::Favorite(value) => personal.favorite = *value,
-            Self::Status(value) => personal.status = value.clone(),
+            Self::Status(value) => personal.set_status(value.clone()),
             Self::Hidden(value) => personal.hidden = *value,
             Self::Collection(id, add) => {
                 if *add {

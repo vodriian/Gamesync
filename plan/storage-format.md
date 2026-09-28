@@ -10,6 +10,7 @@ and AI write operations are pending.
 - `parents` lists the revisions an edit replaces. A new game has no parents.
 - `game` separates title, Steam data, and personal values.
 - Personal data contains status, rating, favorite, hidden, tags, notes, and optional description/cover overrides.
+- Optional `board_rank` orders a game inside its status column on the board. It is a fractional index of `0-9a-z` digits without a trailing `0`, compared as text. It is omitted when unset. A status change clears it. Readers ignore an invalid rank; it does not block the record.
 - Rating uses half-star units from 1 to 10. `null` means unrated.
 - A `null` description uses Steam text. An empty string is an intentional blank.
 - Status is a stable key, initially `backlog`. The folder reader checks game keys against the manifest.

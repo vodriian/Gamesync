@@ -1,13 +1,25 @@
-//! Sidebar collection edits and drops share the library's guarded write boundary.
+//! Sidebar collection and status edits and drops share the library's guarded write boundary.
 use super::*;
-use gamesync_desktop::library::{CollectionDefinition, LibraryRevision, LibraryStore};
+use gamesync_desktop::{
+    bulk::Change,
+    library::{CollectionDefinition, LibraryRevision, LibraryStore},
+};
 use gpui_component::input::InputEvent;
 use std::path::PathBuf;
 use uuid::Uuid;
 
+/// The definition one inline name editor creates or renames.
+#[derive(Clone, PartialEq)]
+pub enum NameTarget {
+    NewCollection,
+    Collection(Uuid),
+    NewStatus,
+    Status(String),
+}
+
 pub(super) struct NameEdit {
     pub input: Entity<InputState>,
-    pub id: Option<Uuid>,
+    pub target: NameTarget,
     root: PathBuf,
     base: LibraryRevision,
     _subscription: gpui::Subscription,
@@ -22,6 +34,9 @@ impl LibrarySidebar {
             .gap_1()
             .flex_shrink_0()
             .child(Input::new(&edit.input).small().disabled(self.busy))
+            .when(!self.message.is_empty(), |editor| {
+                editor.child(div().px_1().text_xs().child(self.message.clone()))
+            })
             .child(
                 h_flex()
                     .gap_1()
@@ -55,26 +70,38 @@ impl LibrarySidebar {
         self.busy
     }
 
-    pub fn begin_name(&mut self, id: Option<Uuid>, window: &mut Window, cx: &mut Context<Self>) {
+    pub fn begin_name(&mut self, target: NameTarget, window: &mut Window, cx: &mut Context<Self>) {
         if self.busy || self.edit.is_some() {
             return;
         }
         let library = self.library.read(cx);
         if let Some(issue) = &library.write_issue {
-            self.message = format!("Collections unavailable: {issue}");
+            self.message = format!("Changes unavailable: {issue}");
             cx.notify();
             return;
         }
         let Some((root, base)) = library.source.clone() else {
             return;
         };
-        let name = id
-            .and_then(|id| base.definitions.collections.iter().find(|c| c.id == id))
-            .map(|c| c.name.clone())
-            .unwrap_or_default();
+        let name = match &target {
+            NameTarget::Collection(id) => base
+                .definitions
+                .collections
+                .iter()
+                .find(|c| c.id == *id)
+                .map(|c| c.name.clone()),
+            NameTarget::Status(key) => base.definitions.status(key).map(|s| s.label.clone()),
+            NameTarget::NewCollection | NameTarget::NewStatus => None,
+        }
+        .unwrap_or_default();
+        let status = matches!(target, NameTarget::NewStatus | NameTarget::Status(_));
         let input = cx.new(|cx| {
             InputState::new(window, cx)
-                .placeholder("Collection name")
+                .placeholder(if status {
+                    "Status name"
+                } else {
+                    "Collection name"
+                })
                 .default_value(name)
         });
         input.update(cx, |input, cx| input.focus(window, cx));
@@ -85,13 +112,18 @@ impl LibrarySidebar {
         });
         self.edit = Some(NameEdit {
             input,
-            id,
+            target,
             root,
             base,
             _subscription: subscription,
         });
-        self.collections_open = true;
-        self.collections_motion.set(1., cx);
+        if status {
+            self.status_open = true;
+            self.status_motion.set(1., cx);
+        } else {
+            self.collections_open = true;
+            self.collections_motion.set(1., cx);
+        }
         self.message.clear();
         cx.notify();
     }
@@ -105,6 +137,27 @@ impl LibrarySidebar {
         };
         let mut base = edit.base.clone();
         let name = edit.input.read(cx).value().trim().to_owned();
+        let status = match &edit.target {
+            NameTarget::NewStatus => {
+                Some(gamesync_desktop::board::add_status(&mut base.definitions, &name).map(|_| ()))
+            }
+            NameTarget::Status(key) => Some(gamesync_desktop::board::rename_status(
+                &mut base.definitions,
+                key,
+                &name,
+            )),
+            _ => None,
+        };
+        if let Some(result) = status {
+            match result {
+                Ok(()) => self.write_definitions(edit.root.clone(), base, cx),
+                Err(error) => {
+                    self.message = error.to_string();
+                    cx.notify();
+                }
+            }
+            return;
+        }
         if name.is_empty() || name.len() > 120 {
             self.message = if name.is_empty() {
                 "Enter a collection name."
@@ -115,7 +168,7 @@ impl LibrarySidebar {
             cx.notify();
             return;
         }
-        if let Some(id) = edit.id {
+        if let NameTarget::Collection(id) = edit.target {
             let Some(collection) = base.definitions.collections.iter_mut().find(|c| c.id == id)
             else {
                 return;
@@ -150,7 +203,12 @@ impl LibrarySidebar {
         self.write_definitions(root, base, cx);
     }
 
-    fn write_definitions(&mut self, root: PathBuf, base: LibraryRevision, cx: &mut Context<Self>) {
+    pub(super) fn write_definitions(
+        &mut self,
+        root: PathBuf,
+        base: LibraryRevision,
+        cx: &mut Context<Self>,
+    ) {
         if let Err(error) = base.definitions.validate() {
             self.message = error.to_string();
             cx.notify();
@@ -175,19 +233,7 @@ impl LibrarySidebar {
                         this.message.clear();
                         this.library.update(cx, |lib, cx| {
                             if lib.source.as_ref().is_some_and(|(path, _)| path == &root) {
-                                let active_scope_exists = match lib.scope {
-                                    crate::model::Scope::Collection(id) => saved
-                                        .definitions
-                                        .collections
-                                        .iter()
-                                        .any(|c| c.id == id && !c.archived),
-                                    _ => true,
-                                };
-                                lib.source = Some((root, saved));
-                                update_labels(lib);
-                                if !active_scope_exists {
-                                    lib.set_scope(crate::model::Scope::All);
-                                }
+                                lib.apply_definitions(root, saved);
                                 cx.notify();
                             }
                         });
@@ -217,7 +263,7 @@ impl LibrarySidebar {
                 })
                 .on_drop(cx.listener(
                     move |this, game: &super::super::grid::DraggedGame, _, cx| {
-                        this.add_game(game, id, cx)
+                        this.drop_game(game, Change::Collection(id, true), cx)
                     },
                 ))
             })
@@ -227,7 +273,9 @@ impl LibrarySidebar {
                 let remove = remove.clone();
                 menu.item(PopupMenuItem::new("Rename").disabled(disabled).on_click(
                     move |_, window, cx| {
-                        rename.update(cx, |this, cx| this.begin_name(Some(id), window, cx))
+                        rename.update(cx, |this, cx| {
+                            this.begin_name(NameTarget::Collection(id), window, cx)
+                        })
                     },
                 ))
                 .separator()
@@ -242,10 +290,12 @@ impl LibrarySidebar {
             .into_any_element()
     }
 
-    fn add_game(
+    /// Apply one personal change to a dropped game: add it to a collection or
+    /// move it to a status. Status drops clear the board position.
+    pub(super) fn drop_game(
         &mut self,
         dragged: &super::super::grid::DraggedGame,
-        id: Uuid,
+        change: Change,
         cx: &mut Context<Self>,
     ) {
         if self.busy || self.edit.is_some() {
@@ -272,19 +322,28 @@ impl LibrarySidebar {
             return;
         };
         if lib.conflicts.contains_key(&dragged.id) {
-            self.message = "Resolve this game's conflict before adding it.".into();
+            self.message = "Resolve this game's conflict before changing it.".into();
             cx.notify();
             return;
         }
-        if record.game.personal.collections.contains(&id) {
-            self.show_toast("Already in this collection.", cx);
-            cx.notify();
-            return;
-        }
+        let (done, already) = match &change {
+            Change::Status(key) => {
+                let label = lib.scope_label(&crate::model::Scope::Status(key.clone()));
+                (format!("Moved to {label}."), format!("Already in {label}."))
+            }
+            _ => (
+                "Added to collection.".to_owned(),
+                "Already in this collection.".to_owned(),
+            ),
+        };
         let mut personal = record.game.personal.clone();
-        personal.collections.push(id);
+        change.apply(&mut personal);
+        if personal == record.game.personal {
+            self.show_toast(&already, cx);
+            return;
+        }
         self.busy = true;
-        self.message = "Adding game…".into();
+        self.message = "Saving game…".into();
         cx.notify();
         cx.spawn(async move |this, cx| {
             let path = root.clone();
@@ -302,48 +361,21 @@ impl LibrarySidebar {
                 this.busy = false;
                 match result {
                     Ok(saved) => {
-                        this.show_toast("Added to collection.", cx);
+                        this.show_toast(&done, cx);
                         this.library.update(cx, |lib, cx| {
                             if lib.source.as_ref().is_some_and(|(path, _)| path == &root) {
-                                if let Some(game) =
-                                    lib.games.iter_mut().find(|g| g.id == saved.game_id)
-                                {
-                                    game.record = Some(saved);
-                                }
-                                update_labels(lib);
-                                lib.set_scope(lib.scope.clone());
+                                lib.apply_personal_record(saved);
                                 cx.notify();
                             }
                         });
                     }
                     Err(error) => {
-                        this.message = format!("Not added: {error}. Refresh and try again.")
+                        this.message = format!("Not saved: {error}. Refresh and try again.")
                     }
                 }
                 cx.notify();
             });
         })
         .detach();
-    }
-}
-
-fn update_labels(lib: &mut crate::model::Library) {
-    let Some((_, manifest)) = &lib.source else {
-        return;
-    };
-    for game in &mut lib.games {
-        game.collections = manifest
-            .definitions
-            .collections
-            .iter()
-            .filter(|c| {
-                !c.archived
-                    && game
-                        .record
-                        .as_ref()
-                        .is_some_and(|r| r.game.personal.collections.contains(&c.id))
-            })
-            .map(|c| c.name.clone())
-            .collect();
     }
 }

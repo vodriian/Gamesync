@@ -10,6 +10,17 @@ use gpui_component::{
     v_flex, ActiveTheme as _, Disableable as _, Icon, IconName, Sizable as _, StyledExt as _,
 };
 mod collections;
+mod statuses;
+pub use collections::NameTarget;
+
+/// Extra list height while an inline editor replaces one row.
+fn editor_extra(message: &str) -> f32 {
+    if message.is_empty() {
+        36.
+    } else {
+        56.
+    }
+}
 
 pub struct LibrarySidebar {
     library: Entity<Library>,
@@ -61,7 +72,7 @@ impl LibrarySidebar {
         cx.notify();
     }
 
-    fn row(&self, scope: Scope, icon: IconName, cx: &mut Context<Self>) -> impl IntoElement {
+    fn row(&self, scope: Scope, icon: impl Into<Icon>, cx: &mut Context<Self>) -> impl IntoElement {
         let active = self.library.read(cx).scope == scope;
         let count = self.library.read(cx).count(&scope);
         let label = self.library.read(cx).scope_label(&scope);
@@ -84,7 +95,9 @@ impl LibrarySidebar {
                 row.hover(|style| style.bg(cx.theme().sidebar_accent.opacity(0.18)))
             })
             .when(
-                matches!(scope, Scope::Collection(_)) && !self.busy && self.edit.is_none(),
+                matches!(scope, Scope::Collection(_) | Scope::Status(_))
+                    && !self.busy
+                    && self.edit.is_none(),
                 |row| {
                     row.drag_over::<super::grid::DraggedGame>(|style, _, _, cx| {
                         style
@@ -99,7 +112,7 @@ impl LibrarySidebar {
                     cx.notify();
                 });
             }))
-            .child(Icon::new(icon).size_4())
+            .child(icon.into().size_4())
             .child(div().flex_1().min_w_0().truncate().child(label))
             .child(div().text_xs().child(count.to_string()))
     }
@@ -152,6 +165,7 @@ impl Render for LibrarySidebar {
                     .gap_1()
                     .child(self.row(Scope::All, IconName::LayoutDashboard, cx))
                     .child(self.row(Scope::Favorites, IconName::Star, cx))
+                    .child(self.row(Scope::Board, crate::assets::BoardIcon, cx))
                     .when(self.library.read(cx).show_hidden_games, |column| {
                         column.child(self.row(Scope::Hidden, IconName::EyeOff, cx))
                     }),
@@ -175,42 +189,76 @@ impl Render for LibrarySidebar {
                     .px_2()
                     .gap_1()
                     .child(
-                        h_flex().child(
-                            Button::new("status-section")
-                                .text_color(cx.theme().sidebar_foreground)
-                                .ghost()
-                                .small()
-                                .label("Status")
-                                .icon(if self.status_open {
-                                    IconName::ChevronDown
-                                } else {
-                                    IconName::ChevronRight
-                                })
-                                .on_click(cx.listener(|this, _, _, cx| {
-                                    this.status_open = !this.status_open;
-                                    this.status_motion
-                                        .set(if this.status_open { 1. } else { 0. }, cx);
-                                })),
-                        ),
+                        h_flex()
+                            .gap_1()
+                            .child(
+                                Button::new("status-section")
+                                    .text_color(cx.theme().sidebar_foreground)
+                                    .ghost()
+                                    .small()
+                                    .label("Status")
+                                    .disabled(self.edit.is_some())
+                                    .icon(if self.status_open {
+                                        IconName::ChevronDown
+                                    } else {
+                                        IconName::ChevronRight
+                                    })
+                                    .on_click(cx.listener(|this, _, _, cx| {
+                                        this.status_open = !this.status_open;
+                                        this.status_motion
+                                            .set(if this.status_open { 1. } else { 0. }, cx);
+                                    })),
+                            )
+                            .child(div().flex_1())
+                            .child(
+                                Button::new("add-status")
+                                    .text_color(cx.theme().sidebar_foreground)
+                                    .ghost()
+                                    .small()
+                                    .icon(IconName::Plus)
+                                    .tooltip("New status")
+                                    .disabled(
+                                        self.busy
+                                            || self.edit.is_some()
+                                            || self.library.read(cx).source.is_none(),
+                                    )
+                                    .on_click(cx.listener(|this, _, window, cx| {
+                                        this.begin_name(NameTarget::NewStatus, window, cx);
+                                    })),
+                            ),
                     )
-                    .child(
+                    .child({
+                        let statuses = self.library.read(cx).statuses.clone();
+                        let count = statuses.len();
+                        let renaming = self
+                            .edit
+                            .as_ref()
+                            .is_some_and(|edit| matches!(edit.target, NameTarget::Status(_)));
                         v_flex()
-                            .h(px(self.library.read(cx).statuses.len() as f32
-                                * 36.
-                                * self.status_motion.value()))
+                            .h(px(count as f32 * 36. * self.status_motion.value()
+                                + if renaming {
+                                    editor_extra(&self.message)
+                                } else {
+                                    0.
+                                }))
                             .overflow_hidden()
                             .gap_1()
                             .flex_shrink_0()
-                            .children(self.library.read(cx).statuses.clone().into_iter().map(
-                                |status| {
-                                    let icon = match status.key.as_str() {
-                                        "completed" => IconName::CircleCheck,
-                                        "dropped" => IconName::CircleX,
-                                        _ => IconName::Folder,
-                                    };
-                                    self.row(Scope::Status(status.key), icon, cx)
-                                },
-                            )),
+                            .children(statuses.into_iter().enumerate().map(|(index, status)| {
+                                if self.edit.as_ref().is_some_and(|edit| {
+                                    edit.target == NameTarget::Status(status.key.clone())
+                                }) {
+                                    self.name_editor(cx)
+                                } else {
+                                    self.status_row(status.key, index, count, cx)
+                                }
+                            }))
+                    })
+                    .when(
+                        self.edit
+                            .as_ref()
+                            .is_some_and(|edit| edit.target == NameTarget::NewStatus),
+                        |view| view.child(self.name_editor(cx)),
                     )
                     .child(
                         h_flex()
@@ -252,7 +300,7 @@ impl Render for LibrarySidebar {
                                                 cx,
                                             );
                                         } else {
-                                            this.begin_name(None, window, cx);
+                                            this.begin_name(NameTarget::NewCollection, window, cx);
                                         }
                                     })),
                             ),
@@ -269,8 +317,10 @@ impl Render for LibrarySidebar {
                                 }) as f32
                                     * 36.
                                     * self.collections_motion.value()
-                                    + if self.edit.as_ref().is_some_and(|edit| edit.id.is_some()) {
-                                        36.
+                                    + if self.edit.as_ref().is_some_and(|edit| {
+                                        matches!(edit.target, NameTarget::Collection(_))
+                                    }) {
+                                        editor_extra(&self.message)
                                     } else {
                                         0.
                                     },
@@ -287,11 +337,9 @@ impl Render for LibrarySidebar {
                                     .flat_map(|(_, m)| m.definitions.collections)
                                     .filter(|c| !c.archived)
                                     .map(|c| {
-                                        if self
-                                            .edit
-                                            .as_ref()
-                                            .is_some_and(|edit| edit.id == Some(c.id))
-                                        {
+                                        if self.edit.as_ref().is_some_and(|edit| {
+                                            edit.target == NameTarget::Collection(c.id)
+                                        }) {
                                             self.name_editor(cx)
                                         } else {
                                             self.collection_row(c.id, cx)
@@ -300,10 +348,13 @@ impl Render for LibrarySidebar {
                             ),
                     )
                     .when(
-                        self.edit.as_ref().is_some_and(|edit| edit.id.is_none()),
+                        self.edit
+                            .as_ref()
+                            .is_some_and(|edit| edit.target == NameTarget::NewCollection),
                         |view| view.child(self.name_editor(cx)),
                     )
-                    .when(!self.message.is_empty(), |view| {
+                    // An open editor shows its own message.
+                    .when(self.edit.is_none() && !self.message.is_empty(), |view| {
                         view.child(div().px_2().text_xs().child(self.message.clone()))
                     }),
             )
