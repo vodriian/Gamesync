@@ -215,7 +215,16 @@ provide history; it needs a third-party service such as IsThereAnyDeal.
   wishlist value with `removed: true`. The Wishlist scope shows it in a
   **Removed from Steam wishlist** group until the user archives it. Removal
   marks are written only after a complete, successful wishlist pass.
-- The Board works in the Wishlist scope, like in other scopes.
+- Wishlist is a simplified view, because the user does not own these games
+  (user decision, September 28; it replaces the earlier choice to allow the
+  Board there). Wishlist games have no status, rating, favorite, or
+  collections in cards, rows, the card details, the context menu, or bulk
+  actions. They keep tags and notes. The Board is hidden in the Wishlist
+  scope; opening Wishlist from the Board switches to Grid.
+- Wishlist cards and rows show the price and, during a discount, when the
+  sale ends ("Sale ends in 3 days", from `active_discounts[].discount_end_date`).
+  The card details show the price, the regular price during a discount, and
+  the sale end.
 - The wishlist parser follows the documented fields (`appid`, `priority`,
   `date_added`). A live check with a public wishlist is still open.
 - New wishlist records start as **Want to play** (`wanted`) when the library

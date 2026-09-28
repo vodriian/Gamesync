@@ -25,6 +25,9 @@ pub struct Price {
     /// Steam's text with the currency, for example "$59.99" or "59,99€".
     pub formatted_final: String,
     pub formatted_original: Option<String>,
+    /// Unix seconds when the current discount ends. Older caches lack it.
+    #[serde(default)]
+    pub sale_ends: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -46,6 +49,22 @@ impl Quote {
             Self::Free => "Free".into(),
             Self::Unavailable => "No price".into(),
         }
+    }
+
+    /// "Sale ends today", "… tomorrow", or "… in N days". Relative wording
+    /// needs no date formatting and reads well on a small card.
+    pub fn sale_label(&self, now: i64) -> Option<String> {
+        let Self::Price(price) = self else {
+            return None;
+        };
+        let ends = price.sale_ends.filter(|_| price.discount_pct > 0)?;
+        let days = (ends - now).div_euclid(86_400);
+        Some(match days {
+            ..0 => "Sale ended".into(),
+            0 => "Sale ends today".into(),
+            1 => "Sale ends tomorrow".into(),
+            n => format!("Sale ends in {n} days"),
+        })
     }
 
     pub fn discount(&self) -> u8 {
@@ -117,6 +136,13 @@ pub fn parse_quotes(data: &Value) -> Result<BTreeMap<u32, Quote>> {
                     formatted_original: option["formatted_original_price"]
                         .as_str()
                         .map(str::to_owned),
+                    // With several discounts, the first to end sets the date.
+                    sale_ends: option["active_discounts"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .filter_map(|d| d["discount_end_date"].as_i64())
+                        .min(),
                 }),
                 None if item["is_free"].as_bool() == Some(true) => Quote::Free,
                 None => Quote::Unavailable,
@@ -181,7 +207,7 @@ mod tests {
     fn quotes_read_string_cents_discounts_free_and_missing_apps() {
         let quotes = parse_quotes(&json!({"response":{"store_items":[
             {"appid":1,"success":1,"best_purchase_option":{"final_price_in_cents":"5999","formatted_final_price":"59,99€"}},
-            {"appid":2,"success":1,"best_purchase_option":{"final_price_in_cents":"1499","original_price_in_cents":"2999","discount_pct":50,"formatted_final_price":"$14.99","formatted_original_price":"$29.99"}},
+            {"appid":2,"success":1,"best_purchase_option":{"final_price_in_cents":"1499","original_price_in_cents":"2999","discount_pct":50,"formatted_final_price":"$14.99","formatted_original_price":"$29.99","active_discounts":[{"discount_end_date":1000000},{"discount_end_date":900000}]}},
             {"appid":3,"success":1,"is_free":true},
             {"appid":4,"success":1},
             {"appid":0,"success":15}
@@ -190,6 +216,20 @@ mod tests {
         assert_eq!(quotes[&1].label(), "59,99€");
         assert_eq!(quotes[&2].label(), "−50% $14.99");
         assert_eq!(quotes[&2].discount(), 50);
+        // The earliest end wins; the label counts whole days.
+        assert_eq!(
+            quotes[&2].sale_label(900_000 - 86_400 * 3 - 10).as_deref(),
+            Some("Sale ends in 3 days")
+        );
+        assert_eq!(
+            quotes[&2].sale_label(900_000 - 10).as_deref(),
+            Some("Sale ends today")
+        );
+        assert_eq!(
+            quotes[&2].sale_label(900_001).as_deref(),
+            Some("Sale ended")
+        );
+        assert_eq!(quotes[&1].sale_label(0), None);
         assert_eq!(quotes[&3], Quote::Free);
         assert_eq!(quotes[&4], Quote::Unavailable);
         assert_eq!(quotes.len(), 4);

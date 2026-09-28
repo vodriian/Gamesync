@@ -59,6 +59,23 @@ impl Game {
             .filter(|rank| gamesync_desktop::board::valid_rank(rank))
     }
 
+    /// Wishlisted games are not owned: no status, rating, favorite, or
+    /// collections. Views show price and sale details instead.
+    pub fn wishlisted(&self) -> bool {
+        self.record.as_ref().is_some_and(|r| r.game.wishlisted())
+    }
+
+    /// Price and sale text for wishlist cards and rows.
+    pub fn price_parts(&self) -> (String, Option<String>) {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs() as i64);
+        match &self.price {
+            Some(quote) => (quote.label(), quote.sale_label(now)),
+            None => ("Price loading…".into(), None),
+        }
+    }
+
     pub fn rating_label(&self) -> String {
         self.rating.map_or_else(
             || "Unrated".into(),
@@ -1150,6 +1167,7 @@ mod tests {
                 discount_pct: discount,
                 formatted_final: format!("${cents}"),
                 formatted_original: None,
+                sale_ends: None,
             })
         };
         assert_eq!(lib.wishlist_app_ids().len(), 3);

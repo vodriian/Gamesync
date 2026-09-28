@@ -152,6 +152,12 @@ impl GameSyncApp {
             let in_wishlist = !lib.home && lib.scope == crate::model::Scope::Wishlist;
             if in_wishlist && !this.in_wishlist {
                 this.refresh_prices(cx);
+                // Wishlist games have no status, so the Board does not apply.
+                if this.view == LibraryView::Board {
+                    this.view = LibraryView::Grid;
+                    this.grid
+                        .update(cx, |grid, cx| grid.set_view(LibraryView::Grid, cx));
+                }
             }
             this.in_wishlist = in_wishlist;
             cx.notify();
@@ -323,6 +329,7 @@ impl GameSyncApp {
     }
 
     fn library_controls(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let wishlist = self.library.read(cx).scope == crate::model::Scope::Wishlist;
         h_flex()
             .gap_3()
             .child(
@@ -352,6 +359,7 @@ impl GameSyncApp {
                             ),
                         ]
                         .into_iter()
+                        .filter(|(view, _, _)| !(wishlist && *view == LibraryView::Board))
                         .map(|(view, label, icon)| {
                             Button::new(label)
                                 .ghost()

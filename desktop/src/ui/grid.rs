@@ -778,12 +778,18 @@ fn cell(
                         .justify_between()
                         .text_xs()
                         .text_color(muted)
-                        .child(data.game.status_label.clone())
-                        .child(match &data.game.price {
-                            Some(quote) => quote.label(),
-                            None => data.game.rating.map_or(String::new(), |rating| {
-                                format!("{:.1}", f32::from(rating) / 2.)
-                            }),
+                        // Wishlist games show price and sale end, not status and rating.
+                        .map(|row| {
+                            if data.game.wishlisted() {
+                                let (price, sale) = data.game.price_parts();
+                                row.child(price).child(sale.unwrap_or_default())
+                            } else {
+                                row.child(data.game.status_label.clone()).child(
+                                    data.game.rating.map_or(String::new(), |rating| {
+                                        format!("{:.1}", f32::from(rating) / 2.)
+                                    }),
+                                )
+                            }
                         }),
                 ),
         )
@@ -873,22 +879,28 @@ fn table_row(
                 .font_medium()
                 .child(data.game.title.clone()),
         )
-        .child(
-            div()
-                .w(px(140.))
-                .text_sm()
-                .child(data.game.status_label.clone()),
-        )
-        .child(div().w(px(100.)).text_sm().child(data.game.rating_label()))
-        .child(
-            div()
-                .w(px(100.))
-                .text_sm()
-                .child(data.game.price.as_ref().map_or_else(
-                    || format!("{:.1} h", data.game.playtime_minutes as f32 / 60.),
-                    |quote| quote.label(),
-                )),
-        )
+        // Wishlist rows: price in the status column, then one wide sale column.
+        .map(|row| {
+            if data.game.wishlisted() {
+                let (price, sale) = data.game.price_parts();
+                return row
+                    .child(div().w(px(140.)).text_sm().child(price))
+                    .child(div().w(px(200.)).text_sm().child(sale.unwrap_or_default()));
+            }
+            row.child(
+                div()
+                    .w(px(140.))
+                    .text_sm()
+                    .child(data.game.status_label.clone()),
+            )
+            .child(div().w(px(100.)).text_sm().child(data.game.rating_label()))
+            .child(
+                div()
+                    .w(px(100.))
+                    .text_sm()
+                    .child(format!("{:.1} h", data.game.playtime_minutes as f32 / 60.)),
+            )
+        })
         .context_menu({
             let grid = cx.entity();
             let id = data.game.id;
