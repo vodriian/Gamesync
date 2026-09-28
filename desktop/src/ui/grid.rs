@@ -779,9 +779,12 @@ fn cell(
                         .text_xs()
                         .text_color(muted)
                         .child(data.game.status_label.clone())
-                        .child(data.game.rating.map_or(String::new(), |rating| {
-                            format!("{:.1}", f32::from(rating) / 2.)
-                        })),
+                        .child(match &data.game.price {
+                            Some(quote) => quote.label(),
+                            None => data.game.rating.map_or(String::new(), |rating| {
+                                format!("{:.1}", f32::from(rating) / 2.)
+                            }),
+                        }),
                 ),
         )
         .context_menu({
@@ -881,7 +884,10 @@ fn table_row(
             div()
                 .w(px(100.))
                 .text_sm()
-                .child(format!("{:.1} h", data.game.playtime_minutes as f32 / 60.)),
+                .child(data.game.price.as_ref().map_or_else(
+                    || format!("{:.1} h", data.game.playtime_minutes as f32 / 60.),
+                    |quote| quote.label(),
+                )),
         )
         .context_menu({
             let grid = cx.entity();

@@ -197,6 +197,35 @@ impl SteamClient {
             &[("input_json", &request.to_string())],
         )?)
     }
+    /// Prices for up to `TAG_BATCH` apps in one store country.
+    pub fn quotes(
+        &self,
+        ids: &[u32],
+        country: &str,
+    ) -> Result<BTreeMap<u32, crate::prices::Quote>> {
+        ensure!(ids.len() <= TAG_BATCH, "Too many apps in one price request");
+        ensure!(valid_country(country), "Store country must be two letters");
+        let request = serde_json::json!({
+            "ids": ids.iter().map(|id| serde_json::json!({"appid": id})).collect::<Vec<_>>(),
+            "context": {"language": "english", "country_code": country},
+            "data_request": {"include_all_purchase_options": true}
+        });
+        crate::prices::parse_quotes(&self.json(
+            "https://api.steampowered.com/IStoreBrowseService/GetItems/v1/",
+            &[("input_json", &request.to_string())],
+        )?)
+    }
+    /// The profile country, when the profile shows it. Used for store prices.
+    pub fn country(&self, key: &str, account: &str) -> Result<Option<String>> {
+        let data = self.json(
+            "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/",
+            &[("key", key), ("steamids", account)],
+        )?;
+        Ok(data["response"]["players"][0]["loccountrycode"]
+            .as_str()
+            .filter(|code| valid_country(code))
+            .map(str::to_owned))
+    }
     /// English names for store tag IDs. `GetItems` returns only IDs.
     pub fn tag_names(&self) -> Result<BTreeMap<u32, String>> {
         parse_tag_names(&self.json(
@@ -323,6 +352,11 @@ pub fn parse_store_tags(data: &Value) -> Result<BTreeMap<u32, Vec<u32>>> {
         tags.insert(id, weighted.into_iter().map(|(_, id)| id).collect());
     }
     Ok(tags)
+}
+
+/// ISO 3166-1 alpha-2 in upper case, as Steam expects.
+pub fn valid_country(code: &str) -> bool {
+    code.len() == 2 && code.bytes().all(|b| b.is_ascii_uppercase())
 }
 
 pub fn parse_wishlist(data: &Value) -> Result<Vec<WishlistItem>> {

@@ -272,6 +272,7 @@ mod tests {
             playtime_minutes: spec.minutes.unwrap_or(0),
             favorite: spec.favorite,
             record: Some(record),
+            price: None,
         }
     }
 

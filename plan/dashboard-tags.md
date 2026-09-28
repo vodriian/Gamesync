@@ -151,8 +151,8 @@ Do not add these in the first version.
 
 ## 4. Wishlist
 
-Status: 4a (wishlist data and scope) implemented on September 28. 4b (prices)
-is next.
+Status: implemented on September 28: 4a (wishlist data and scope) and 4b
+(prices).
 
 ### Source
 
@@ -188,15 +188,21 @@ is next.
 - Prices are device-local cache data, not library data. Store them outside the
   library folder with the fetch time. Prices change often; writing them into
   records would add a revision for every price change on every computer.
-- Refresh prices when the cache is older than 12 hours, during sync or when
-  the Wishlist scope opens. Batch 50 apps per request.
-- Country: use `loccountrycode` from `ISteamUser/GetPlayerSummaries` when
-  the profile exposes it. Let the user override it in Settings. Show the currency
-  from the response.
-- The Wishlist scope shows price, discount, and an **On sale** filter. It
-  can sort by discount, price, priority, and date added.
-- A game with no price shows **No price**. Examples are unreleased games and
-  games not sold in the region.
+- Opening the Wishlist scope shows cached prices and refreshes them when the
+  cache is older than 12 hours, is for another country, or lacks a wishlist
+  game. Sync does not fetch prices. Batch 50 apps per request. A failed fetch
+  keeps the saved prices and shows a notice.
+- Country: after each sync, `loccountrycode` from
+  `ISteamUser/GetPlayerSummaries` is saved as `detected_country` when the
+  profile shows it. **Store country** in Settings (`store_country`) wins over
+  it. The fallback is US. Steam's formatted price carries the currency.
+- Cards, grid cells, and table rows show the price where others show the
+  rating or playtime. A discount shows as `−50% $14.99`. Free games show
+  **Free**; games without a purchase option show **No price**.
+- In the Wishlist scope, Filter adds **On sale only**, and Sort by lists
+  Wishlist order, Price, Discount, Date added, and Name. Each has one fixed
+  direction. These choices are not saved: new enum values in device settings
+  would make older versions fail to read the file.
 
 ### Deferred
 

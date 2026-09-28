@@ -129,11 +129,14 @@ pub fn front(
                             )
                         }),
                 )
+                // A wishlisted game shows its price where others show the rating.
                 .child(
-                    div().flex_shrink_0().child(
-                        game.rating
+                    div().flex_shrink_0().child(match &game.price {
+                        Some(quote) => quote.label(),
+                        None => game
+                            .rating
                             .map_or("✦".to_owned(), |r| format!("★ {:.1}", f32::from(r) / 2.)),
-                    ),
+                    }),
                 ),
         )
 }

@@ -172,7 +172,18 @@ impl Render for SettingsView {
                             })),
                     ),
             )
-            .child(settings::sync_label(self.last_sync));
+            .child(settings::sync_label(self.last_sync))
+            .child("Store country for wishlist prices")
+            .child(
+                h_flex()
+                    .gap_2()
+                    .child(div().w(px(220.)).child(Input::new(&self.country)))
+                    .child(
+                        Button::new("save-country")
+                            .label("Save country")
+                            .on_click(cx.listener(|this, _, _, cx| this.save_country(cx))),
+                    ),
+            );
         v_flex()
             .size_full()
             .bg(cx.theme().background)

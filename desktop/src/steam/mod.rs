@@ -48,7 +48,7 @@ pub fn sync(
     mut progress: impl FnMut(SyncProgress),
 ) -> Result<SyncProgress> {
     let client = SteamClient::new()?;
-    run_sync(
+    let result = run_sync(
         root,
         account,
         key,
@@ -56,7 +56,18 @@ pub fn sync(
         &client,
         Duration::from_millis(1200),
         &mut progress,
-    )
+    )?;
+    // Prices use the profile country. A hidden country keeps the old value.
+    match client.country(key, account) {
+        Ok(Some(code)) => {
+            if let Err(error) = crate::settings::update(|s| s.detected_country = Some(code)) {
+                log::warn!("Could not save the store country: {error:#}");
+            }
+        }
+        Ok(None) => {}
+        Err(error) => log::warn!("Could not read the profile country: {error:#}"),
+    }
+    Ok(result)
 }
 
 /// The transport boundary lets recovery tests use fixed responses without real keys.

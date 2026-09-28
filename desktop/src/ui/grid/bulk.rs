@@ -73,7 +73,14 @@ impl GameGrid {
             .child(div().flex_1().child("Title"))
             .child(div().w(px(140.)).child("Status"))
             .child(div().w(px(100.)).child("Rating"))
-            .child(div().w(px(100.)).child("Playtime"))
+            // Wishlist games are not owned, so price replaces playtime there.
+            .child(div().w(px(100.)).child(
+                if self.library.read(cx).scope == crate::model::Scope::Wishlist {
+                    "Price"
+                } else {
+                    "Playtime"
+                },
+            ))
             .into_any_element()
     }
 

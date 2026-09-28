@@ -1,6 +1,7 @@
 mod display;
 mod loading;
 mod omarchy;
+mod prices;
 mod windows;
 // A shared library model with three presentations and a focused game card.
 
@@ -62,6 +63,9 @@ pub struct GameSyncApp {
     refreshing: bool,
     notice: String,
     display_save: Option<Task<()>>,
+    price_task: Option<Task<()>>,
+    /// Detects opening the Wishlist scope, which triggers a price refresh.
+    in_wishlist: bool,
     display_pending: usize,
     last_issues: Vec<String>,
     main_window: gpui::AnyWindowHandle,
@@ -134,7 +138,15 @@ impl GameSyncApp {
                 this.sidebar
                     .update(cx, |sidebar, cx| sidebar.show_toast(&event.0, cx));
             });
-        let library_subscription = cx.observe(&library, |_, _, cx| cx.notify());
+        let library_subscription = cx.observe(&library, |this, library, cx| {
+            let lib = library.read(cx);
+            let in_wishlist = !lib.home && lib.scope == crate::model::Scope::Wishlist;
+            if in_wishlist && !this.in_wishlist {
+                this.refresh_prices(cx);
+            }
+            this.in_wishlist = in_wishlist;
+            cx.notify();
+        });
         window.focus(&grid.focus_handle(cx));
         let mut app = Self {
             library,
@@ -179,6 +191,8 @@ impl GameSyncApp {
             refreshing: false,
             notice: String::new(),
             display_save: None,
+            price_task: None,
+            in_wishlist: false,
             display_pending: 0,
             last_issues: Vec::new(),
             main_window: window.window_handle(),
