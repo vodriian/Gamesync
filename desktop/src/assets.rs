@@ -52,16 +52,26 @@ const COVERS: &[(&str, &[u8])] = &[
     ),
 ];
 /// Lucide `square-kanban` (ISC), the icon set gpui-component already bundles.
-const ICONS: &[(&str, &[u8])] = &[(
-    "icons/square-kanban.svg",
-    include_bytes!("../icons/square-kanban.svg"),
-)];
+const ICONS: &[(&str, &[u8])] = &[
+    (
+        "icons/square-kanban.svg",
+        include_bytes!("../icons/square-kanban.svg"),
+    ),
+    ("icons/house.svg", include_bytes!("../icons/house.svg")),
+];
 
 /// App icons that the bundled component icon set does not include.
 pub struct BoardIcon;
 impl gpui_component::IconNamed for BoardIcon {
     fn path(self) -> SharedString {
         "icons/square-kanban.svg".into()
+    }
+}
+
+pub struct HomeIcon;
+impl gpui_component::IconNamed for HomeIcon {
+    fn path(self) -> SharedString {
+        "icons/house.svg".into()
     }
 }
 

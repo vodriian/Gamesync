@@ -74,26 +74,9 @@ impl LibrarySidebar {
         count: usize,
         cx: &mut Context<Self>,
     ) -> gpui::Stateful<gpui::Div> {
-        let active = self.library.read(cx).scope == scope;
+        let active = !self.library.read(cx).home && self.library.read(cx).scope == scope;
         let label = self.library.read(cx).scope_label(&scope);
-        h_flex()
-            .id(gpui::SharedString::from(format!("scope-{scope:?}")))
-            .h_8()
-            .flex_shrink_0()
-            .px_2()
-            .py_1()
-            .gap_x_2()
-            .rounded(cx.theme().radius)
-            .text_sm()
-            .cursor_pointer()
-            .when(active, |row| {
-                row.font_medium()
-                    .bg(cx.theme().sidebar_accent)
-                    .text_color(cx.theme().sidebar_accent_foreground)
-            })
-            .when(!active, |row| {
-                row.hover(|style| style.bg(cx.theme().sidebar_accent.opacity(0.18)))
-            })
+        self.row_base(format!("scope-{scope:?}"), active, cx)
             .when(
                 matches!(scope, Scope::Collection(_)) && !self.busy && self.edit.is_none(),
                 |row| {
@@ -113,6 +96,45 @@ impl LibrarySidebar {
             .when_some(icon, |row, icon| row.child(Icon::new(icon).size_4()))
             .child(div().flex_1().min_w_0().truncate().child(label))
             .child(div().text_xs().child(count.to_string()))
+    }
+
+    fn home_row(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let active = self.library.read(cx).home;
+        self.row_base("home".into(), active, cx)
+            .on_click(cx.listener(|this, _, _, cx| {
+                this.library.update(cx, |lib, cx| {
+                    lib.show_home();
+                    cx.notify();
+                });
+            }))
+            .child(Icon::new(crate::assets::HomeIcon).size_4())
+            .child(div().flex_1().child("Home"))
+    }
+
+    fn row_base(
+        &self,
+        id: String,
+        active: bool,
+        cx: &mut Context<Self>,
+    ) -> gpui::Stateful<gpui::Div> {
+        h_flex()
+            .id(gpui::SharedString::from(id))
+            .h_8()
+            .flex_shrink_0()
+            .px_2()
+            .py_1()
+            .gap_x_2()
+            .rounded(cx.theme().radius)
+            .text_sm()
+            .cursor_pointer()
+            .when(active, |row| {
+                row.font_medium()
+                    .bg(cx.theme().sidebar_accent)
+                    .text_color(cx.theme().sidebar_accent_foreground)
+            })
+            .when(!active, |row| {
+                row.hover(|style| style.bg(cx.theme().sidebar_accent.opacity(0.18)))
+            })
     }
 }
 
@@ -161,6 +183,7 @@ impl Render for LibrarySidebar {
                 v_flex()
                     .px_2()
                     .gap_1()
+                    .child(self.home_row(cx))
                     .child(self.row(Scope::All, IconName::LayoutDashboard, cx))
                     .child(self.row(Scope::Favorites, IconName::Star, cx))
                     .when(self.library.read(cx).show_hidden_games, |column| {

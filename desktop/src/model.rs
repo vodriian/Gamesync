@@ -112,7 +112,7 @@ fn smart_groups(games: &[Game]) -> Vec<SmartGroup> {
 }
 
 impl Scope {
-    fn contains(&self, game: &Game) -> bool {
+    pub fn contains(&self, game: &Game) -> bool {
         let hidden = game.record.as_ref().is_some_and(|r| r.game.personal.hidden);
         if matches!(self, Self::Hidden) {
             return hidden;
@@ -156,6 +156,9 @@ pub struct Library {
     pub conflicts: std::collections::BTreeMap<Uuid, String>,
     pub media_version: u64,
     pub scope: Scope,
+    /// Home is a page over the whole library, not a scope. The app opens on it.
+    /// `scope` keeps the last library scope for when the user leaves Home.
+    pub home: bool,
     pub show_hidden_games: bool,
     pub display: LibraryDisplay,
     pub filter_status: Option<String>,
@@ -205,6 +208,7 @@ impl Library {
             media_version: 0,
             selected: None,
             scope: Scope::All,
+            home: true,
             show_hidden_games: false,
             display: LibraryDisplay::default(),
             filter_status: None,
@@ -287,6 +291,7 @@ impl Library {
     /// Preserve selection and viewport when a refresh only changes metadata.
     pub fn replace(&mut self, mut next: Self, same_folder: bool) {
         next.show_hidden_games = self.show_hidden_games;
+        next.home = self.home;
         next.display = self.display.clone();
         if same_folder {
             next.filter_status = self.filter_status.clone();
@@ -427,7 +432,9 @@ impl Library {
     pub fn set_show_hidden_games(&mut self, show: bool) {
         self.show_hidden_games = show;
         if !show && self.scope == Scope::Hidden {
-            self.set_scope(Scope::All);
+            // Not `set_scope`: a settings change must not leave Home.
+            self.scope = Scope::All;
+            self.recompute();
         }
     }
 
@@ -477,7 +484,25 @@ impl Library {
     }
 
     pub fn set_scope(&mut self, scope: Scope) {
+        self.home = false;
         self.scope = scope;
+        self.recompute();
+    }
+
+    pub fn show_home(&mut self) {
+        self.home = true;
+    }
+
+    /// Select a game from Home. Home ignores the library scope, search, and
+    /// filters, so clear them; otherwise the selection could be filtered out.
+    /// Home stays open behind the game card.
+    pub fn select_from_home(&mut self, id: Uuid) {
+        self.scope = Scope::All;
+        self.query.clear();
+        self.filter_status = None;
+        self.filter_collection = None;
+        self.filter_favorites = false;
+        self.selected = Some(id);
         self.recompute();
     }
 
@@ -894,6 +919,27 @@ mod tests {
         let sidebar: Vec<_> = lib.statuses.iter().map(|s| s.label.clone()).collect();
         assert_eq!(labels, sidebar);
         assert_eq!(labels[labels.len() - 2], "On hold");
+    }
+
+    #[test]
+    fn home_opens_first_and_selecting_from_home_clears_filters() {
+        let mut lib = library();
+        assert!(lib.home);
+        lib.set_scope(Scope::Favorites);
+        assert!(!lib.home);
+        lib.set_query("zzz-no-match");
+        lib.filter_favorites = true;
+        lib.show_home();
+        // Home selection must survive the old search and filters.
+        let id = lib.games[0].id;
+        lib.select_from_home(id);
+        assert!(lib.home);
+        assert_eq!(lib.scope, Scope::All);
+        assert_eq!(lib.selected, Some(id));
+        assert_eq!(lib.visible.len(), lib.count(&Scope::All));
+        // A settings change does not leave Home.
+        lib.set_show_hidden_games(false);
+        assert!(lib.home);
     }
 
     #[test]

@@ -1,4 +1,5 @@
 mod assets;
+mod dashboard;
 mod fixtures;
 mod managed_storage;
 mod model;

@@ -5,6 +5,7 @@ mod definitions;
 mod detail;
 mod editor;
 mod grid;
+mod home;
 mod sidebar;
 pub mod thumb_cache;
 

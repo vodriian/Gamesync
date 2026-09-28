@@ -111,6 +111,8 @@ rules, a rule editor, or rule persistence in this branch.
 
 ## 3. Dashboard
 
+Status: implemented on September 28.
+
 A **Home** row at the top of the sidebar, above All games. Home is a page, not
 a scope: the view switch, Filter menu, and search do not apply to it. The app
 opens on Home.
@@ -133,6 +135,13 @@ opens on Home.
   `last_played` before the next sync shows **Sync to see recent games**.
   An empty panel shows one short sentence and no placeholder art.
 - Hidden games are excluded from all panels.
+- `Library::home` holds the Home state; the last scope stays in `scope`.
+  Opening a game from Home clears the scope, search, and filters, so the game
+  card can always show it. Closing the card returns to Home.
+- Playtime by platform hides platforms with no playtime. A note explains
+  **Other** when it has playtime.
+- Home tiles and genre rows use the pointer. Keyboard access to Home is
+  deferred, as for sidebar rows.
 
 ### Later panels
 
