@@ -11,7 +11,7 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 | [App plan](app-plan.md) | Scope, architecture, data rules, milestones, and acceptance checks |
 | [Guardrails](guardrails.md) | Code quality, tests, writing, and efficient agent work |
 | [Design](design.md) | Eagle GUI reference and design rules |
-| [Latest Omarchy log](logs/2026-09-28.md) | Completed theme integration, release checks, and current limits |
+| [Latest log](logs/2026-09-28.md) | Omarchy theme integration, 3D card POC, and Kanban board |
 | [Latest UI log](logs/2026-09-22.md) | Physical card views, save checks, and rendering limits |
 | [Foundation log](logs/2026-09-11.md) | Initial decisions, changes, checks, and next task |
 | [Desktop demo](../desktop/README.md) | Run commands and current native features |
@@ -22,7 +22,7 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 ## Current state
 
 - Documentation foundation: added.
-- Desktop implementation: native Cards, Grid, Table, and focused game details use app-managed Steam storage on macOS.
+- Desktop implementation: native Cards, Grid, Table, Board, and focused game details use app-managed Steam storage on macOS.
 - Milestone 1: Linux runtime verification remains pending.
 - Milestone 2: file records, definitions, folder loading, and a local index are in place. Inspector draft edits, guarded saves, and saved-game conflict review are implemented.
 - Working branch: `kanban-board` (from `omarchy-cards-3d-render`) for the status board.
