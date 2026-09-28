@@ -190,55 +190,12 @@ fn run_sync(
                 break;
             }
             let result = match stage {
-                0 => client.details(id).and_then(|data| {
-                    let description = data["short_description"]
-                        .as_str()
-                        .context("Description is missing")?
-                        .to_owned();
-                    let genres = data["genres"]
-                        .as_array()
-                        .into_iter()
-                        .flatten()
-                        .filter_map(|g| g["description"].as_str().map(str::to_owned))
-                        .collect::<Vec<_>>();
-                    let year = data["release_date"]["date"]
-                        .as_str()
-                        .and_then(|date| {
-                            date.split(|c: char| !c.is_ascii_digit())
-                                .find(|p| p.len() == 4)
-                        })
-                        .map(str::to_owned);
-                    store
-                        .update_steam(record.game_id, id, |steam| {
-                            steam.description = Some(description);
-                            let metadata =
-                                steam.metadata.get_or_insert_with(SteamMetadata::default);
-                            metadata.genres = genres;
-                            metadata.release_year = year;
-                            metadata.details_complete = true;
-                        })
-                        .map(|_| ())
-                }),
-                1 => client.reviews(id).and_then(|data| {
-                    let total = data["total_reviews"]
-                        .as_u64()
-                        .context("Review count is missing")?;
-                    let positive = data["total_positive"]
-                        .as_u64()
-                        .context("Positive count is missing")?;
-                    anyhow::ensure!(positive <= total, "Invalid review counts");
-                    store
-                        .update_steam(record.game_id, id, |steam| {
-                            let metadata =
-                                steam.metadata.get_or_insert_with(SteamMetadata::default);
-                            metadata.review_label =
-                                data["review_score_desc"].as_str().map(str::to_owned);
-                            metadata.review_percent = (total > 0)
-                                .then(|| ((positive as f64 / total as f64) * 100.).round() as u8);
-                            metadata.reviews_complete = true;
-                        })
-                        .map(|_| ())
-                }),
+                0 => client
+                    .details(id)
+                    .and_then(|data| apply_details(&store, record.game_id, id, &data)),
+                1 => client
+                    .reviews(id)
+                    .and_then(|data| apply_reviews(&store, record.game_id, id, &data)),
                 _ => client
                     .cover(id)
                     .and_then(|bytes| covers::save(root, record.game_id, id, &bytes).map(|_| ())),
@@ -280,6 +237,122 @@ fn run_sync(
     }
     progress(state.clone());
     Ok(state)
+}
+
+fn apply_details(
+    store: &RecordStore,
+    game_id: uuid::Uuid,
+    app_id: u32,
+    data: &serde_json::Value,
+) -> Result<()> {
+    let description = data["short_description"]
+        .as_str()
+        .context("Description is missing")?
+        .to_owned();
+    let genres = data["genres"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|g| g["description"].as_str().map(str::to_owned))
+        .collect::<Vec<_>>();
+    let year = data["release_date"]["date"]
+        .as_str()
+        .and_then(|date| {
+            date.split(|c: char| !c.is_ascii_digit())
+                .find(|p| p.len() == 4)
+        })
+        .map(str::to_owned);
+    store.update_steam(game_id, app_id, |steam| {
+        steam.description = Some(description);
+        let metadata = steam.metadata.get_or_insert_with(SteamMetadata::default);
+        metadata.genres = genres;
+        metadata.release_year = year;
+        metadata.details_complete = true;
+    })?;
+    Ok(())
+}
+
+fn apply_reviews(
+    store: &RecordStore,
+    game_id: uuid::Uuid,
+    app_id: u32,
+    data: &serde_json::Value,
+) -> Result<()> {
+    let total = data["total_reviews"]
+        .as_u64()
+        .context("Review count is missing")?;
+    let positive = data["total_positive"]
+        .as_u64()
+        .context("Positive count is missing")?;
+    anyhow::ensure!(positive <= total, "Invalid review counts");
+    store.update_steam(game_id, app_id, |steam| {
+        let metadata = steam.metadata.get_or_insert_with(SteamMetadata::default);
+        metadata.review_label = data["review_score_desc"].as_str().map(str::to_owned);
+        metadata.review_percent =
+            (total > 0).then(|| ((positive as f64 / total as f64) * 100.).round() as u8);
+        metadata.reviews_complete = true;
+    })?;
+    Ok(())
+}
+
+/// A tag added after the name list was built is skipped.
+fn apply_tags(
+    store: &RecordStore,
+    game_id: uuid::Uuid,
+    app_id: u32,
+    tag_ids: &[u32],
+    names: &BTreeMap<u32, String>,
+) -> Result<GameRevision> {
+    let tags = tag_ids
+        .iter()
+        .filter_map(|tag| names.get(tag).cloned())
+        .collect::<Vec<_>>();
+    store.update_steam(game_id, app_id, |steam| {
+        let metadata = steam.metadata.get_or_insert_with(SteamMetadata::default);
+        metadata.tags = tags;
+        metadata.tags_complete = true;
+    })
+}
+
+/// Fetch store details, reviews, and Steam tags for one game again, even when
+/// its stages are complete. No key is needed. Returns one message for each
+/// part that failed; parts that succeed are kept.
+pub fn resync_game(root: &Path, game_id: uuid::Uuid) -> Result<Vec<String>> {
+    let store = RecordStore::open(root)?;
+    let snapshot = store.inspect(game_id)?;
+    let app_id = snapshot
+        .current()
+        .context("Resolve this game's conflict before resyncing")?
+        .game
+        .steam
+        .as_ref()
+        .context("This game is not linked to Steam")?
+        .app_id;
+    let client = SteamClient::new()?;
+    let mut failures = Vec::new();
+    if let Err(error) = client
+        .details(app_id)
+        .and_then(|data| apply_details(&store, game_id, app_id, &data))
+    {
+        failures.push(format!("description: {error}"));
+    }
+    if let Err(error) = client
+        .reviews(app_id)
+        .and_then(|data| apply_reviews(&store, game_id, app_id, &data))
+    {
+        failures.push(format!("reviews: {error}"));
+    }
+    let tags = client.tag_names().and_then(|names| {
+        let tag_ids = client
+            .store_tags(&[app_id])?
+            .remove(&app_id)
+            .context("Store tags are unavailable")?;
+        apply_tags(&store, game_id, app_id, &tag_ids, &names)
+    });
+    if let Err(error) = tags {
+        failures.push(format!("tags: {error}"));
+    }
+    Ok(failures)
 }
 
 /// Count `stages` failed stages under one reported issue.
@@ -452,17 +525,7 @@ fn sync_tags(
                         tags.get(id)
                             .context("Store tags are unavailable")
                             .and_then(|tag_ids| {
-                                // A tag added after the name list was built is skipped.
-                                let tags = tag_ids
-                                    .iter()
-                                    .filter_map(|tag| names.get(tag).cloned())
-                                    .collect::<Vec<_>>();
-                                store.update_steam(record.game_id, *id, |steam| {
-                                    let metadata =
-                                        steam.metadata.get_or_insert_with(SteamMetadata::default);
-                                    metadata.tags = tags;
-                                    metadata.tags_complete = true;
-                                })
+                                apply_tags(store, record.game_id, *id, tag_ids, &names)
                             });
                     if let Err(error) = result {
                         note_issue(state, 1, format!("{} · tags: {error}", record.game.title));

@@ -4,14 +4,17 @@ use gamesync_desktop::{
     library::{LibraryRevision, LibraryStore},
     records::{GameRevision, PersonalData},
 };
-use gpui::{div, prelude::*, px, App, Entity, EventEmitter, Subscription, Window};
+use gpui::{
+    div, prelude::*, px, App, Corner, Entity, EventEmitter, Focusable as _, Subscription, Window,
+};
 use gpui_component::{
     button::{Button, ButtonVariants as _},
     checkbox::Checkbox,
     h_flex,
     input::{Input, InputEvent, InputState},
     menu::{DropdownMenu as _, PopupMenuItem},
-    v_flex, ActiveTheme as _, Disableable as _, Selectable as _, Sizable as _, StyledExt as _,
+    popover::Popover,
+    v_flex, ActiveTheme as _, Disableable as _, IconName, Sizable as _, StyledExt as _,
 };
 use std::path::PathBuf;
 
@@ -26,7 +29,8 @@ pub struct InspectorEditor {
     manifest: LibraryRevision,
     base: GameRevision,
     personal: PersonalData,
-    tags: Entity<InputState>,
+    /// Search text in the Add tag picker. Tags themselves live in `personal`.
+    tag_query: Entity<InputState>,
     notes: Entity<InputState>,
     scroll: gpui::ScrollHandle,
     saving: bool,
@@ -48,12 +52,8 @@ impl InspectorEditor {
         cx: &mut Context<Self>,
     ) -> Self {
         let personal = base.game.personal.clone();
-        let tags = cx.new(|cx| {
-            InputState::new(window, cx)
-                .multi_line(true)
-                .rows(2)
-                .default_value(personal.tags.join("\n"))
-        });
+        let tag_query =
+            cx.new(|cx| InputState::new(window, cx).placeholder("Search or create a tag"));
         let notes = cx.new(|cx| {
             InputState::new(window, cx)
                 .multi_line(true)
@@ -64,21 +64,36 @@ impl InspectorEditor {
             this.reconcile(cx);
             cx.notify();
         })];
-        for input in [&tags, &notes] {
-            subscriptions.push(cx.subscribe(input, |this, _, event, cx| {
-                if matches!(event, InputEvent::Change) {
-                    this.changed(cx);
-                    cx.notify();
-                }
-            }));
-        }
+        subscriptions.push(cx.subscribe(&notes, |this, _, event, cx| {
+            if matches!(event, InputEvent::Change) {
+                this.changed(cx);
+                cx.notify();
+            }
+        }));
+        // Enter adds the first match, or creates the typed tag.
+        subscriptions.push(
+            cx.subscribe_in(
+                &tag_query,
+                window,
+                |this, _, event, window, cx| match event {
+                    InputEvent::PressEnter { .. } => {
+                        let (matches, create) = this.tag_suggestions(cx);
+                        if let Some(tag) = matches.into_iter().next().or(create) {
+                            this.add_tag(&tag, window, cx);
+                        }
+                    }
+                    InputEvent::Change => cx.notify(),
+                    _ => {}
+                },
+            ),
+        );
         Self {
             library,
             root,
             manifest,
             base,
             personal,
-            tags,
+            tag_query,
             notes,
             scroll: gpui::ScrollHandle::new(),
             saving: false,
@@ -157,15 +172,132 @@ impl InspectorEditor {
 
     fn value(&self, cx: &App) -> PersonalData {
         let mut value = self.personal.clone();
-        value.tags = self
-            .tags
-            .read(cx)
-            .value()
-            .lines()
-            .map(str::to_owned)
-            .collect();
         value.notes = self.notes.read(cx).value().to_string();
         value
+    }
+
+    /// Picker rows for the current search. See `suggest_tags`.
+    fn tag_suggestions(&self, cx: &App) -> (Vec<String>, Option<String>) {
+        let library = self.library.read(cx);
+        suggest_tags(
+            library.games.iter().flat_map(|game| &game.tags),
+            &self.personal.tags,
+            &self.tag_query.read(cx).value(),
+        )
+    }
+
+    fn add_tag(&mut self, tag: &str, window: &mut Window, cx: &mut Context<Self>) {
+        let tag = tag.trim();
+        if tag.is_empty()
+            || self
+                .personal
+                .tags
+                .iter()
+                .any(|t| t.to_lowercase() == tag.to_lowercase())
+        {
+            return;
+        }
+        self.personal.tags.push(tag.to_owned());
+        self.tag_query
+            .update(cx, |query, cx| query.set_value("", window, cx));
+        self.change_now(cx);
+    }
+
+    fn remove_tag(&mut self, tag: &str, cx: &mut Context<Self>) {
+        self.personal.tags.retain(|t| t != tag);
+        self.change_now(cx);
+    }
+
+    fn tags_row(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let editor = cx.entity();
+        let query = self.tag_query.clone();
+        h_flex()
+            .flex_wrap()
+            .items_center()
+            .gap_1()
+            .children(self.personal.tags.iter().map(|tag| {
+                let name = tag.clone();
+                h_flex()
+                    .id(gpui::SharedString::from(format!("tag-{tag}")))
+                    .h(px(24.))
+                    .pl_2()
+                    .pr_0p5()
+                    .gap_0p5()
+                    .rounded_full()
+                    .text_xs()
+                    .bg(cx.theme().secondary)
+                    .text_color(cx.theme().secondary_foreground)
+                    .child(tag.clone())
+                    .child(
+                        Button::new(gpui::SharedString::from(format!("remove-tag-{tag}")))
+                            .ghost()
+                            .xsmall()
+                            .icon(IconName::Close)
+                            .tooltip(format!("Remove {tag}"))
+                            .on_click(
+                                cx.listener(move |this, _, _, cx| this.remove_tag(&name, cx)),
+                            ),
+                    )
+            }))
+            .child(
+                Popover::new("tag-picker")
+                    .anchor(Corner::TopLeft)
+                    .track_focus(&query.focus_handle(cx))
+                    .trigger(
+                        Button::new("add-tag")
+                            .ghost()
+                            .xsmall()
+                            .icon(IconName::Plus)
+                            .label("Add tag"),
+                    )
+                    .content(move |_, _, cx| {
+                        let (matches, create) = editor.read(cx).tag_suggestions(cx);
+                        let empty = matches.is_empty() && create.is_none();
+                        let row =
+                            |id: String,
+                             label: String,
+                             tag: String,
+                             editor: Entity<InspectorEditor>| {
+                                h_flex()
+                                    .id(gpui::SharedString::from(id))
+                                    .px_2()
+                                    .py_1()
+                                    .rounded(cx.theme().radius)
+                                    .text_sm()
+                                    .cursor_pointer()
+                                    .hover(|style| style.bg(cx.theme().accent))
+                                    .child(label)
+                                    .on_click(move |_, window, cx| {
+                                        editor.update(cx, |this, cx| this.add_tag(&tag, window, cx))
+                                    })
+                            };
+                        v_flex()
+                            .w(px(240.))
+                            .gap_1()
+                            .child(Input::new(&query).small())
+                            .children(matches.into_iter().map(|tag| {
+                                row(format!("pick-{tag}"), tag.clone(), tag, editor.clone())
+                            }))
+                            .children(create.map(|name| {
+                                row(
+                                    "create-tag".into(),
+                                    format!("Create “{name}”"),
+                                    name,
+                                    editor.clone(),
+                                )
+                            }))
+                            .when(empty, |list| {
+                                list.child(
+                                    div()
+                                        .px_2()
+                                        .py_1()
+                                        .text_xs()
+                                        .text_color(cx.theme().muted_foreground)
+                                        .child("Type to create a tag."),
+                                )
+                            })
+                    }),
+            )
     }
 
     pub fn busy(&self, cx: &App) -> bool {
@@ -252,6 +384,45 @@ impl InspectorEditor {
     }
 }
 
+/// Existing library tags that match `query`, most used first, without tags
+/// the game already has. Also the query as a new tag when no tag has that
+/// name. Matching ignores case.
+fn suggest_tags<'a>(
+    library: impl Iterator<Item = &'a String>,
+    current: &[String],
+    query: &str,
+) -> (Vec<String>, Option<String>) {
+    const LIMIT: usize = 8;
+    let query = query.trim();
+    let needle = query.to_lowercase();
+    let on_game = |name: &str| current.iter().any(|t| t.to_lowercase() == name);
+    let mut counts = std::collections::HashMap::<&String, usize>::new();
+    for tag in library {
+        *counts.entry(tag).or_default() += 1;
+    }
+    let exists = counts.keys().any(|t| t.to_lowercase() == needle);
+    let mut matches: Vec<_> = counts
+        .into_iter()
+        .filter(|(tag, _)| {
+            let lower = tag.to_lowercase();
+            lower.contains(&needle) && !on_game(&lower)
+        })
+        .collect();
+    matches.sort_by(|a, b| {
+        b.1.cmp(&a.1)
+            .then_with(|| a.0.to_lowercase().cmp(&b.0.to_lowercase()))
+    });
+    let create = (!query.is_empty() && !exists && !on_game(&needle)).then(|| query.to_owned());
+    (
+        matches
+            .into_iter()
+            .take(LIMIT)
+            .map(|(tag, _)| tag.clone())
+            .collect(),
+        create,
+    )
+}
+
 impl Render for InspectorEditor {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let blocked = self.blocked(cx);
@@ -298,15 +469,15 @@ impl Render for InspectorEditor {
                         ),
                         cx,
                     ))
-                    .children(self.base.game.steam.as_ref().map(|steam| {
-                        let id = steam.app_id;
-                        Button::new("inline-store")
-                            .ghost()
-                            .label("View store page")
-                            .on_click(move |_, _, cx| {
-                                cx.open_url(&format!("https://store.steampowered.com/app/{id}/"))
-                            })
-                    }))
+                    .child(
+                        div().text_sm().child(
+                            self.base
+                                .game
+                                .description()
+                                .unwrap_or("No Steam description.")
+                                .to_owned(),
+                        ),
+                    )
                     .child(hint("Status", cx))
                     .child(
                         Button::new("edit-status")
@@ -392,10 +563,21 @@ impl Render for InspectorEditor {
                                 .filter(|c| !c.archived)
                                 .map(|collection| {
                                     let id = collection.id;
+                                    let member = self.personal.collections.contains(&id);
+                                    // Filled with a check when the game is in it; outlined
+                                    // and muted otherwise, so both states read at a glance.
                                     Button::new(gpui::SharedString::from(format!("member-{id}")))
                                         .small()
                                         .label(collection.name)
-                                        .selected(self.personal.collections.contains(&id))
+                                        .when(member, |chip| chip.primary().icon(IconName::Check))
+                                        .when(!member, |chip| {
+                                            chip.outline().text_color(cx.theme().muted_foreground)
+                                        })
+                                        .tooltip(if member {
+                                            "In this collection. Click to remove."
+                                        } else {
+                                            "Click to add to this collection."
+                                        })
                                         .on_click(cx.listener(move |this, _, _, cx| {
                                             if this.personal.collections.contains(&id) {
                                                 this.personal.collections.retain(|v| *v != id);
@@ -407,14 +589,8 @@ impl Render for InspectorEditor {
                                 }),
                         ),
                     )
-                    .child(hint("Tags · one per line", cx))
-                    .child(
-                        Input::new(&self.tags)
-                            .h(px(64.))
-                            .flex_shrink_0()
-                            .small()
-                            .disabled(false),
-                    )
+                    .child(hint("Tags", cx))
+                    .child(self.tags_row(cx))
                     .child(hint("Notes", cx))
                     .child(
                         Input::new(&self.notes)
@@ -439,16 +615,6 @@ impl Render for InspectorEditor {
                                 facts.extend(metadata.genres.clone());
                                 hint(&facts.join(" · "), cx)
                             }),
-                    )
-                    .child(hint("Description", cx))
-                    .child(
-                        div().text_sm().child(
-                            self.base
-                                .game
-                                .description()
-                                .unwrap_or("No Steam description.")
-                                .to_owned(),
-                        ),
                     ),
             )
             .child(
@@ -493,4 +659,30 @@ fn hint(text: &str, cx: &App) -> impl IntoElement {
         .text_xs()
         .text_color(cx.theme().muted_foreground)
         .child(text.to_owned())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::suggest_tags;
+
+    #[test]
+    fn tag_suggestions_rank_by_use_and_offer_new_tags_once() {
+        let library: Vec<String> = ["Cozy", "Cozy", "Co-op", "Puzzle"]
+            .map(String::from)
+            .to_vec();
+        let current = vec!["Puzzle".to_string()];
+        let (matches, create) = suggest_tags(library.iter(), &current, "co");
+        assert_eq!(matches, ["Cozy", "Co-op"]);
+        assert_eq!(create.as_deref(), Some("co"));
+        // An existing tag in another case is suggested, not created again.
+        let (matches, create) = suggest_tags(library.iter(), &current, "cozy");
+        assert_eq!((matches, create), (vec!["Cozy".to_string()], None));
+        // A tag the game already has is neither suggested nor created.
+        assert_eq!(
+            suggest_tags(library.iter(), &current, "PUZZLE"),
+            (Vec::new(), None)
+        );
+        // An empty search lists tags without offering to create one.
+        assert_eq!(suggest_tags(library.iter(), &current, " ").1, None);
+    }
 }
