@@ -145,7 +145,7 @@ impl GameGrid {
             saving: false,
             feedback: String::new(),
             restore_focus: false,
-            view: LibraryView::Cards,
+            view: LibraryView::Grid,
             hovered: None,
             preserve_viewport: false,
             preserve_next_library_update: false,

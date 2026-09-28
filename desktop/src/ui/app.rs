@@ -165,7 +165,7 @@ impl GameSyncApp {
             search,
             detail_shown: false,
             last_sync: None,
-            view: LibraryView::Cards,
+            view: LibraryView::Grid,
             restore_grid_focus: false,
             theme: initial_theme,
             omarchy_mode,
@@ -326,14 +326,14 @@ impl GameSyncApp {
                     .children(
                         [
                             (
-                                LibraryView::Cards,
-                                "Cards",
-                                Icon::new(IconName::GalleryVerticalEnd),
-                            ),
-                            (
                                 LibraryView::Grid,
                                 "Grid",
                                 Icon::new(IconName::LayoutDashboard),
+                            ),
+                            (
+                                LibraryView::Cards,
+                                "Cards",
+                                Icon::new(IconName::GalleryVerticalEnd),
                             ),
                             (LibraryView::Table, "Table", Icon::new(IconName::Menu)),
                             (
