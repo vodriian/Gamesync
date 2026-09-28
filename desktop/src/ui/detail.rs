@@ -460,6 +460,19 @@ impl Render for DetailPanel {
                             .map(|steam| self.actions_menu(steam.app_id, cx)),
                     ),
             );
+            // Menu results show under the header, next to the menu that ran them.
+            if let Some((id, notice)) = &self.steam_notice {
+                if game.as_ref().is_some_and(|g| g.id == *id) {
+                    body = body.child(
+                        div()
+                            .px_4()
+                            .pb_2()
+                            .text_xs()
+                            .text_color(cx.theme().muted_foreground)
+                            .child(notice.clone()),
+                    );
+                }
+            }
             if let Some(editor) = &self.editor {
                 body = body.child(div().flex_1().min_h_0().child(editor.clone()));
             } else if let Some(game) = &game {
@@ -491,11 +504,6 @@ impl Render for DetailPanel {
                                 .child("Preview card. Changes are unavailable in this preview."),
                         ),
                 );
-            }
-            if let Some((id, notice)) = &self.steam_notice {
-                if game.as_ref().is_some_and(|g| g.id == *id) {
-                    body = body.child(div().p_3().text_xs().child(notice.clone()));
-                }
             }
         }
         let dimensions = gpui::size(px(width), px(width * 1.46));

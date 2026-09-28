@@ -39,9 +39,25 @@ pub struct InspectorEditor {
     failed: bool,
     published_from: Option<uuid::Uuid>,
     message: String,
+    /// The control changed last. Save status shows under it.
+    field: Option<Field>,
+    /// Hides "Saved." after a short time.
+    message_clear: Option<gpui::Task<()>>,
     _subscriptions: Vec<Subscription>,
 }
 impl EventEmitter<EditorEvent> for InspectorEditor {}
+
+/// Places for inline save status. `Top` is used before any control changes,
+/// for example when the game changed on another computer.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Field {
+    Top,
+    Status,
+    Rating,
+    Collections,
+    Tags,
+    Notes,
+}
 
 impl InspectorEditor {
     pub fn new(
@@ -67,6 +83,7 @@ impl InspectorEditor {
         })];
         subscriptions.push(cx.subscribe(&notes, |this, _, event, cx| {
             if matches!(event, InputEvent::Change) {
+                this.field = Some(Field::Notes);
                 this.changed(cx);
                 cx.notify();
             }
@@ -102,6 +119,8 @@ impl InspectorEditor {
             failed: false,
             published_from: None,
             message: String::new(),
+            field: None,
+            message_clear: None,
             _subscriptions: subscriptions,
         }
     }
@@ -146,7 +165,8 @@ impl InspectorEditor {
                 || (record.revision_id != self.base.revision_id
                     && Some(record.revision_id) != self.published_from))
     }
-    fn change_now(&mut self, cx: &mut Context<Self>) {
+    fn change_now(&mut self, field: Field, cx: &mut Context<Self>) {
+        self.field = Some(field);
         self.changed(cx);
         self.save(cx);
     }
@@ -154,14 +174,75 @@ impl InspectorEditor {
         self.failed = false;
         if !self.saving && self.value(cx) == self.base.game.personal {
             self.pending = None;
-            self.message = "Saved.".into();
-            cx.notify();
+            self.show_saved(cx);
             return;
         }
+        self.message_clear = None;
         self.message = "Unsaved changes…".into();
         self.schedule(cx);
         cx.notify();
     }
+    /// "Saved." is brief confirmation, so it clears itself after two seconds.
+    fn show_saved(&mut self, cx: &mut Context<Self>) {
+        self.message = "Saved.".into();
+        self.message_clear = Some(cx.spawn(async move |this, cx| {
+            cx.background_executor()
+                .timer(std::time::Duration::from_secs(2))
+                .await;
+            let _ = this.update(cx, |this, cx| {
+                if this.message == "Saved." {
+                    this.message.clear();
+                    cx.notify();
+                }
+            });
+        }));
+        cx.notify();
+    }
+
+    /// Save status, errors, and recovery actions under the control that
+    /// changed. Nothing is shown when there is nothing to report.
+    fn status_line(&self, slot: Field, cx: &mut Context<Self>) -> Option<impl IntoElement> {
+        if self.field.unwrap_or(Field::Top) != slot {
+            return None;
+        }
+        let blocked = self.blocked(cx);
+        if self.message.is_empty() && blocked.is_none() && !self.failed {
+            return None;
+        }
+        let saving = self.saving;
+        Some(
+            v_flex()
+                .gap_1()
+                .children(blocked.as_deref().map(|text| hint(text, cx)))
+                .when(!self.message.is_empty(), |column| {
+                    column.child(hint(&self.message, cx))
+                })
+                .when(self.failed || blocked.is_some(), |column| {
+                    column.child(
+                        h_flex()
+                            .gap_2()
+                            .child(
+                                Button::new("retry-save")
+                                    .xsmall()
+                                    .label("Retry save")
+                                    .disabled(saving || blocked.is_some())
+                                    .on_click(cx.listener(|this, _, _, cx| this.save(cx))),
+                            )
+                            .child(
+                                Button::new("reload-details")
+                                    .xsmall()
+                                    .ghost()
+                                    .label("Discard changes")
+                                    .disabled(saving)
+                                    .on_click(
+                                        cx.listener(|_, _, _, cx| cx.emit(EditorEvent::Closed)),
+                                    ),
+                            ),
+                    )
+                }),
+        )
+    }
+
     fn schedule(&mut self, cx: &mut Context<Self>) {
         self.pending = Some(cx.spawn(async move |this, cx| {
             cx.background_executor()
@@ -248,12 +329,12 @@ impl InspectorEditor {
         self.personal.tags.push(tag.to_owned());
         self.tag_query
             .update(cx, |query, cx| query.set_value("", window, cx));
-        self.change_now(cx);
+        self.change_now(Field::Tags, cx);
     }
 
     fn remove_tag(&mut self, tag: &str, cx: &mut Context<Self>) {
         self.personal.tags.retain(|t| t != tag);
-        self.change_now(cx);
+        self.change_now(Field::Tags, cx);
     }
 
     fn tags_row(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -413,7 +494,7 @@ impl InspectorEditor {
                         this.failed = false;
                         this.published_from = Some(this.base.revision_id);
                         this.base = record;
-                        this.message = "Saved.".into();
+                        this.show_saved(cx);
                         cx.emit(EditorEvent::Saved);
                         if this.value(cx) != this.base.game.personal {
                             this.schedule(cx);
@@ -473,8 +554,6 @@ fn suggest_tags<'a>(
 
 impl Render for InspectorEditor {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let blocked = self.blocked(cx);
-        let saving = self.saving;
         let selected = self.personal.status.clone();
         let statuses = self.manifest.definitions.statuses.clone();
         let status_label = self
@@ -505,6 +584,7 @@ impl Render for InspectorEditor {
                             .font_semibold()
                             .child(self.base.game.title.clone()),
                     )
+                    .children(self.status_line(Field::Top, cx))
                     .child(hint(
                         &format!(
                             "{:.1} hours played",
@@ -542,7 +622,7 @@ impl Render for InspectorEditor {
                                             .on_click(move |_, _, cx| {
                                                 target.update(cx, |this, cx| {
                                                     this.personal.set_status(key.clone());
-                                                    this.change_now(cx);
+                                                    this.change_now(Field::Status, cx);
                                                 })
                                             }),
                                     );
@@ -550,6 +630,7 @@ impl Render for InspectorEditor {
                                 menu
                             }),
                     )
+                    .children(self.status_line(Field::Status, cx))
                     // Rating and favorite share one row: a small label above each control.
                     .child(
                         // Wraps on a narrow card so the heart never overflows.
@@ -599,7 +680,7 @@ impl Render for InspectorEditor {
                                             this.personal.rating = (this.personal.rating
                                                 != Some(value))
                                             .then_some(value);
-                                            this.change_now(cx);
+                                            this.change_now(Field::Rating, cx);
                                         }))
                                 })),
                             ))
@@ -624,11 +705,12 @@ impl Render for InspectorEditor {
                                         )
                                         .on_click(cx.listener(|this, _, _, cx| {
                                             this.personal.favorite = !this.personal.favorite;
-                                            this.change_now(cx);
+                                            this.change_now(Field::Rating, cx);
                                         })),
                                 ),
                             ),
                     )
+                    .children(self.status_line(Field::Rating, cx))
                     .child(hint("Collections", cx))
                     .child(
                         h_flex().flex_wrap().gap_2().children(
@@ -661,55 +743,27 @@ impl Render for InspectorEditor {
                                             } else {
                                                 this.personal.collections.push(id);
                                             }
-                                            this.change_now(cx);
+                                            this.change_now(Field::Collections, cx);
                                         }))
                                 }),
                         ),
                     )
+                    .children(self.status_line(Field::Collections, cx))
                     .child(hint("Tags", cx))
                     .child(self.tags_row(cx))
+                    .children(self.status_line(Field::Tags, cx))
                     .child(hint("Notes", cx))
                     .child(
+                        // Notes fill the rest of the card, so the card ends with the
+                        // last field instead of empty space.
                         Input::new(&self.notes)
-                            .h(px(88.))
+                            .flex_1()
+                            .min_h(px(88.))
                             .flex_shrink_0()
                             .small()
                             .disabled(false),
-                    ),
-            )
-            .child(
-                v_flex()
-                    .p_3()
-                    .flex_shrink_0()
-                    .gap_2()
-                    .border_t_1()
-                    .border_color(cx.theme().border)
-                    .when(blocked.is_some(), |column| {
-                        column.child(hint(blocked.as_deref().unwrap_or_default(), cx))
-                    })
-                    .when(!self.message.is_empty(), |column| {
-                        column.child(hint(&self.message, cx))
-                    })
-                    .when(self.failed || blocked.is_some(), |column| {
-                        column.child(
-                            h_flex()
-                                .gap_2()
-                                .child(
-                                    Button::new("retry-save")
-                                        .label("Retry save")
-                                        .disabled(saving || blocked.is_some())
-                                        .on_click(cx.listener(|this, _, _, cx| this.save(cx))),
-                                )
-                                .child(
-                                    Button::new("reload-details")
-                                        .label("Discard unsaved changes")
-                                        .disabled(saving)
-                                        .on_click(
-                                            cx.listener(|_, _, _, cx| cx.emit(EditorEvent::Closed)),
-                                        ),
-                                ),
-                        )
-                    }),
+                    )
+                    .children(self.status_line(Field::Notes, cx)),
             )
     }
 }
