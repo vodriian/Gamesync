@@ -15,6 +15,10 @@ use gpui::{
 use gpui_component::Root;
 use ui::app::GameSyncApp;
 
+/// Wayland app ID and X11 class. Must match `StartupWMClass` in the Linux
+/// desktop entry so the compositor links windows to the launcher entry.
+const APP_ID: &str = "gamesync";
+
 gpui::actions!(
     gamesync,
     [
@@ -124,6 +128,7 @@ fn main() -> anyhow::Result<()> {
             cx.activate(true);
             let result = cx.open_window(
                 WindowOptions {
+                    app_id: Some(APP_ID.into()),
                     titlebar: Some(gpui::TitlebarOptions {
                         title: Some(library.name.clone().into()),
                         ..gpui_component::TitleBar::title_bar_options()

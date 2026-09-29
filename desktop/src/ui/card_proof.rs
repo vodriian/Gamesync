@@ -135,6 +135,7 @@ pub fn run() -> anyhow::Result<()> {
             cx.activate(true);
             let result = cx.open_window(
                 WindowOptions {
+                    app_id: Some(crate::APP_ID.into()),
                     window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
                         None,
                         size(px(800.), px(760.)),

@@ -35,6 +35,7 @@ impl GameSyncApp {
         let bounds = Bounds::centered(None, size(px(540.), px(600.)), cx);
         match cx.open_window(
             WindowOptions {
+                app_id: Some(crate::APP_ID.into()),
                 titlebar: Some(gpui::TitlebarOptions {
                     title: Some("Collections".into()),
                     ..gpui_component::TitleBar::title_bar_options()
@@ -113,6 +114,7 @@ impl GameSyncApp {
         let result_view = created.clone();
         match cx.open_window(
             WindowOptions {
+                app_id: Some(crate::APP_ID.into()),
                 titlebar: Some(gpui::TitlebarOptions {
                     title: Some("Settings".into()),
                     ..gpui_component::TitleBar::title_bar_options()
