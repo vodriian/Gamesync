@@ -70,18 +70,29 @@ impl ChangeSet {
     /// Record a local edit. It replaces every current candidate of the field,
     /// so an edit to a field in conflict also resolves the conflict.
     pub fn edit(&mut self, wall_ms: u64, target: Target, field: &str, value: Value) -> Change {
-        let key = (target, field.to_owned());
         let base = self
             .fields
-            .get(&key)
+            .get(&(target.clone(), field.to_owned()))
             .map(|ids| self.heads(ids).into_iter().map(|c| c.id).collect())
             .unwrap_or_default();
-        let (target, field) = key;
+        self.edit_from(wall_ms, target, field, value, base)
+    }
+
+    /// Record a local edit that replaced the changes in `base`: the value the
+    /// user saw. A change that arrived since then becomes a conflict.
+    pub fn edit_from(
+        &mut self,
+        wall_ms: u64,
+        target: Target,
+        field: &str,
+        value: Value,
+        base: Vec<Uuid>,
+    ) -> Change {
         let change = Change {
             id: Uuid::new_v4(),
             at: self.clock.tick(wall_ms),
             target,
-            field,
+            field: field.to_owned(),
             value,
             base,
             extra: BTreeMap::new(),

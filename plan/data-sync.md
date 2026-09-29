@@ -1,7 +1,8 @@
 # Data sync across devices
 
-Status: approved direction, September 29. Steps 1 (change model) and 2 (folder
-transport) implemented in `desktop/src/sync/`. Branch: `data-sync-mode`.
+Status: approved direction, September 29. Steps 1 (change model), 2 (folder
+transport), and 3 (local connection) implemented in `desktop/src/sync/`. The
+app does not run sync yet; step 4 connects it. Branch: `data-sync-mode`.
 
 ## Goal
 
@@ -29,9 +30,11 @@ no account.
 | Data | Syncs | Note |
 | --- | --- | --- |
 | Personal game data | Yes | Status, board order, rating, favorite, hidden, tags, notes, collections, overrides, and every future or unknown personal field |
-| Override covers | Yes | Content-addressed image files |
-| Manual games | Yes | Identity, title, and personal data |
-| Library definitions | Yes | Statuses, collections, bound Steam account ID, and future field definitions and saved views |
+| Override covers | Deferred | Content-addressed image files. No feature sets an override cover yet |
+| Manual games | Deferred | Identity, title, and personal data. No feature creates manual games yet |
+| Archive state of a game | Deferred | The loaded library leaves out archived games |
+| Library definitions | Yes | Name, default status, statuses, status order, collections, collection order, and future field definitions and saved views |
+| Bound Steam account ID | No | Each device binds its own library. Different accounts on two devices are not supported |
 | Future AI results | Yes | They are user data that costs money to create again |
 | Shared settings | Yes | See the settings table |
 | API keys | Yes, encrypted | Steam key and future AI provider keys |
@@ -119,8 +122,15 @@ A change sets one value:
   games, `status:<key>`, `collection:<uuid>`, `library`, `settings`, and
   `secret:<name>`.
 - **Fields are small.** Collection membership is one boolean for each game and
-  collection. Status order and board order use fractional ranks, as
-  `board_rank` does now. Adds and reorders on two devices do not collide.
+  collection. Board order is the existing fractional `board_rank` of each
+  game. Status order and collection order are one list field each; a status or
+  collection that the received list does not name stays, after the listed
+  ones. Two reorders at the same time are a conflict for review.
+- **Unset:** a field with its default value is left out, and `null` clears a
+  field to its default. Definitions equal to those of a new library count as
+  unset too. So a value set on only one device is taken without a review.
+- **Section views:** section keys can hold any text, so the setting field is
+  `section_views.<hex of the key>`.
 - **Unknown fields** from a newer app version are stored and passed on. A
   device does not drop a value that it cannot display.
 - **Clock:** a hybrid logical clock: wall time, a counter, and the device ID
@@ -200,14 +210,31 @@ provider can read notes, tags, and settings.
 
 ## Connection to the local app
 
-- **Out:** after a guarded personal, definitions, or settings write succeeds,
-  the sync service adds one change for each changed field to the next batch.
-  It writes a batch 2 seconds after the last edit and when the app closes.
-- **In:** a file watcher, plus a scan every 10 seconds, finds new batches. The
-  service merges them and applies the result through the existing guarded
-  writes. Steam targets map to local games by Steam App ID.
-- A change for a game that this device does not have yet stays pending. It is
-  applied when Steam sync adds the game.
+The sync engine does not hook each save path. Each round compares three
+values for each field: the local value now, the value at the last round
+(`known`, saved on the device), and the merged folder value.
+
+- **Local equals known:** no edit here. A new folder value is applied through
+  the existing guarded writes. It becomes known only after the write succeeds.
+- **Local differs from known:** an edit here, from any save path. It is
+  written with the known changes as its `base`, so an unseen remote edit
+  becomes a conflict and is not overwritten.
+- **First round after joining:** nothing is known. A value set on one side is
+  taken; different values are conflicts. Joining uses no separate code.
+- **Absent targets:** a game that is not in the loaded library now (archived,
+  unreadable, or not added by Steam sync yet) is never read as cleared. Its
+  values wait and apply when the game is present.
+- **Device state:** device ID, sync ID, last batch number, known values, and
+  unwritten changes (outbox) are in one device-local file. An edit is saved
+  there before it is written to the folder, so an offline folder or a crash
+  loses nothing.
+- **Missing folder:** an unmounted or replaced sync folder is an error. The
+  engine never creates its folders on the local disk in its place.
+- **Rounds:** step 4 runs a round after each local save and on a file watcher,
+  plus a scan every 10 seconds. The local values must be read from disk after
+  the previous round's values were applied.
+- **Speed:** each game write inspects its record files. A first join that
+  applies thousands of games can take time. Measure it in step 6.
 - An open notes draft is never overwritten. The existing external-edit review
   appears.
 - Steam sync writes only Steam data and makes no sync changes.
@@ -259,11 +286,12 @@ A new section after Steam:
    sequential and concurrent edits, resolution, and pending targets.
 2. **Folder transport:** batches, device files, skipped files, conflict
    copies, and a duplicate device ID. Tests use three temporary device folders.
-3. **Local connection:** outgoing hooks, incoming apply, Steam App ID mapping,
-   pending changes, shared settings, joining, and override cover media. Media
-   moved here from step 2: no current feature sets an override cover.
-4. **Settings section and review:** the Sync section, conflict review, join
-   review, and conflict marks on cards.
+3. **Local connection:** projection of local values, the three-way round,
+   apply through guarded writes, Steam App ID mapping, pending games, shared
+   settings, joining, device state, and a duplicate device ID. Media, manual
+   games, and archive state are deferred until a feature needs them.
+4. **App connection, Settings section, and review:** run rounds in the app,
+   the Sync section, conflict review, join review, and conflict marks on cards.
 5. **Encrypted keys:** `age` dependency, passphrase, check value, key changes,
    and credential store writes. Include the Steam key; AI keys use the same path.
 6. **Live check** between macOS and Omarchy on one Dropbox folder and one

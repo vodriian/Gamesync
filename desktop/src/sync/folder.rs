@@ -185,7 +185,24 @@ impl SyncFolder {
         self.sync_id
     }
 
+    /// A missing or replaced sync folder, for example an unmounted cloud
+    /// drive, must fail. Creating folders there would write to the local disk
+    /// in place of the cloud folder.
+    fn check(&self) -> Result<()> {
+        let manifest: Manifest = serde_json::from_slice(
+            &read_limited(&self.root.join(MANIFEST), MAX_DEVICE_BYTES)
+                .context("The sync folder is not available")?,
+        )
+        .context("The sync folder is not available")?;
+        ensure!(
+            manifest.sync_id == self.sync_id,
+            "The sync folder was replaced. Stop syncing, then join it again."
+        );
+        Ok(())
+    }
+
     pub fn write_device(&self, info: &DeviceInfo) -> Result<()> {
+        self.check()?;
         let dir = self.root.join("devices");
         fs::create_dir_all(&dir)?;
         let mut bytes = serde_json::to_vec_pretty(info)?;
@@ -241,6 +258,7 @@ impl SyncFolder {
                 "A device can only write its own changes"
             );
         }
+        self.check()?;
         let seq = last_written + 1;
         let dir = self.root.join("changes").join(self.device.to_string());
         fs::create_dir_all(&dir).with_context(|| format!("Could not create {}", dir.display()))?;
@@ -274,6 +292,7 @@ impl SyncFolder {
     /// Read batches that `cursor` has not read. Fails only when the folder
     /// itself cannot be read; problems with single files are issues.
     pub fn scan(&self, cursor: &mut Cursor) -> Result<Scan> {
+        self.check()?;
         let mut scan = Scan::default();
         let mut devices = Vec::new();
         for (path, name) in entries(&self.root.join("changes"), &mut scan.issues)? {
