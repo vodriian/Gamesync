@@ -198,10 +198,12 @@ Status: implemented on September 28: 4a (wishlist data and scope) and 4b
   it. The fallback is UA for the current owner. Steam's formatted price carries
   the currency; a live UA request returned prices in UAH on September 28.
 - Cards, grid cells, and table rows show the price where others show the
-  rating or playtime. A discount shows the localized current price, a discount
-  icon, `−50%` and the localized amount saved in parentheses. An alert icon
-  appears when the sale ends within 48 hours. Free games show **Free**; games
-  without a purchase option show **No price**.
+  rating or playtime. A discount shows the localized discounted price, a
+  discount icon, and `−50%` with the real percentage, with the discount at the
+  right edge of the row. The full price and the amount saved are not shown
+  (user decision, September 29: the saved amount made the row too long for a
+  card). An alert icon appears when the sale ends within 48 hours. Free games
+  show **Free**; games without a purchase option show **No price**.
 - The Wishlist display menu contains only **Sort by**: Wishlist order, Price,
   Discount, Date added, and Name. Wishlist ignores library filters and grouping.
   Sort choices are not saved: new enum values in device settings would make
