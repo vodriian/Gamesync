@@ -386,11 +386,6 @@ fn apply_setting(settings: &mut Settings, field: &str, value: &Value) -> Result<
         return Ok(());
     }
     match field {
-        "theme" => {
-            let theme: Option<String> = parse(value)?;
-            settings.theme = theme.unwrap_or_else(|| Settings::default().theme);
-        }
-        "appearance" => settings.appearance = parse(value)?,
         "reduce_motion" => settings.reduce_motion = parse(value)?,
         "show_hidden_games" => settings.show_hidden_games = parse(value)?,
         "library_display" => settings.library_display = parse(value)?,

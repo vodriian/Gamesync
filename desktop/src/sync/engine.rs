@@ -13,6 +13,7 @@
 //! The first round after joining has no known values. Then a value set on only
 //! one side is taken, and different values become conflicts for review.
 
+use super::project::is_synced;
 use super::secrets::same_value;
 use super::{
     apply::Apply, project::Projection, Change, ChangeSet, Cursor, DeviceInfo, Devices,
@@ -220,8 +221,11 @@ impl SyncEngine {
         let mut keys: BTreeSet<FieldKey> = local.fields.keys().cloned().collect();
         keys.extend(self.known.keys().cloned());
         keys.extend(self.set.fields().map(|(key, _)| key.clone()));
+        keys.retain(is_synced);
+        let before = self.known.len();
+        self.known.retain(|key, _| is_synced(key));
         let mut edits = Vec::new();
-        let mut changed = false;
+        let mut changed = self.known.len() != before;
         for key in keys {
             let (known, known_ids) = self
                 .known

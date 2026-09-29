@@ -146,11 +146,10 @@ impl GameSyncApp {
                     })
                     .await;
                 reader = returned;
-                let mut appearance = None;
                 if this
                     .update(cx, |this, cx| {
                         if let Some(synced) = synced {
-                            appearance = this.apply_sync(synced, cx);
+                            this.apply_sync(synced, cx);
                         }
                         match result {
                             Ok((model, mut issues)) => {
@@ -174,14 +173,6 @@ impl GameSyncApp {
                     .is_err()
                 {
                     return;
-                }
-                // Theme changes from another device apply like a local choice.
-                if let Some(appearance) = appearance {
-                    if let Ok(window) = this.update(cx, |this, _| this.main_window) {
-                        let _ = window.update(cx, move |_, window, cx| {
-                            crate::theme::apply_choice(&appearance, window, cx)
-                        });
-                    }
                 }
             }
         }));

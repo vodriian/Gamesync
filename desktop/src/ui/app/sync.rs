@@ -1,16 +1,11 @@
 //! Sync results in the open app: status, and shared settings from other devices.
 use super::{loading::SyncOutcome, GameSyncApp};
 use crate::settings::LibraryView;
-use gamesync_desktop::appearance::Appearance;
 use gpui::Context;
 
 impl GameSyncApp {
-    /// Store a round result. Returns an appearance to apply to the window.
-    pub(super) fn apply_sync(
-        &mut self,
-        outcome: SyncOutcome,
-        cx: &mut Context<Self>,
-    ) -> Option<Appearance> {
+    /// Store a round result and show shared settings that it changed.
+    pub(super) fn apply_sync(&mut self, outcome: SyncOutcome, cx: &mut Context<Self>) {
         let mut settings_changed = false;
         let mut keys_changed = false;
         self.sync.update(cx, |sync, cx| {
@@ -37,20 +32,18 @@ impl GameSyncApp {
             }
         }
         if settings_changed {
-            self.reload_shared_settings(cx)
-        } else {
-            None
+            self.reload_shared_settings(cx);
         }
     }
 
     /// Read shared settings that sync wrote and show them. Device-local
-    /// settings are not synced, so they stay as they are.
-    fn reload_shared_settings(&mut self, cx: &mut Context<Self>) -> Option<Appearance> {
+    /// settings, such as the theme, are not synced, so they stay as they are.
+    fn reload_shared_settings(&mut self, cx: &mut Context<Self>) {
         let settings = match crate::settings::load() {
             Ok(settings) => settings,
             Err(error) => {
                 self.notice = format!("Could not read synced settings: {error:#}");
-                return None;
+                return;
             }
         };
         self.section_views = settings.section_views.clone();
@@ -84,19 +77,6 @@ impl GameSyncApp {
             let reduce = settings.reduce_motion;
             view.update(cx, |view, cx| view.set_reduce_motion(reduce, cx));
         }
-        let appearance = settings.appearance();
-        if appearance == self.theme {
-            cx.notify();
-            return None;
-        }
-        self.theme = appearance.clone();
-        if let Some(view) = &self.settings_view {
-            let theme = appearance.clone();
-            view.update(cx, |view, cx| view.set_theme(theme, cx));
-        }
         cx.notify();
-        // Omarchy mode replaces the theme on this device; the shared choice
-        // stays saved and returns when the mode is off.
-        (!self.omarchy_mode).then_some(appearance)
     }
 }

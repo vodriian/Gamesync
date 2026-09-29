@@ -50,16 +50,19 @@ is listed as device-local in this document.
 
 | Shared | Device-local |
 | --- | --- |
-| Theme and appearance | Omarchy mode (Linux only) |
-| Reduce motion | Sync folder, device ID, device name |
-| Show hidden games | Last Steam sync times |
-| Sort, descending, and grouping | Detected Steam country |
-| View choice for each section | Window size and position |
-| Open smart groups | Legacy library path |
-| Store country | |
+| Reduce motion | Theme and appearance |
+| Show hidden games | Omarchy mode (Linux only) |
+| Sort, descending, and grouping | Sync folder, device ID, device name |
+| View choice for each section | Last Steam sync times |
+| Open smart groups | Detected Steam country |
+| Store country | Window size and position |
+| | Legacy library path |
 
-Omarchy mode already replaces the theme on the device that turns it on. The
-shared theme stays saved and applies again when the mode is off.
+User decision, September 29, after the first live check: the theme stays on
+each device. Each computer can have a different screen and desktop theme.
+Test builds before this decision wrote theme and appearance changes to the
+folder. Rounds ignore changes for device-local settings, so these old changes
+make no conflict and change no theme.
 
 ## Decision: sync folder is a transport, not the library
 
@@ -168,6 +171,10 @@ A change sets one value:
 - The review lists each value: game or item, field, this device's value, and
   the other devices' values with device names. At most 50 rows show at once;
   bulk choices apply to all.
+- Values show as text: status and collection names, "Sort by name,
+  ascending, no groups", view names. The review never shows raw JSON. A value
+  that this version cannot describe shows "A value this version cannot show";
+  the device name tells the values apart.
 - Choices for each value: **Keep this**, **Use other**. Text fields and tags
   also have **Keep both**: text is joined with a separator, tags are combined.
 - Bulk choices: **Keep all from this device** and **Use all from <device>**.
@@ -253,8 +260,7 @@ values for each field: the local value now, the value at the last round
   10 seconds. The sync folder has no watcher; the 10-second scan finds new
   batches. A round that wrote to the library reads it again at once.
 - **Shared settings from another device** are applied to the open windows:
-  appearance (not in Omarchy mode), reduce motion, hidden games, sort and
-  grouping, and section views.
+  reduce motion, hidden games, sort and grouping, and section views.
 - **Offline at start:** if the folder cannot open, each later round tries
   again. Edits made meanwhile are found as local changes when it opens.
 - **Speed:** each game write inspects its record files. A first join that

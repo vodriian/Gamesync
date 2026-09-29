@@ -26,6 +26,16 @@ pub struct Projection {
     pub targets: BTreeSet<Target>,
 }
 
+/// Settings that stay on each device. Earlier builds synced them, so the
+/// folder can hold changes for them. Rounds ignore those changes.
+const DEVICE_LOCAL_SETTINGS: [&str; 2] = ["theme", "appearance"];
+
+/// False for a field that must not sync, even when the folder has changes
+/// for it.
+pub(crate) fn is_synced(key: &FieldKey) -> bool {
+    !(key.0 == Target::Settings && DEVICE_LOCAL_SETTINGS.contains(&key.1.as_str()))
+}
+
 /// Fields read from `personal` of a game record. Other personal fields,
 /// including unknown ones, use their own key. `cover` is a device path into
 /// local media and does not sync until media files sync.
@@ -199,10 +209,6 @@ fn project_game(
 /// Shared settings only. See `plan/data-sync.md` for the device-local list.
 fn project_settings(settings: &Settings, fields: &mut Projection) {
     let target = Target::Settings;
-    if settings.theme != Settings::default().theme {
-        set(fields, &target, "theme", json!(settings.theme));
-    }
-    set(fields, &target, "appearance", json!(settings.appearance));
     if settings.reduce_motion {
         set(fields, &target, "reduce_motion", json!(true));
     }

@@ -295,6 +295,44 @@ fn joining_takes_one_sided_values_and_asks_about_different_values() {
 }
 
 #[test]
+fn theme_settings_stay_on_each_device() {
+    let base = tempfile::tempdir().unwrap();
+    let cloud = base.path().join("cloud");
+    std::fs::create_dir(&cloud).unwrap();
+    let mut mac = Machine::new(base.path(), "mac", &[]);
+    let mut linux = Machine::new(base.path(), "linux", &[]);
+    mac.join(&cloud);
+    linux.join(&cloud);
+    // Earlier builds synced the theme. Both devices wrote a different one
+    // before either saw the other, which was a conflict.
+    let appearance = |scheme: &str| json!({"mode": "auto", "light_scheme": scheme});
+    let key = (Target::Settings, "appearance".to_owned());
+    assert!(mac
+        .engine()
+        .resolve(&key, appearance("notion"), 1_000)
+        .issues
+        .is_empty());
+    assert!(linux
+        .engine()
+        .resolve(&key, appearance("things"), 1_100)
+        .issues
+        .is_empty());
+
+    mac.settings.theme = "mac theme".into();
+    linux.settings.theme = "linux theme".into();
+    let round = linux.sync(2_000);
+    assert!(round.conflicts.is_empty(), "{:?}", round.conflicts);
+    assert!(round.apply.is_empty(), "{:?}", round.apply);
+    assert_eq!(round.written, 0);
+    let round = mac.sync(2_100);
+    assert!(round.conflicts.is_empty(), "{:?}", round.conflicts);
+    assert_eq!(round.written, 0);
+    assert_eq!(linux.sync(2_200).received, 0);
+    assert_eq!(mac.settings.theme, "mac theme");
+    assert_eq!(linux.settings.theme, "linux theme");
+}
+
+#[test]
 fn values_for_a_missing_game_wait_until_steam_adds_it() {
     let base = tempfile::tempdir().unwrap();
     let cloud = base.path().join("cloud");

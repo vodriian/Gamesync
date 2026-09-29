@@ -1,6 +1,7 @@
 //! The Sync section: folder, devices, status, and review of conflicting edits.
 use super::*;
 use crate::sync_runtime::{self, KeyState, SyncState};
+use gamesync_desktop::settings::{GroupBy, LibraryDisplay, LibraryView, SortBy};
 use gamesync_desktop::sync::{Conflict, FieldKey, Target};
 use gpui::{div, px, PathPromptOptions};
 use gpui_component::{
@@ -13,6 +14,8 @@ use serde_json::Value;
 
 /// Rows shown at once. Bulk choices apply to all conflicts, shown or not.
 const MAX_REVIEW_ROWS: usize = 50;
+/// Shown for a value that this version cannot describe.
+const UNKNOWN_VALUE: &str = "A value this version cannot show";
 
 impl SettingsView {
     pub(super) fn device_name_input(
@@ -368,21 +371,32 @@ impl SettingsView {
         }
     }
 
+    fn status_name(&self, key: &str, cx: &gpui::App) -> String {
+        self.library
+            .read(cx)
+            .source
+            .as_ref()
+            .and_then(|(_, m)| m.definitions.status(key))
+            .map_or_else(|| key.to_owned(), |s| s.label.clone())
+    }
+
+    fn collection_name(&self, id: &str, cx: &gpui::App) -> String {
+        self.library
+            .read(cx)
+            .source
+            .as_ref()
+            .and_then(|(_, m)| {
+                m.definitions
+                    .collections
+                    .iter()
+                    .find(|c| c.id.to_string() == id)
+            })
+            .map_or_else(|| "a collection".into(), |c| c.name.clone())
+    }
+
     fn field_label(&self, field: &str, cx: &gpui::App) -> String {
         if let Some(id) = field.strip_prefix("personal.collections.") {
-            let name = self
-                .library
-                .read(cx)
-                .source
-                .as_ref()
-                .and_then(|(_, m)| {
-                    m.definitions
-                        .collections
-                        .iter()
-                        .find(|c| c.id.to_string() == id)
-                })
-                .map_or_else(|| "a collection".into(), |c| c.name.clone());
-            return format!("In {name}");
+            return format!("In {}", self.collection_name(id, cx));
         }
         if field.starts_with("section_views.") {
             return "View of a section".into();
@@ -402,7 +416,6 @@ impl SettingsView {
             "status_order" => "Status order",
             "collection_order" => "Collection order",
             "recommendation_eligible" => "Used for recommendations",
-            "theme" | "appearance" => "Appearance",
             "reduce_motion" => "Reduce motion",
             "show_hidden_games" => "Show hidden games",
             "library_display" => "Sort and grouping",
@@ -424,13 +437,28 @@ impl SettingsView {
                 let stars = n.as_f64().unwrap_or(0.) / 2.;
                 format!("{stars} stars")
             }
-            ("personal.status", Value::String(key)) => self
-                .library
-                .read(cx)
-                .source
-                .as_ref()
-                .and_then(|(_, m)| m.definitions.status(key))
-                .map_or_else(|| key.clone(), |s| s.label.clone()),
+            ("personal.status" | "default_status", Value::String(key)) => self.status_name(key, cx),
+            ("status_order", Value::Array(keys)) => keys
+                .iter()
+                .filter_map(Value::as_str)
+                .map(|key| self.status_name(key, cx))
+                .collect::<Vec<_>>()
+                .join(", "),
+            ("collection_order", Value::Array(ids)) => ids
+                .iter()
+                .filter_map(Value::as_str)
+                .map(|id| self.collection_name(id, cx))
+                .collect::<Vec<_>>()
+                .join(", "),
+            ("library_display", Value::Object(_)) => {
+                serde_json::from_value::<LibraryDisplay>(value.clone())
+                    .map_or_else(|_| UNKNOWN_VALUE.into(), |d| display_label(&d))
+            }
+            ("smart_groups_open", Value::Array(groups)) => count(groups.len(), "group open"),
+            (field, Value::String(view)) if field.starts_with("section_views.") => {
+                serde_json::from_value::<LibraryView>(value.clone())
+                    .map_or_else(|_| view.clone(), |v| view_label(v).into())
+            }
             (_, Value::Bool(true)) => "Yes".into(),
             (_, Value::Bool(false)) => "No".into(),
             (_, Value::String(text)) if text.is_empty() => "Empty".into(),
@@ -440,7 +468,10 @@ impl SettingsView {
                 .filter_map(Value::as_str)
                 .collect::<Vec<_>>()
                 .join(", "),
-            (_, other) => other.to_string(),
+            (_, Value::Number(n)) => n.to_string(),
+            // A structured value from a newer version, or one without a
+            // label. Raw JSON tells the user nothing.
+            _ => UNKNOWN_VALUE.into(),
         };
         // One line, bounded, so a long note does not stretch the review.
         let line = text.lines().next().unwrap_or_default();
@@ -846,6 +877,35 @@ fn keep_both(field: &str, values: &[Value]) -> Option<Value> {
 }
 
 /// "1 change", "2 changes"; "1 change waits", "2 changes wait".
+fn display_label(display: &LibraryDisplay) -> String {
+    let sort = match display.sort {
+        SortBy::Name => "name",
+        SortBy::Status => "status",
+        SortBy::Hours => "hours played",
+        SortBy::Collection => "collection",
+    };
+    let order = if display.descending {
+        "descending"
+    } else {
+        "ascending"
+    };
+    let group = match display.group {
+        GroupBy::None => "no groups",
+        GroupBy::Status => "grouped by status",
+        GroupBy::Collections => "grouped by collection",
+    };
+    format!("Sort by {sort}, {order}, {group}")
+}
+
+fn view_label(view: LibraryView) -> &'static str {
+    match view {
+        LibraryView::Cards => "Cards",
+        LibraryView::Grid => "Grid",
+        LibraryView::Table => "Table",
+        LibraryView::Board => "Board",
+    }
+}
+
 fn count(n: usize, phrase: &str) -> String {
     if n == 1 {
         return format!("1 {phrase}");
@@ -879,7 +939,7 @@ fn age(ms: u64) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{count, keep_both};
+    use super::{count, display_label, keep_both, GroupBy, LibraryDisplay, SortBy};
 
     #[test]
     fn counts_use_singular_and_plural() {
@@ -887,6 +947,24 @@ mod tests {
         assert_eq!(count(3, "change"), "3 changes");
         assert_eq!(count(1, "change waits"), "1 change waits");
         assert_eq!(count(2, "change waits"), "2 changes wait");
+        assert_eq!(count(2, "group open"), "2 groups open");
+    }
+
+    #[test]
+    fn sort_and_grouping_read_as_text() {
+        assert_eq!(
+            display_label(&LibraryDisplay::default()),
+            "Sort by name, ascending, no groups"
+        );
+        let display = LibraryDisplay {
+            sort: SortBy::Hours,
+            descending: true,
+            group: GroupBy::Status,
+        };
+        assert_eq!(
+            display_label(&display),
+            "Sort by hours played, descending, grouped by status"
+        );
     }
     use serde_json::json;
 
