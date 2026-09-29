@@ -154,39 +154,13 @@ impl Render for LibrarySidebar {
             .text_color(cx.theme().sidebar_foreground)
             .child(
                 v_flex()
-                    .p_4()
-                    .gap_1()
-                    .child(
-                        h_flex()
-                            .justify_between()
-                            .child(div().font_semibold().child("GameSync"))
-                            .child(
-                                Button::new("settings")
-                                    .text_color(cx.theme().sidebar_foreground)
-                                    .ghost()
-                                    .small()
-                                    .icon(IconName::Settings)
-                                    .tooltip("Settings")
-                                    .on_click(|_, window, cx| {
-                                        window.dispatch_action(Box::new(crate::OpenSettings), cx)
-                                    }),
-                            ),
-                    )
-                    .child(
-                        div()
-                            .text_xs()
-                            .text_color(cx.theme().sidebar_foreground.opacity(0.65))
-                            .child("A little room for your games"),
-                    ),
-            )
-            .child(
-                v_flex()
                     .px_2()
+                    .pt_4()
                     .gap_1()
                     .child(self.home_row(cx))
                     .child(self.row(Scope::All, IconName::LayoutDashboard, cx))
-                    .child(self.row(Scope::Favorites, IconName::Star, cx))
-                    .child(self.row(Scope::Wishlist, IconName::Heart, cx))
+                    .child(self.row(Scope::Favorites, IconName::Heart, cx))
+                    .child(self.row(Scope::Wishlist, IconName::Star, cx))
                     .when(self.library.read(cx).show_hidden_games, |column| {
                         column.child(self.row(Scope::Hidden, IconName::EyeOff, cx))
                     }),
@@ -304,11 +278,35 @@ impl Render for LibrarySidebar {
                         view.child(div().px_2().text_xs().child(self.message.clone()))
                     }),
             )
+            .child(
+                h_flex()
+                    .flex_shrink_0()
+                    .px_4()
+                    .py_3()
+                    .justify_between()
+                    .child(
+                        div()
+                            .font_semibold()
+                            .text_color(cx.theme().sidebar_foreground.opacity(0.6))
+                            .child("GameSync"),
+                    )
+                    .child(
+                        Button::new("settings")
+                            .text_color(cx.theme().sidebar_foreground)
+                            .ghost()
+                            .small()
+                            .icon(IconName::Settings)
+                            .tooltip("Settings")
+                            .on_click(|_, window, cx| {
+                                window.dispatch_action(Box::new(crate::OpenSettings), cx)
+                            }),
+                    ),
+            )
             .when_some(self.toast.as_ref(), |sidebar, message| {
                 sidebar.child(
                     h_flex()
                         .absolute()
-                        .bottom_3()
+                        .bottom(px(64.))
                         .left_3()
                         .right_3()
                         .px_3()

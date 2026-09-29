@@ -91,13 +91,18 @@ impl SettingsView {
             profile: Self::masked_input("Steam profile link or SteamID64", window, cx),
             key: Self::masked_input("Enter a key to save or replace", window, cx),
             country: {
-                let saved = settings::load()
-                    .ok()
-                    .and_then(|s| s.store_country)
+                let loaded = settings::load().ok();
+                let saved = loaded
+                    .as_ref()
+                    .and_then(|s| s.store_country.clone())
                     .unwrap_or_default();
+                let placeholder = loaded.and_then(|s| s.detected_country).map_or_else(
+                    || format!("Default: {}", gamesync_desktop::prices::DEFAULT_COUNTRY),
+                    |country| format!("Detected: {country}"),
+                );
                 cx.new(|cx| {
                     InputState::new(window, cx)
-                        .placeholder("From your Steam profile")
+                        .placeholder(placeholder)
                         .default_value(saved)
                 })
             },
@@ -142,7 +147,7 @@ impl SettingsView {
     fn save_country(&mut self, cx: &mut Context<Self>) {
         let code = self.country.read(cx).value().trim().to_uppercase();
         if !code.is_empty() && !steam::client::valid_country(&code) {
-            self.message = "Enter a two-letter country code, for example US or DE.".into();
+            self.message = "Enter a two-letter country code, for example UA, US, or DE.".into();
             cx.notify();
             return;
         }

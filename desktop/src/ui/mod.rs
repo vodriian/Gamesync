@@ -20,3 +20,4 @@ pub mod card_proof;
 mod filmstrip;
 
 mod panel;
+mod price;

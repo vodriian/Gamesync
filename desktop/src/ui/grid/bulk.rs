@@ -71,12 +71,10 @@ impl GameGrid {
             )
             .child(div().w(px(30.)))
             .child(div().flex_1().child("Title"))
-            // Wishlist games are not owned: price and sale replace the owned columns.
+            // Wishlist games are not owned: price replaces the owned columns.
             .map(|header| {
                 if self.library.read(cx).scope == crate::model::Scope::Wishlist {
-                    header
-                        .child(div().w(px(140.)).child("Price"))
-                        .child(div().w(px(200.)).child("Sale"))
+                    header.child(div().w(px(340.)).child("Price"))
                 } else {
                     header
                         .child(div().w(px(140.)).child("Status"))

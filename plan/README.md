@@ -12,7 +12,7 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 | [Guardrails](guardrails.md) | Code quality, tests, writing, and efficient agent work |
 | [Design](design.md) | Eagle GUI reference and design rules |
 | [Latest log](logs/2026-09-28.md) | Omarchy theme integration, 3D card POC, and Kanban board |
-| [Latest UI log](logs/2026-09-22.md) | Physical card views, save checks, and rendering limits |
+| [Latest UI log](logs/2026-09-28.md) | Current macOS and cross-platform UI fixes and checks |
 | [Foundation log](logs/2026-09-11.md) | Initial decisions, changes, checks, and next task |
 | [Desktop demo](../desktop/README.md) | Run commands and current native features |
 | [Source notes](../desktop/SOURCE-NOTES.md) | Eagle code reuse and demo artwork sources |
@@ -27,7 +27,8 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 - Milestone 1: Linux runtime verification remains pending.
 - Milestone 2: file records, definitions, folder loading, and a local index are in place. Inspector draft edits, guarded saves, and saved-game conflict review are implemented.
 - Desktop v1 merged to `main` in PR #1 on September 28.
-- Working branch: `dashboard-tags` (from `main`) for Steam data, Smart collections, Home, and wishlist.
+- Working branch: `codex/macos-view-board-wishlist-fixes` (from `main`) for the
+  macOS build and cross-platform view, board, settings, and wishlist fixes.
 - Runtime targets: macOS and Linux. Windows follows later.
 - Existing React/Express app: retained as a reference.
 
@@ -40,7 +41,8 @@ experimental Blade/Vulkan card projection for Cards and focused fronts.
 
 ## Next task
 
-Build [Dashboard and smart collections](dashboard-tags.md), step 1: Steam data.
+Verify these cross-platform fixes on Linux, then continue the deferred tuning
+fields and offline feeling/time picker in [Dashboard and smart collections](dashboard-tags.md).
 
 Collections, core Settings, and Steam sync are implemented. See
 [Collections, Settings, and Steam](collections-settings-steam.md) for use and limits.

@@ -195,14 +195,17 @@ Status: implemented on September 28: 4a (wishlist data and scope) and 4b
 - Country: after each sync, `loccountrycode` from
   `ISteamUser/GetPlayerSummaries` is saved as `detected_country` when the
   profile shows it. **Store country** in Settings (`store_country`) wins over
-  it. The fallback is US. Steam's formatted price carries the currency.
+  it. The fallback is UA for the current owner. Steam's formatted price carries
+  the currency; a live UA request returned prices in UAH on September 28.
 - Cards, grid cells, and table rows show the price where others show the
-  rating or playtime. A discount shows as `−50% $14.99`. Free games show
-  **Free**; games without a purchase option show **No price**.
-- In the Wishlist scope, Filter adds **On sale only**, and Sort by lists
-  Wishlist order, Price, Discount, Date added, and Name. Each has one fixed
-  direction. These choices are not saved: new enum values in device settings
-  would make older versions fail to read the file.
+  rating or playtime. A discount shows the localized current price, a discount
+  icon, `−50%` and the localized amount saved in parentheses. An alert icon
+  appears when the sale ends within 48 hours. Free games show **Free**; games
+  without a purchase option show **No price**.
+- The Wishlist display menu contains only **Sort by**: Wishlist order, Price,
+  Discount, Date added, and Name. Wishlist ignores library filters and grouping.
+  Sort choices are not saved: new enum values in device settings would make
+  older versions fail to read the file.
 
 ### Deferred
 
@@ -221,12 +224,11 @@ provide history; it needs a third-party service such as IsThereAnyDeal.
   collections in cards, rows, the card details, the context menu, or bulk
   actions. They keep tags and notes. The Board is hidden in the Wishlist
   scope; opening Wishlist from the Board switches to Grid.
-- Wishlist cards and rows show the price and, during a discount, when the
-  sale ends ("Sale ends in 3 days", from `active_discounts[].discount_end_date`).
-  The card details show the price, the regular price during a discount, and
-  the sale end.
+- Wishlist cards and rows use one compact price treatment. The sale end date
+  from `active_discounts[].discount_end_date` drives the alert icon instead of
+  relative “Sale ends…” copy.
 - The wishlist parser follows the documented fields (`appid`, `priority`,
-  `date_added`). A live check with a public wishlist is still open.
+  `date_added`). Live public wishlist and Ukrainian price checks passed.
 - New wishlist records start as **Want to play** (`wanted`) when the library
   has that status. An owned game is never a wishlist record.
 - `GetWishlist` gives only app IDs. New wishlist games get their names from

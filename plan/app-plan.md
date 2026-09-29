@@ -95,7 +95,7 @@ Dropbox moves files; it does not resolve application-level edits. See
 
 ### Views
 
-- **Grid:** the default view and the first in the view switch. Compact portrait covers, title, status, and rating (price for wishlist games).
+- **Grid:** the default for a section without a saved view and the first in the view switch. Compact portrait covers, title, status, and rating (price for wishlist games).
 - **Cards:** large framed game cards. Front: artwork and title. Back: personal edits and game details.
 - **Table:** sortable, resizable, reorderable columns; inline edits; bulk status, tag, and rating changes.
 - **Board:** fourth view in the switch after Table; one column per status over the current scope; create, rename, and reorder statuses there; drag to change status; persistent manual order within columns; menu and keyboard alternatives. See [Kanban board](kanban-board.md).
@@ -106,7 +106,11 @@ are excluded from normal views and counts. Look and feel includes a device-local
 "Show hidden games in sidebar" setting (off by default). The Hidden games scope
 shows only hidden games and provides Unhide through the same menu.
 
-Share search, filters, selected game IDs, and saved views across presentations.
+Share search, filters, and selected game IDs across presentations. Save one view
+per sidebar section in device settings, including built-in, collection, and smart
+sections. Restore that view when the user returns to the section and after an app
+restart. Wishlist excludes Board and falls back to Grid if an older preference
+requests it.
 The toolbar menu between view controls and search provides status, collection,
 and favorites filters; Name, Status, Hours, and Collection sorting with direction;
 and None, Status, or Collections grouping. Filters compose with search and the

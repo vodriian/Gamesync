@@ -113,14 +113,11 @@ pub fn front(
                 .gap_2()
                 .text_size(px(10.))
                 .text_color(cx.theme().muted_foreground)
-                // A wishlisted game is not owned: price and sale end replace
+                // A wishlisted game is not owned: price and discount replace
                 // status, collections, and rating.
                 .map(|row| {
                     if game.wishlisted() {
-                        let (price, sale) = game.price_parts();
-                        return row
-                            .child(badge(price, cx))
-                            .children(sale.map(|sale| div().flex_shrink_0().child(sale)));
+                        return row.child(super::price::wishlist_price(game, cx));
                     }
                     row.child(
                         h_flex()

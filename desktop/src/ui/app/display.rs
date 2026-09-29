@@ -53,11 +53,14 @@ impl GameSyncApp {
         let app = cx.entity();
         let lib = self.library.read(cx);
         let wishlist = lib.scope == crate::model::Scope::Wishlist;
-        let active = lib.filter_status.is_some()
-            || lib.filter_collection.is_some()
-            || lib.filter_favorites
-            || (wishlist && lib.filter_on_sale)
-            || lib.display != crate::settings::LibraryDisplay::default();
+        let active = if wishlist {
+            lib.wishlist_sort != crate::model::WishlistSort::default()
+        } else {
+            lib.filter_status.is_some()
+                || lib.filter_collection.is_some()
+                || lib.filter_favorites
+                || lib.display != crate::settings::LibraryDisplay::default()
+        };
         Button::new("library-display")
             .ghost()
             .small()
@@ -66,15 +69,33 @@ impl GameSyncApp {
             .w(px(36.))
             .h(px(38.))
             .selected(active)
-            .tooltip("Filter, sort and group")
+            .tooltip(if wishlist {
+                "Sort wishlist"
+            } else {
+                "Filter, sort and group"
+            })
             .dropdown_menu(move |menu, window, cx| {
                 let lib = app.read(cx).library.read(cx);
+                let wishlist_sort = lib.wishlist_sort;
+                if wishlist {
+                    let sort_app = app.clone();
+                    return menu.submenu("Sort by", window, cx, move |mut menu, _, _| {
+                        for sort in crate::model::WishlistSort::ALL {
+                            menu = menu.item(item(
+                                &sort_app,
+                                sort.label(),
+                                wishlist_sort == sort,
+                                false,
+                                move |l| l.wishlist_sort = sort,
+                            ));
+                        }
+                        menu
+                    });
+                }
                 let display = lib.display.clone();
                 let status = lib.filter_status.clone();
                 let collection = lib.filter_collection;
                 let favorites = lib.filter_favorites;
-                let on_sale = lib.filter_on_sale;
-                let wishlist_sort = lib.wishlist_sort;
                 let statuses = lib.statuses.clone();
                 let collections = lib
                     .source
@@ -137,15 +158,6 @@ impl GameSyncApp {
                         false,
                         move |l| l.filter_favorites = !favorites,
                     ))
-                    .when(wishlist, |menu| {
-                        menu.item(item(
-                            &filter_app,
-                            "On sale only",
-                            on_sale,
-                            false,
-                            move |l| l.filter_on_sale = !on_sale,
-                        ))
-                    })
                     .separator()
                     .item(item(
                         &filter_app,
@@ -156,24 +168,10 @@ impl GameSyncApp {
                             l.filter_status = None;
                             l.filter_collection = None;
                             l.filter_favorites = false;
-                            l.filter_on_sale = false;
                         },
                     ))
                 })
                 .submenu("Sort by", window, cx, move |mut menu, _, _| {
-                    // Wishlist sorts are not saved: they apply only in this scope.
-                    if wishlist {
-                        for sort in crate::model::WishlistSort::ALL {
-                            menu = menu.item(item(
-                                &sort_app,
-                                sort.label(),
-                                wishlist_sort == sort,
-                                false,
-                                move |l| l.wishlist_sort = sort,
-                            ));
-                        }
-                        return menu;
-                    }
                     for (label, sort) in [
                         ("Name", SortBy::Name),
                         ("Status", SortBy::Status),

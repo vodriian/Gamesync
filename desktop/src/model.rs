@@ -65,14 +65,19 @@ impl Game {
         self.record.as_ref().is_some_and(|r| r.game.wishlisted())
     }
 
-    /// Price and sale text for wishlist cards and rows.
-    pub fn price_parts(&self) -> (String, Option<String>) {
+    /// Localized price, discount savings, and time-sensitive sale state.
+    pub fn price_parts(&self) -> gamesync_desktop::prices::PriceDisplay {
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map_or(0, |d| d.as_secs() as i64);
         match &self.price {
-            Some(quote) => (quote.label(), quote.sale_label(now)),
-            None => ("Price loading…".into(), None),
+            Some(quote) => quote.display(now),
+            None => gamesync_desktop::prices::PriceDisplay {
+                price: "Price loading…".into(),
+                discount: None,
+                sale_ends_soon: false,
+                sale_label: None,
+            },
         }
     }
 
@@ -175,6 +180,21 @@ fn smart_groups(games: &[Game]) -> Vec<SmartGroup> {
 }
 
 impl Scope {
+    /// Stable device-local key for this section's presentation preference.
+    pub fn view_key(&self) -> String {
+        match self {
+            Self::All => "all".into(),
+            Self::Favorites => "favorites".into(),
+            Self::Hidden => "hidden".into(),
+            Self::Wishlist => "wishlist".into(),
+            Self::Collection(id) => format!("collection:{id}"),
+            Self::Smart(rule) => format!(
+                "smart:{}",
+                serde_json::to_string(rule).expect("smart rules are serializable")
+            ),
+        }
+    }
+
     pub fn contains(&self, game: &Game) -> bool {
         let hidden = game.record.as_ref().is_some_and(|r| r.game.personal.hidden);
         if matches!(self, Self::Hidden) {
@@ -231,7 +251,6 @@ pub struct Library {
     pub filter_collection: Option<Uuid>,
     pub filter_favorites: bool,
     /// Applies only in the Wishlist scope.
-    pub filter_on_sale: bool,
     pub wishlist_sort: WishlistSort,
     /// Device-local prices. See `gamesync_desktop::prices`.
     pub price_cache: Arc<PriceCache>,
@@ -285,7 +304,6 @@ impl Library {
             filter_status: None,
             filter_collection: None,
             filter_favorites: false,
-            filter_on_sale: false,
             wishlist_sort: WishlistSort::default(),
             price_cache: Default::default(),
             groups: Vec::new(),
@@ -375,7 +393,6 @@ impl Library {
             next.filter_status = self.filter_status.clone();
             next.filter_collection = self.filter_collection;
             next.filter_favorites = self.filter_favorites;
-            next.filter_on_sale = self.filter_on_sale;
             next.wishlist_sort = self.wishlist_sort;
             next.query = self.query.clone();
             next.scope = self.scope.clone();
@@ -672,20 +689,18 @@ impl Library {
                 .filter_map(|(index, game)| {
                     (self.scope.contains(game)
                         && self.search_keys[index].contains(&self.query)
-                        && self
-                            .filter_status
-                            .as_ref()
-                            .is_none_or(|status| &game.status == status)
-                        && self.filter_collection.is_none_or(|id| {
-                            game.record
+                        && (self.scope == Scope::Wishlist
+                            || (self
+                                .filter_status
                                 .as_ref()
-                                .is_some_and(|r| r.game.personal.collections.contains(&id))
-                        })
-                        && (!self.filter_favorites || game.favorite)
-                        && (!self.filter_on_sale
-                            || self.scope != Scope::Wishlist
-                            || game.price.as_ref().is_some_and(|q| q.discount() > 0)))
-                    .then_some(index)
+                                .is_none_or(|status| &game.status == status)
+                                && self.filter_collection.is_none_or(|id| {
+                                    game.record
+                                        .as_ref()
+                                        .is_some_and(|r| r.game.personal.collections.contains(&id))
+                                })
+                                && (!self.filter_favorites || game.favorite))))
+                        .then_some(index)
                 })
                 .collect(),
         );
@@ -737,9 +752,9 @@ impl Library {
                 .then(a.id.cmp(&b.id))
         });
         self.groups.clear();
-        match self.display.group {
+        match (wishlist, self.display.group) {
             // Games that left the Steam wishlist stay apart until the user archives them.
-            GroupBy::None if self.scope == Scope::Wishlist => {
+            (true, _) => {
                 let removed = |i: usize| {
                     self.games[i].record.as_ref().is_some_and(|r| {
                         r.game
@@ -759,8 +774,8 @@ impl Library {
                         .push(("Removed from Steam wishlist".into(), gone));
                 }
             }
-            GroupBy::None => {}
-            GroupBy::Status => {
+            (false, GroupBy::None) => {}
+            (false, GroupBy::Status) => {
                 for status in &self.statuses {
                     let slots: Vec<_> = self
                         .visible
@@ -787,7 +802,7 @@ impl Library {
                     self.groups.push(("Other statuses".into(), unknown));
                 }
             }
-            GroupBy::Collections => {
+            (false, GroupBy::Collections) => {
                 let mut groups = std::collections::BTreeMap::<String, Vec<usize>>::new();
                 let mut uncollected = Vec::new();
                 for (slot, &i) in self.visible.iter().enumerate() {
@@ -1129,7 +1144,7 @@ mod tests {
     }
 
     #[test]
-    fn wishlist_sorts_by_price_and_discount_and_filters_sales() {
+    fn wishlist_sorts_by_price_and_discount_and_ignores_library_display() {
         use gamesync_desktop::{
             prices::{Price, PriceCache, Quote},
             records::{SteamData, WishlistEntry},
@@ -1195,12 +1210,11 @@ mod tests {
         lib.wishlist_sort = WishlistSort::Added;
         lib.recompute();
         assert_eq!(order(&lib), [1, 2, 0]);
-        lib.filter_on_sale = true;
+        lib.filter_favorites = true;
+        lib.display.group = GroupBy::Status;
         lib.recompute();
-        assert_eq!(order(&lib), [0]);
-        // The sale filter does not hide games in other scopes.
-        lib.set_scope(Scope::All);
-        assert_eq!(lib.visible.len(), lib.count(&Scope::All));
+        assert_eq!(order(&lib), [1, 2, 0]);
+        assert!(lib.groups.is_empty());
     }
 
     #[test]
@@ -1310,5 +1324,21 @@ mod tests {
         lib.apply_personal_record(record);
         assert_eq!(lib.count(&Scope::All), total);
         assert_eq!(lib.count(&Scope::Hidden), 0);
+    }
+
+    #[test]
+    fn section_view_keys_are_stable_and_distinct() {
+        let collection = Uuid::parse_str("12345678-1234-5678-1234-567812345678").unwrap();
+        assert_eq!(Scope::All.view_key(), "all");
+        assert_eq!(Scope::Favorites.view_key(), "favorites");
+        assert_eq!(Scope::Wishlist.view_key(), "wishlist");
+        assert_eq!(
+            Scope::Collection(collection).view_key(),
+            "collection:12345678-1234-5678-1234-567812345678"
+        );
+        assert_eq!(
+            Scope::Smart(SmartRule::MyTag("Weekend".into())).view_key(),
+            r#"smart:{"kind":"my_tag","value":"Weekend"}"#
+        );
     }
 }
