@@ -223,32 +223,37 @@ impl Render for SettingsView {
                             .border_r_1()
                             .border_color(cx.theme().border)
                             .children(
-                                [Section::General, Section::Appearance, Section::Ai]
-                                    .into_iter()
-                                    .map(|section| {
-                                        Button::new(section.label())
-                                            .ghost()
-                                            .label(section.label())
-                                            .icon(match section {
-                                                Section::General => {
-                                                    gpui_component::IconName::Settings
-                                                }
-                                                Section::Appearance => {
-                                                    gpui_component::IconName::Palette
-                                                }
-                                                Section::Ai => gpui_component::IconName::Bot,
-                                            })
-                                            .justify_start()
-                                            .w_full()
-                                            .selected(self.section == section)
-                                            .on_click(cx.listener(move |this, _, _, cx| {
-                                                this.section = section;
-                                                if !this.busy {
-                                                    this.message.clear();
-                                                }
-                                                cx.notify();
-                                            }))
-                                    }),
+                                [
+                                    Section::General,
+                                    Section::Sync,
+                                    Section::Appearance,
+                                    Section::Ai,
+                                ]
+                                .into_iter()
+                                .map(|section| {
+                                    Button::new(section.label())
+                                        .ghost()
+                                        .label(section.label())
+                                        .icon(match section {
+                                            Section::General => gpui_component::IconName::Settings,
+                                            Section::Sync => gpui_component::IconName::FolderOpen,
+                                            Section::Appearance => {
+                                                gpui_component::IconName::Palette
+                                            }
+                                            Section::Ai => gpui_component::IconName::Bot,
+                                        })
+                                        .justify_start()
+                                        .w_full()
+                                        .selected(self.section == section)
+                                        .on_click(cx.listener(move |this, _, _, cx| {
+                                            this.section = section;
+                                            this.stop_confirm = false;
+                                            if !this.busy {
+                                                this.message.clear();
+                                            }
+                                            cx.notify();
+                                        }))
+                                }),
                             ),
                     )
                     .child(
@@ -268,6 +273,9 @@ impl Render for SettingsView {
                             })
                             .when(self.section == Section::General, |column| {
                                 column.child(connection).child(sync)
+                            })
+                            .when(self.section == Section::Sync, |column| {
+                                column.child(self.sync_section(cx))
                             })
                             .when(self.section == Section::Ai, |column| {
                                 column.child(self.ai.clone())

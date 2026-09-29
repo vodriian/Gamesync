@@ -75,6 +75,12 @@ pub struct Settings {
     /// The user's choice; it wins over the detected country.
     #[serde(default)]
     pub store_country: Option<String>,
+    /// The folder the user selected for data sync. None means sync is off.
+    #[serde(default)]
+    pub sync_folder: Option<PathBuf>,
+    /// This device's name for other devices. None uses the host name.
+    #[serde(default)]
+    pub device_name: Option<String>,
     #[serde(flatten)]
     extra: std::collections::BTreeMap<String, serde_json::Value>,
 }
@@ -142,6 +148,8 @@ impl Default for Settings {
             smart_groups_open: Vec::new(),
             detected_country: None,
             store_country: None,
+            sync_folder: None,
+            device_name: None,
             extra: Default::default(),
         }
     }

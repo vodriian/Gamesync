@@ -1,6 +1,7 @@
 //! Glaze's grouped settings layout, backed by native device services.
 mod ai;
 mod appearance;
+mod sync;
 mod view;
 use crate::model::Library;
 use gamesync_desktop::{
@@ -27,6 +28,7 @@ pub enum SettingsEvent {
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Section {
     General,
+    Sync,
     Appearance,
     Ai,
 }
@@ -34,6 +36,7 @@ impl Section {
     fn label(self) -> &'static str {
         match self {
             Self::General => "General",
+            Self::Sync => "Sync",
             Self::Appearance => "Look and feel",
             Self::Ai => "AI",
         }
@@ -74,11 +77,17 @@ pub struct SettingsView {
     cancel: Option<steam::Cancellation>,
     message: String,
     last_sync: Option<u64>,
+    sync: Entity<crate::sync_runtime::SyncState>,
+    device_name: Entity<InputState>,
+    /// Stop was pressed once while changes wait to be written.
+    stop_confirm: bool,
+    sync_busy: bool,
 }
 impl EventEmitter<SettingsEvent> for SettingsView {}
 impl SettingsView {
     pub fn new(
         library: Entity<Library>,
+        sync: Entity<crate::sync_runtime::SyncState>,
         theme: gamesync_desktop::appearance::Appearance,
         omarchy_mode: bool,
         omarchy_theme_name: Option<String>,
@@ -86,7 +95,12 @@ impl SettingsView {
         cx: &mut Context<Self>,
     ) -> Self {
         cx.observe(&library, |_, _, cx| cx.notify()).detach();
+        cx.observe(&sync, |_, _, cx| cx.notify()).detach();
         Self {
+            device_name: Self::device_name_input(window, cx),
+            sync,
+            stop_confirm: false,
+            sync_busy: false,
             library,
             profile: Self::masked_input("Steam profile link or SteamID64", window, cx),
             key: Self::masked_input("Enter a key to save or replace", window, cx),
@@ -174,7 +188,14 @@ impl SettingsView {
         cx.notify();
     }
     pub fn busy(&self) -> bool {
-        self.saving_appearance_preference || self.saving_hidden_preference || self.busy
+        self.saving_appearance_preference
+            || self.saving_hidden_preference
+            || self.busy
+            || self.sync_busy
+    }
+    pub fn show_sync(&mut self, cx: &mut Context<Self>) {
+        self.section = Section::Sync;
+        cx.notify();
     }
     pub fn set_theme(
         &mut self,

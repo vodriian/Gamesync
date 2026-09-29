@@ -95,6 +95,12 @@ impl GameSyncApp {
             view.update(cx, |view, cx| view.show_general(cx));
         }
     }
+    pub fn open_sync_settings(&mut self, cx: &mut Context<Self>) {
+        self.open_settings(cx);
+        if let Some(view) = &self.settings_view {
+            view.update(cx, |view, cx| view.show_sync(cx));
+        }
+    }
     pub fn open_settings(&mut self, cx: &mut Context<Self>) {
         if let Some(handle) = self.settings_window {
             if handle
@@ -105,6 +111,7 @@ impl GameSyncApp {
             }
         }
         let library = self.library.clone();
+        let sync = self.sync.clone();
         let theme = self.theme.clone();
         let omarchy_mode = self.omarchy_mode;
         let omarchy_theme_name = self.omarchy_theme.as_ref().map(|theme| theme.name.clone());
@@ -128,6 +135,7 @@ impl GameSyncApp {
                     cx.new(|cx| {
                         crate::ui::settings::SettingsView::new(
                             library,
+                            sync,
                             theme,
                             omarchy_mode,
                             omarchy_theme_name,

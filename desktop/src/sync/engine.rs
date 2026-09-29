@@ -143,7 +143,22 @@ impl SyncEngine {
             engine.extra = state.extra;
         }
         engine.save()?;
+        // Other devices list this device from its first session, even
+        // before it writes a change.
+        engine.publish_info(super::wall_ms())?;
         Ok(engine)
+    }
+
+    /// Change the name or version that other devices show.
+    pub fn set_info(&mut self, info: DeviceInfo, wall_ms: u64) -> Result<()> {
+        self.info = info;
+        self.publish_info(wall_ms)
+    }
+
+    fn publish_info(&self, wall_ms: u64) -> Result<()> {
+        let mut info = self.info.clone();
+        info.last_seen_ms = wall_ms;
+        self.folder.write_device(&info)
     }
 
     pub fn device(&self) -> Uuid {
@@ -333,9 +348,7 @@ impl SyncEngine {
         }
         round.waiting = self.outbox.len();
         if round.written > 0 {
-            let mut info = self.info.clone();
-            info.last_seen_ms = wall_ms;
-            if let Err(error) = self.folder.write_device(&info) {
+            if let Err(error) = self.publish_info(wall_ms) {
                 round.issues.push(format!("{error:#}"));
             }
         }
@@ -374,7 +387,8 @@ impl SyncEngine {
         self.cursor = cursor;
         self.last_written = 0;
         self.outbox = outbox;
-        self.save()
+        self.save()?;
+        self.publish_info(wall_ms)
     }
 
     fn save(&self) -> Result<()> {

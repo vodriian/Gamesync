@@ -1,8 +1,8 @@
 # Data sync across devices
 
-Status: approved direction, September 29. Steps 1 (change model), 2 (folder
-transport), and 3 (local connection) implemented in `desktop/src/sync/`. The
-app does not run sync yet; step 4 connects it. Branch: `data-sync-mode`.
+Status: approved direction, September 29. Steps 1 to 4 implemented: the
+engine in `desktop/src/sync/`, the app connection in `desktop/src/sync_runtime.rs`,
+and the Settings section. Next: step 5, encrypted keys. Branch: `data-sync-mode`.
 
 ## Goal
 
@@ -163,13 +163,17 @@ A change sets one value:
 
 ### Conflict review
 
-- The sidebar footer and the Sync section show "N changes need review".
-- The review lists each value: game or item, field, this device's value, the
-  other value, device name, and time.
+- The sidebar footer shows "N to review"; it opens the Sync section. The
+  section shows the review above the device list.
+- The review lists each value: game or item, field, this device's value, and
+  the other devices' values with device names. At most 50 rows show at once;
+  bulk choices apply to all.
 - Choices for each value: **Keep this**, **Use other**. Text fields and tags
   also have **Keep both**: text is joined with a separator, tags are combined.
 - Bulk choices: **Keep all from this device** and **Use all from <device>**.
-- The game card marks a field that has a conflict.
+- Deferred: a mark on the game card for a field in review.
+- Each device keeps its own value until the user chooses. A choice is a new
+  change; the next round applies it on every device.
 
 ## Joining (one time)
 
@@ -230,9 +234,15 @@ values for each field: the local value now, the value at the last round
   loses nothing.
 - **Missing folder:** an unmounted or replaced sync folder is an error. The
   engine never creates its folders on the local disk in its place.
-- **Rounds:** step 4 runs a round after each local save and on a file watcher,
-  plus a scan every 10 seconds. The local values must be read from disk after
-  the previous round's values were applied.
+- **Rounds:** the library refresh loop runs a round after each library read:
+  after a local save (library file watcher), at start, on Sync now, and every
+  10 seconds. The sync folder has no watcher; the 10-second scan finds new
+  batches. A round that wrote to the library reads it again at once.
+- **Shared settings from another device** are applied to the open windows:
+  appearance (not in Omarchy mode), reduce motion, hidden games, sort and
+  grouping, and section views.
+- **Offline at start:** if the folder cannot open, each later round tries
+  again. Edits made meanwhile are found as local changes when it opens.
 - **Speed:** each game write inspects its record files. A first join that
   applies thousands of games can take time. Measure it in step 6.
 - An open notes draft is never overwritten. The existing external-edit review
@@ -255,19 +265,21 @@ This is a normal case, not an error:
 
 ## Settings: Sync section
 
-A new section after Steam:
+A **Sync** section after General, where the Steam connection is:
 
-- **Sync across devices:** off by default.
-- **Folder:** path, Choose folder, and Show in file manager. Help text: "Select
-  a folder in Dropbox, Google Drive, or OneDrive. Keep it available offline."
-- **Passphrase:** set, enter, or change. It protects API keys.
-- **This device:** an editable name. The default is the host name.
-- **Status:** "Up to date", "Waiting for folder", "N changes need review", or
-  an error, with the time and device of the last received change.
-- **Devices:** name, platform, and last seen for each device.
-- **Review changes**, **Sync now**, and **Stop syncing**.
-- Messages for unreadable batches, a newer format, a wrong passphrase, or a
-  folder that is only online.
+- **Off:** a short description, the help text "Select a folder in Dropbox,
+  Google Drive, or OneDrive, and keep it available offline", and **Choose
+  folder…**. The sample library cannot sync.
+- **Folder:** path, **Sync now**, **Show folder**, and **Stop syncing**. Stop
+  asks again when changes wait to be written. It removes the device state and
+  keeps the library and the folder.
+- **Status:** "Up to date", "Waiting for the folder", "N changes need your
+  review", or "N changes wait to be written", with the last received changes,
+  values waiting for games, and up to three issues.
+- **Review changes** (only when there are conflicts).
+- **This device:** an editable name; the default is the host name.
+- **Devices:** name, platform, and the time of the last written change.
+- Step 5 adds the passphrase and the wrong-passphrase message.
 
 ## Provider notes
 

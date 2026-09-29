@@ -15,6 +15,7 @@ mod smart;
 
 pub struct LibrarySidebar {
     library: Entity<Library>,
+    sync: Entity<crate::sync_runtime::SyncState>,
     collections_open: bool,
     collections_motion: super::motion::Motion,
     focus: gpui::FocusHandle,
@@ -28,10 +29,16 @@ pub struct LibrarySidebar {
 }
 
 impl LibrarySidebar {
-    pub fn new(library: Entity<Library>, cx: &mut Context<Self>) -> Self {
+    pub fn new(
+        library: Entity<Library>,
+        sync: Entity<crate::sync_runtime::SyncState>,
+        cx: &mut Context<Self>,
+    ) -> Self {
         cx.observe(&library, |_, _, cx| cx.notify()).detach();
+        cx.observe(&sync, |_, _, cx| cx.notify()).detach();
         Self {
             library,
+            sync,
             collections_open: true,
             collections_motion: super::motion::Motion::new(1.),
             focus: cx.focus_handle(),
@@ -140,6 +147,7 @@ impl LibrarySidebar {
 
 impl Render for LibrarySidebar {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let review = self.sync.read(cx).conflicts.len();
         if self.restore_focus {
             self.restore_focus = false;
             window.focus(&self.focus);
@@ -290,6 +298,21 @@ impl Render for LibrarySidebar {
                             .text_color(cx.theme().sidebar_foreground.opacity(0.6))
                             .child("GameSync"),
                     )
+                    .child(div().flex_1())
+                    // Conflicting edits from another device wait for a choice.
+                    .when(review > 0, |footer| {
+                        footer.child(
+                            Button::new("sync-review")
+                                .ghost()
+                                .small()
+                                .text_color(cx.theme().warning)
+                                .label(format!("{review} to review"))
+                                .tooltip("Changes from another device need a choice")
+                                .on_click(|_, window, cx| {
+                                    window.dispatch_action(Box::new(crate::OpenSyncSettings), cx)
+                                }),
+                        )
+                    })
                     .child(
                         Button::new("settings")
                             .text_color(cx.theme().sidebar_foreground)

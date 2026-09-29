@@ -3,6 +3,7 @@ mod dashboard;
 mod fixtures;
 mod managed_storage;
 mod model;
+mod sync_runtime;
 use gamesync_desktop::settings;
 mod theme;
 mod ui;
@@ -28,6 +29,7 @@ gpui::actions!(
         SaveDetails,
         ManageCollections,
         OpenSettings,
+        OpenSyncSettings,
         ConnectSteam
     ]
 );
@@ -172,6 +174,10 @@ fn main() -> anyhow::Result<()> {
                     let settings_view = view.downgrade();
                     cx.on_action(move |_: &OpenSettings, cx| {
                         let _ = settings_view.update(cx, |app, cx| app.open_settings(cx));
+                    });
+                    let sync_view = view.downgrade();
+                    cx.on_action(move |_: &OpenSyncSettings, cx| {
+                        let _ = sync_view.update(cx, |app, cx| app.open_sync_settings(cx));
                     });
                     let connect_view = view.downgrade();
                     cx.on_action(move |_: &ConnectSteam, cx| {

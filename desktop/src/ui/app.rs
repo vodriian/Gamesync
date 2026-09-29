@@ -2,6 +2,7 @@ mod display;
 mod loading;
 mod omarchy;
 mod prices;
+mod sync;
 mod windows;
 // A shared library model with three presentations and a focused game card.
 
@@ -72,6 +73,7 @@ pub struct GameSyncApp {
     display_pending: usize,
     last_issues: Vec<String>,
     main_window: gpui::AnyWindowHandle,
+    sync: Entity<crate::sync_runtime::SyncState>,
 }
 
 impl GameSyncApp {
@@ -92,10 +94,14 @@ impl GameSyncApp {
             reduced: settings.reduce_motion,
         });
         let library = cx.new(|_| library);
+        let sync = cx.new(|_| crate::sync_runtime::SyncState {
+            folder: settings.sync_folder.clone(),
+            ..Default::default()
+        });
         let cache = LruImageCache::new(DEFAULT_BUDGET_BYTES, cx);
         let grid = cx.new(|cx| GameGrid::new(library.clone(), cache.clone(), cx));
         let home = cx.new(|cx| HomeView::new(library.clone(), cache.clone(), cx));
-        let sidebar = cx.new(|cx| LibrarySidebar::new(library.clone(), cx));
+        let sidebar = cx.new(|cx| LibrarySidebar::new(library.clone(), sync.clone(), cx));
         let detail = cx.new(|cx| DetailPanel::new(library.clone(), cache.clone(), cx));
         let search = cx.new(|cx| InputState::new(window, cx).placeholder("Search games or tags…"));
         let search_subscription = cx.subscribe(&search, |this, search, event, cx| {
@@ -230,6 +236,7 @@ impl GameSyncApp {
             display_pending: 0,
             last_issues: Vec::new(),
             main_window: window.window_handle(),
+            sync,
         };
         if app.omarchy_mode {
             app.start_omarchy_sync(cx);
