@@ -1,7 +1,7 @@
 # Data sync across devices
 
-Status: approved direction, September 29. Step 1 (change model) implemented in
-`desktop/src/sync/`. Branch: `data-sync-mode`.
+Status: approved direction, September 29. Steps 1 (change model) and 2 (folder
+transport) implemented in `desktop/src/sync/`. Branch: `data-sync-mode`.
 
 ## Goal
 
@@ -84,20 +84,28 @@ The user selects a folder. GameSync uses a `GameSync Sync/` subfolder in it.
 GameSync Sync/
   sync.json                          # format version, sync ID, key check; written once
   devices/<device-id>.json           # name, platform, app version, last seen
-  changes/<device-id>/<seq>.jsonl    # immutable change batches
+  changes/<device-id>/<seq>.json     # immutable change batches; seq has 10 digits
   media/<sha256>.<ext>               # override covers; immutable
   snapshots/<device-id>.json         # later: compacted state of one device
 ```
 
 - `device-id` is a random UUID in device-local settings. It never goes in the
   library or shared settings, so a copied profile does not copy the identity.
-- A batch is written once to a temporary name, then renamed, and never changed.
-  A reader skips a file that it cannot parse and tries again at the next scan.
-  A partial download or a placeholder is not an error.
+- A batch is one JSON object with format, device, number, and at most 1000
+  changes. It is written once to a hidden temporary name, then renamed without
+  overwrite, and never changed. A partial download does not parse, so a reader
+  skips it and tries again at the next scan. A batch whose device or number
+  does not match its path, or that holds another device's change, is rejected.
+- A device stores the number of its last batch. A batch in its own folder with
+  a higher number, or with the same number and different content, comes from
+  a second writer with the same device ID.
+- Hidden files and `desktop.ini` are ignored. Other unknown names are reported.
+- File writes use the Unix durable-write path. Windows needs its own path in
+  step 7.
 - File names use only lowercase ASCII letters, digits, `-`, and `.`. They are
   short and safe on Windows, macOS, Linux, and case-insensitive volumes.
 - Cloud conflict copies (`(conflicted copy)`, `.sync-conflict-`, ` (1)`) are
-  ignored and reported. They occur only if two devices share one device ID.
+  not read and are reported. They occur only if two devices share one device ID.
 
 ## Change model
 
@@ -249,10 +257,11 @@ A new section after Steam:
 1. **Change model** (pure Rust): change type, clock, merge, conflict detection,
    and resolution. Tests: same result in any order, repeats, clock skew,
    sequential and concurrent edits, resolution, and pending targets.
-2. **Folder transport:** batches, device files, media, skipped files, conflict
+2. **Folder transport:** batches, device files, skipped files, conflict
    copies, and a duplicate device ID. Tests use three temporary device folders.
 3. **Local connection:** outgoing hooks, incoming apply, Steam App ID mapping,
-   pending changes, shared settings, and joining.
+   pending changes, shared settings, joining, and override cover media. Media
+   moved here from step 2: no current feature sets an override cover.
 4. **Settings section and review:** the Sync section, conflict review, join
    review, and conflict marks on cards.
 5. **Encrypted keys:** `age` dependency, passphrase, check value, key changes,

@@ -8,8 +8,13 @@
 
 mod change;
 mod clock;
+mod folder;
 mod merge;
 
 pub use change::{Change, Target};
 pub use clock::{wall_ms, Clock, Stamp};
+pub use folder::{
+    Cursor, DeviceInfo, Devices, DuplicateDevice, Issue, IssueKind, Scan, SyncFolder, FOLDER_NAME,
+    MAX_BATCH_CHANGES,
+};
 pub use merge::{ChangeSet, FieldKey, FieldState, Insert};
