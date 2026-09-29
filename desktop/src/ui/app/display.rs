@@ -1,6 +1,6 @@
 //! One display menu and one query model for all library presentations.
 use super::*;
-use crate::settings::{GroupBy, SortBy};
+use crate::settings::{GroupBy, LibraryView, SortBy};
 use gpui_component::menu::{DropdownMenu as _, PopupMenuItem};
 
 fn item(
@@ -93,6 +93,7 @@ impl GameSyncApp {
                     });
                 }
                 let display = lib.display.clone();
+                let board = app.read(cx).view == LibraryView::Board;
                 let status = lib.filter_status.clone();
                 let collection = lib.filter_collection;
                 let favorites = lib.filter_favorites;
@@ -172,6 +173,16 @@ impl GameSyncApp {
                     ))
                 })
                 .submenu("Sort by", window, cx, move |mut menu, _, _| {
+                    // Board alone has a manual order. Choosing a sort there
+                    // turns it off; saved positions stay for later.
+                    let manual = board && display.board_manual;
+                    if board {
+                        menu = menu
+                            .item(item(&sort_app, "Manual order", manual, true, |l| {
+                                l.display.board_manual = true
+                            }))
+                            .separator();
+                    }
                     for (label, sort) in [
                         ("Name", SortBy::Name),
                         ("Status", SortBy::Status),
@@ -181,9 +192,14 @@ impl GameSyncApp {
                         menu = menu.item(item(
                             &sort_app,
                             label,
-                            display.sort == sort,
+                            !manual && display.sort == sort,
                             true,
-                            move |l| l.display.sort = sort,
+                            move |l| {
+                                l.display.sort = sort;
+                                if board {
+                                    l.display.board_manual = false;
+                                }
+                            },
                         ));
                     }
                     menu.separator()

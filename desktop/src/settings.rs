@@ -38,12 +38,28 @@ pub enum LibraryView {
     Board,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(default)]
 pub struct LibraryDisplay {
     pub sort: SortBy,
     pub descending: bool,
     pub group: GroupBy,
+    /// Board columns put manually placed games first. When false, Board
+    /// follows `sort` fully; manual positions stay saved for later.
+    pub board_manual: bool,
+}
+
+impl Default for LibraryDisplay {
+    /// Manual order is on, so settings from before this field keep the board
+    /// that the user arranged.
+    fn default() -> Self {
+        Self {
+            sort: SortBy::default(),
+            descending: false,
+            group: GroupBy::default(),
+            board_manual: true,
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize)]
@@ -219,12 +235,14 @@ mod display_tests {
         let old: Settings =
             serde_json::from_str(r#"{"library_path":null,"future_setting":42}"#).unwrap();
         assert_eq!(old.library_display, LibraryDisplay::default());
+        assert!(old.library_display.board_manual);
         assert!(old.section_views.is_empty());
         let mut settings = old;
         settings.library_display = LibraryDisplay {
             sort: SortBy::Hours,
             descending: true,
             group: GroupBy::Collections,
+            board_manual: false,
         };
         settings
             .section_views

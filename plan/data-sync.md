@@ -172,7 +172,7 @@ A change sets one value:
   the other devices' values with device names. At most 50 rows show at once;
   bulk choices apply to all.
 - Values show as text: status and collection names, "Sort by name,
-  ascending, no groups", view names. The review never shows raw JSON. A value
+  ascending, no groups, Board in manual order", view names. The review never shows raw JSON. A value
   that this version cannot describe shows "A value this version cannot show";
   the device name tells the values apart.
 - Choices for each value: **Keep this**, **Use other**. Text fields and tags

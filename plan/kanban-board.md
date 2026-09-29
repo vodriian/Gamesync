@@ -64,8 +64,16 @@ personal data. It is a fractional index: a string of `0-9a-z` digits compared
 as text, with no trailing `0`. A new rank always fits between two neighbors, so
 a move writes only the moved game and never renumbers a column.
 
-- Ranked games come first, by rank. Games without a rank follow them in the
-  Sort menu order. Ties use the Sort menu order.
+- **Manual order** is the first item of the Sort menu on Board, and the
+  default. Ranked games come first, by rank. Games without a rank follow them
+  in the Sort menu order. Ties use the Sort menu order.
+- User decision, September 29: the sort wins. Choosing Name, Status, Hours, or
+  Collection on Board turns manual order off, and every column follows that
+  sort. Ranks stay saved and apply again when Manual order is chosen. The
+  choice is `board_manual` in the shared display settings, so it syncs.
+- A drag inside a column turns manual order on, then places the game. A drag
+  to another column changes the status and keeps a sorted board sorted.
+  Move up and Move down (menu and Alt with arrows) need manual order.
 - Drop on a ranked card: insert before it. Drop on an unranked card or on the
   empty part of a column: place after the last ranked game.
 - A status change from a menu, the editor, or bulk edit clears the rank. The

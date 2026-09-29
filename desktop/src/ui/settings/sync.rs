@@ -894,7 +894,12 @@ fn display_label(display: &LibraryDisplay) -> String {
         GroupBy::Status => "grouped by status",
         GroupBy::Collections => "grouped by collection",
     };
-    format!("Sort by {sort}, {order}, {group}")
+    let board = if display.board_manual {
+        "Board in manual order"
+    } else {
+        "Board sorted"
+    };
+    format!("Sort by {sort}, {order}, {group}, {board}")
 }
 
 fn view_label(view: LibraryView) -> &'static str {
@@ -954,16 +959,17 @@ mod tests {
     fn sort_and_grouping_read_as_text() {
         assert_eq!(
             display_label(&LibraryDisplay::default()),
-            "Sort by name, ascending, no groups"
+            "Sort by name, ascending, no groups, Board in manual order"
         );
         let display = LibraryDisplay {
             sort: SortBy::Hours,
             descending: true,
             group: GroupBy::Status,
+            board_manual: false,
         };
         assert_eq!(
             display_label(&display),
-            "Sort by hours played, descending, grouped by status"
+            "Sort by hours played, descending, grouped by status, Board sorted"
         );
     }
     use serde_json::json;

@@ -137,18 +137,23 @@ impl GameGrid {
         });
     }
 
-    /// One place up. `None` at the top of the column.
+    /// One place up. `None` at the top of the column, and when the board
+    /// follows a sort: rows are then not in manual order.
     fn place_up(&self, column: usize, row: usize, cx: &gpui::App) -> Option<Place> {
         let games = &self.board.columns[column].games;
         let lib = self.library.read(cx);
-        (row > 0).then(|| Place::Before(lib.games[games[row - 1]].id))
+        (lib.display.board_manual && row > 0).then(|| Place::Before(lib.games[games[row - 1]].id))
     }
 
     /// One place down. Unranked games follow the Sort menu, so a game cannot
-    /// move below an unranked game; `None` there and at the bottom.
+    /// move below an unranked game; `None` there, at the bottom, and when the
+    /// board follows a sort.
     fn place_down(&self, column: usize, row: usize, cx: &gpui::App) -> Option<Place> {
         let games = &self.board.columns[column].games;
         let lib = self.library.read(cx);
+        if !lib.display.board_manual {
+            return None;
+        }
         lib.games[*games.get(row + 1)?].board_rank()?;
         Some(match games.get(row + 2) {
             Some(&next) if lib.games[next].board_rank().is_some() => {
@@ -180,7 +185,9 @@ impl GameGrid {
             .map(|&i| &lib.games[i])
             .filter(|g| g.id != id)
             .collect();
-        let ranked: Vec<&str> = others.iter().filter_map(|g| g.board_rank()).collect();
+        // A sorted board shows the column in Sort menu order, not rank order.
+        let mut ranked: Vec<&str> = others.iter().filter_map(|g| g.board_rank()).collect();
+        ranked.sort_unstable();
         let before = match place {
             Place::Before(target) => others
                 .iter()
@@ -224,9 +231,46 @@ impl GameGrid {
         if dragged.library_id.is_none() || dragged.library_id != library_id {
             return;
         }
+        let same_column = {
+            let lib = self.library.read(cx);
+            self.board
+                .find(dragged.id, lib)
+                .is_some_and(|(column, _)| self.board.columns[column].key.as_deref() == Some(&key))
+        };
         self.library
             .update(cx, |lib, _| lib.selected = Some(dragged.id));
+        // A drag inside a column asks for manual order. A drag to another
+        // column only changes the status, so a sorted board stays sorted.
+        if same_column {
+            self.use_manual_order(cx);
+        }
         self.move_card(dragged.id, key, place, cx);
+    }
+
+    /// Turn on manual order for Board and save it with the display settings.
+    fn use_manual_order(&mut self, cx: &mut Context<Self>) {
+        if self.library.read(cx).display.board_manual {
+            return;
+        }
+        self.library.update(cx, |lib, cx| {
+            lib.display.board_manual = true;
+            lib.recompute();
+            cx.notify();
+        });
+        cx.spawn(async move |grid, cx| {
+            let result = cx
+                .background_spawn(async {
+                    crate::settings::update(|s| s.library_display.board_manual = true)
+                })
+                .await;
+            if let Err(error) = result {
+                let _ = grid.update(cx, |grid, cx| {
+                    grid.feedback = format!("Could not save the board order setting: {error}");
+                    cx.notify();
+                });
+            }
+        })
+        .detach();
     }
 
     pub(super) fn render_board(&mut self, cx: &mut Context<Self>) -> gpui::AnyElement {
