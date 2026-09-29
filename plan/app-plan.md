@@ -13,7 +13,7 @@ that fit the user's mood, time, and energy.
 
 - Use this repository. Add Rust/GPUI code under `desktop/` on a feature branch.
 - Retain the existing web app as a reference until its removal is requested.
-- Support macOS and Linux first. Windows follows later.
+- Support macOS and Linux first. Windows follows after data sync works between them.
 - Open into the library. Keep Choose and Analysis as dedicated areas.
 - Use app-managed local storage for Steam sync. Remove folder opening from the
   product. Retain existing readable stores internally; do not move or delete user data.
@@ -24,6 +24,8 @@ that fit the user's mood, time, and energy.
 - Let selected custom fields opt into AI analysis.
 - Sync owned Steam games. Add games by Steam link/App ID or manually.
 - Preserve conflicting edits from different computers and let the user resolve them.
+- Sync personal data, settings, and encrypted API keys through a user-selected
+  folder. Each device keeps its own local library. See [Data sync](data-sync.md).
 
 ## Reuse
 
@@ -54,6 +56,9 @@ out of view rendering. A REST server is not required.
 
 ## Library storage
 
+Each device keeps this library in app storage. It is not placed in a cloud
+folder; [Data sync](data-sync.md) replaces that earlier direction.
+
 ```text
 GameSync.library/
   library.json
@@ -69,9 +74,9 @@ provider metadata, personal values, AI suggestions, and relative media paths.
 Keep ownership separate from status. Keep local installation state separate
 from library data. Names are display values; do not use them as identity.
 
-Use a rebuildable SQLite index outside Dropbox when implementing durable
+Use a rebuildable SQLite index outside the sync folder when implementing durable
 storage. It is not the source of truth. Keep thumbnails, device settings,
-job queues, and window state outside Dropbox too. Store credentials in the
+job queues, and window state outside the sync folder too. Store credentials in the
 OS credential store; ask the user to unlock it if that store is unavailable.
 
 ### Writes and conflicts
@@ -241,8 +246,9 @@ milestones require them.
 
 ## Deferred
 
-Windows, mobile, other store sync, automatic session
+Mobile, other store sync, automatic session
 tracking, social features, live Obsidian sync, and automatic conflict merging.
+Windows is not deferred; it follows data sync.
 Default audience: one person using several computers. Do not add team or
 multi-account infrastructure in v1.
 
