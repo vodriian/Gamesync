@@ -1,6 +1,7 @@
 # Data sync across devices
 
-Status: approved direction, September 29. No code yet. Branch: `data-sync-mode`.
+Status: approved direction, September 29. Step 1 (change model) implemented in
+`desktop/src/sync/`. Branch: `data-sync-mode`.
 
 ## Goal
 
@@ -103,7 +104,7 @@ GameSync Sync/
 A change sets one value:
 
 ```json
-{"id":"<uuid>","at":"<hlc>","target":"steam:620","field":"personal.rating","value":8,"base":["<change-id>"]}
+{"id":"<uuid>","at":{"ms":1790000000000,"n":0,"device":"<device-id>"},"target":"steam:620","field":"personal.rating","value":8,"base":["<change-id>"]}
 ```
 
 - **Targets:** `steam:<app-id>` for Steam games, `game:<uuid>` for manual
@@ -130,6 +131,15 @@ A change sets one value:
 - **Resolution** is a new change whose `base` lists all conflicting changes.
   Every device reads it and clears the conflict. If two devices resolve the
   same conflict differently at the same time, the result is a new conflict.
+- **Late history:** if a change lists a `base` that has not arrived yet, the
+  newest candidate is shown and no review opens. The missing change usually
+  shows that one candidate replaced the others. If it never arrives, the newest
+  candidate stays.
+- **Edit during review:** a new local edit of a field in conflict replaces all
+  candidates, so it also resolves the conflict.
+- **Faulty data:** two different changes with one ID keep the one with the
+  lower JSON text on every device, and the app reports it. A cycle of bases
+  opens a review.
 - **Deletion:** collections and statuses stay archived, as now. Nothing is
   removed from the logs.
 
@@ -177,8 +187,8 @@ A change sets one value:
   encrypted values and a new check value.
 - Changing the passphrase encrypts all keys again in new changes.
 
-Personal data and settings are not encrypted. The cloud provider can read
-notes and tags. See the open questions.
+Personal data and settings are not encrypted, by user decision. The cloud
+provider can read notes, tags, and settings.
 
 ## Connection to the local app
 
@@ -257,9 +267,3 @@ A new section after Steam:
 Acceptance checks: edits on two open devices at the same time; a concurrent
 edit that opens the review; one device offline for a day; a new device that
 joins a folder with data; a wrong passphrase; a lost passphrase.
-
-## Open questions
-
-- Encrypt personal data and settings too? Recommendation: no for now. It makes
-  the passphrase mandatory for all sync and makes problems harder to inspect.
-  The format allows it later.
