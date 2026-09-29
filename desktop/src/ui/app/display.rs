@@ -1,7 +1,7 @@
 //! One display menu and one query model for all library presentations.
 use super::*;
 use crate::settings::{GroupBy, LibraryView, SortBy};
-use gpui_component::menu::{DropdownMenu as _, PopupMenuItem};
+use gpui_component::menu::{DropdownMenu as _, PopupMenu, PopupMenuItem};
 
 fn item(
     app: &Entity<GameSyncApp>,
@@ -77,9 +77,11 @@ impl GameSyncApp {
             .dropdown_menu(move |menu, window, cx| {
                 let lib = app.read(cx).library.read(cx);
                 let wishlist_sort = lib.wishlist_sort;
+                let grid = app.read(cx).view == LibraryView::Grid;
+                let parts = (lib.display.grid_title, lib.display.grid_metadata);
                 if wishlist {
                     let sort_app = app.clone();
-                    return menu.submenu("Sort by", window, cx, move |mut menu, _, _| {
+                    let menu = menu.submenu("Sort by", window, cx, move |mut menu, _, _| {
                         for sort in crate::model::WishlistSort::ALL {
                             menu = menu.item(item(
                                 &sort_app,
@@ -91,6 +93,11 @@ impl GameSyncApp {
                         }
                         menu
                     });
+                    return if grid {
+                        grid_parts(menu, &app, parts, "Show price", window, cx)
+                    } else {
+                        menu
+                    };
                 }
                 let display = lib.display.clone();
                 let board = app.read(cx).view == LibraryView::Board;
@@ -234,6 +241,34 @@ impl GameSyncApp {
                     }
                     menu
                 })
+                .map(|menu| {
+                    if grid {
+                        grid_parts(menu, &app, parts, "Show status and rating", window, cx)
+                    } else {
+                        menu
+                    }
+                })
             })
     }
+}
+
+/// The View submenu of Grid: title and details under each cover. In
+/// Wishlist the details line is the price.
+fn grid_parts(
+    menu: PopupMenu,
+    app: &Entity<GameSyncApp>,
+    (title, metadata): (bool, bool),
+    metadata_label: &'static str,
+    window: &mut Window,
+    cx: &mut Context<PopupMenu>,
+) -> PopupMenu {
+    let app = app.clone();
+    menu.submenu("View", window, cx, move |menu, _, _| {
+        menu.item(item(&app, "Show title", title, true, move |l| {
+            l.display.grid_title = !title
+        }))
+        .item(item(&app, metadata_label, metadata, true, move |l| {
+            l.display.grid_metadata = !metadata
+        }))
+    })
 }

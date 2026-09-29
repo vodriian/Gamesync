@@ -87,3 +87,8 @@ The bundled set has no home icon.
 
 `icons/badge-percent.svg` is Lucide's `badge-percent` icon (ISC license), from
 the same family. The bundled set has no discount-badge icon.
+
+## Favorite icon
+
+`icons/heart-filled.svg` is Lucide's `heart` icon (ISC license) with a filled
+shape. The bundled set has only the outline heart.

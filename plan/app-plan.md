@@ -118,8 +118,11 @@ restart. Wishlist excludes Board and falls back to Grid if an older preference
 requests it.
 The toolbar menu between view controls and search provides status, collection,
 and favorites filters; Name, Status, Hours, and Collection sorting with direction;
-and None, Status, or Collections grouping. Filters compose with search and the
-sidebar scope and reset on restart. Sorting and grouping persist in device settings.
+and None, Status, or Collections grouping. In Grid, a **View** submenu turns
+the title and the details line (status, rating, and favorite; the price in
+Wishlist) under each cover on or off. Hidden parts take no row height. Filters
+compose with search and the sidebar scope and reset on restart. Sorting,
+grouping, and the Grid parts persist in the shared display settings.
 Status order follows library definitions. Collection sorting uses the first
 alphabetical collection name (unassigned games first ascending). Grouping shows
 a game in every active collection, with a final No collection section. Bulk

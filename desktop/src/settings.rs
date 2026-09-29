@@ -47,6 +47,10 @@ pub struct LibraryDisplay {
     /// Board columns put manually placed games first. When false, Board
     /// follows `sort` fully; manual positions stay saved for later.
     pub board_manual: bool,
+    /// Grid cells show the game title under the cover.
+    pub grid_title: bool,
+    /// Grid cells show status and rating, or the price in Wishlist.
+    pub grid_metadata: bool,
 }
 
 impl Default for LibraryDisplay {
@@ -58,6 +62,8 @@ impl Default for LibraryDisplay {
             descending: false,
             group: GroupBy::default(),
             board_manual: true,
+            grid_title: true,
+            grid_metadata: true,
         }
     }
 }
@@ -236,6 +242,7 @@ mod display_tests {
             serde_json::from_str(r#"{"library_path":null,"future_setting":42}"#).unwrap();
         assert_eq!(old.library_display, LibraryDisplay::default());
         assert!(old.library_display.board_manual);
+        assert!(old.library_display.grid_title && old.library_display.grid_metadata);
         assert!(old.section_views.is_empty());
         let mut settings = old;
         settings.library_display = LibraryDisplay {
@@ -243,6 +250,8 @@ mod display_tests {
             descending: true,
             group: GroupBy::Collections,
             board_manual: false,
+            grid_title: false,
+            grid_metadata: true,
         };
         settings
             .section_views

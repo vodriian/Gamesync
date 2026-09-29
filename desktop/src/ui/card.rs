@@ -1,10 +1,10 @@
 //! Native card face. Artwork is composited once before applying its shape mask.
-use crate::model::Game;
+use crate::{assets::FavoriteIcon, model::Game};
 use gpui::{
     div, img, linear_color_stop, linear_gradient, point, prelude::*, px, rgb, rgba, App, BoxShadow,
     ObjectFit,
 };
-use gpui_component::{h_flex, v_flex, ActiveTheme as _};
+use gpui_component::{h_flex, v_flex, ActiveTheme as _, Icon};
 
 pub fn tabletop(cx: &App) -> gpui::Hsla {
     cx.theme().background
@@ -136,11 +136,15 @@ pub fn front(
                             }),
                     )
                     .child(
-                        div().flex_shrink_0().child(
-                            game.rating.map_or("✦".to_owned(), |r| {
+                        h_flex()
+                            .flex_shrink_0()
+                            .gap_1()
+                            .child(game.rating.map_or("✦".to_owned(), |r| {
                                 format!("★ {:.1}", f32::from(r) / 2.)
+                            }))
+                            .when(game.favorite, |row| {
+                                row.child(Icon::new(FavoriteIcon).size_3())
                             }),
-                        ),
                     )
                 }),
         )

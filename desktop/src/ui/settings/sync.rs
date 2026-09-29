@@ -899,7 +899,14 @@ fn display_label(display: &LibraryDisplay) -> String {
     } else {
         "Board sorted"
     };
-    format!("Sort by {sort}, {order}, {group}, {board}")
+    let mut label = format!("Sort by {sort}, {order}, {group}, {board}");
+    if !display.grid_title {
+        label.push_str(", Grid without titles");
+    }
+    if !display.grid_metadata {
+        label.push_str(", Grid without details");
+    }
+    label
 }
 
 fn view_label(view: LibraryView) -> &'static str {
@@ -966,10 +973,12 @@ mod tests {
             descending: true,
             group: GroupBy::Status,
             board_manual: false,
+            grid_title: false,
+            grid_metadata: true,
         };
         assert_eq!(
             display_label(&display),
-            "Sort by hours played, descending, grouped by status, Board sorted"
+            "Sort by hours played, descending, grouped by status, Board sorted, Grid without titles"
         );
     }
     use serde_json::json;
