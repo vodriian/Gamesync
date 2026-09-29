@@ -127,6 +127,10 @@ impl Machine {
         round
     }
 
+    fn engine(&mut self) -> &mut SyncEngine {
+        self.engine.as_mut().unwrap()
+    }
+
     fn resolve(&mut self, app_id: u32, field: &str, value: Value, wall_ms: u64) {
         let key = (Target::Steam(app_id), field.to_owned());
         let round = self.engine.as_mut().unwrap().resolve(&key, value, wall_ms);
@@ -414,4 +418,57 @@ fn copy_dir(from: &Path, to: &Path) {
             std::fs::copy(entry.path(), target).unwrap();
         }
     }
+}
+
+#[test]
+fn sealed_keys_sync_without_rewrites_when_encryption_changes() {
+    use gamesync_desktop::sync::secrets::{ExposeSecret as _, SyncKey};
+    let base = tempfile::tempdir().unwrap();
+    let cloud = base.path().join("cloud");
+    std::fs::create_dir(&cloud).unwrap();
+    let mut mac = Machine::new(base.path(), "mac", &[]);
+    let mut linux = Machine::new(base.path(), "linux", &[]);
+    mac.join(&cloud);
+    linux.join(&cloud);
+    let key = SyncKey::generate();
+    let target = Target::Secret("steam_api_key".into());
+    let field = (target.clone(), "value".to_string());
+
+    // Each round encrypts again; only the fingerprint decides equality.
+    let round = |machine: &mut Machine, secret: Option<&str>, ms: u64| {
+        let loaded = machine.load();
+        let mut local = project(
+            &loaded.manifest.definitions,
+            &loaded.games,
+            &machine.settings,
+        );
+        local.targets.insert(target.clone());
+        if let Some(secret) = secret {
+            local
+                .fields
+                .insert(field.clone(), key.seal("steam_api_key", secret).unwrap());
+        }
+        machine.engine().round(&local, ms)
+    };
+    assert_eq!(round(&mut mac, Some("K1"), 1_000).written, 1);
+    assert_eq!(round(&mut mac, Some("K1"), 2_000).written, 0);
+
+    let received = round(&mut linux, None, 3_000);
+    assert_eq!(received.apply.len(), 1);
+    assert_eq!(
+        key.open(&received.apply[0].value).unwrap().expose_secret(),
+        "K1"
+    );
+    linux.engine().confirm(&received.apply, &[0]).unwrap();
+    // Linux now holds K1, encrypted again by its own round: no write back.
+    assert_eq!(round(&mut linux, Some("K1"), 4_000).written, 0);
+
+    // A new key on Linux reaches the Mac.
+    assert_eq!(round(&mut linux, Some("K2"), 5_000).written, 1);
+    let received = round(&mut mac, Some("K1"), 6_000);
+    assert!(received.conflicts.is_empty());
+    assert_eq!(
+        key.open(&received.apply[0].value).unwrap().expose_secret(),
+        "K2"
+    );
 }

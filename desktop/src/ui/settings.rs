@@ -5,7 +5,7 @@ mod sync;
 mod view;
 use crate::model::Library;
 use gamesync_desktop::{
-    credentials::{replace_checked, CredentialStore, SteamCredential},
+    credentials::{replace_checked, CredentialStore, OsCredential},
     library::LibraryStore,
     settings,
     steam::{self, SteamClient},
@@ -82,6 +82,10 @@ pub struct SettingsView {
     /// Stop was pressed once while changes wait to be written.
     stop_confirm: bool,
     sync_busy: bool,
+    passphrase: Entity<InputState>,
+    passphrase_confirm: Entity<InputState>,
+    /// Replace the passphrase inputs at the next render, so no copy stays.
+    clear_passphrase: bool,
 }
 impl EventEmitter<SettingsEvent> for SettingsView {}
 impl SettingsView {
@@ -101,6 +105,9 @@ impl SettingsView {
             sync,
             stop_confirm: false,
             sync_busy: false,
+            passphrase: Self::masked_input("Sync passphrase", window, cx),
+            passphrase_confirm: Self::masked_input("Repeat the passphrase", window, cx),
+            clear_passphrase: false,
             library,
             profile: Self::masked_input("Steam profile link or SteamID64", window, cx),
             key: Self::masked_input("Enter a key to save or replace", window, cx),
@@ -193,6 +200,12 @@ impl SettingsView {
             || self.busy
             || self.sync_busy
     }
+    /// Read the saved Steam key again, for example after sync saved one.
+    pub fn reload_connection(&mut self, cx: &mut Context<Self>) {
+        if let (Some(id), false) = (self.library_id, self.busy) {
+            self.read_connection(id, cx);
+        }
+    }
     pub fn show_sync(&mut self, cx: &mut Context<Self>) {
         self.section = Section::Sync;
         cx.notify();
@@ -220,7 +233,7 @@ impl SettingsView {
             let result = cx
                 .background_spawn(async move {
                     let last = settings::load()?.last_sync.get(&id.to_string()).copied();
-                    let credential = SteamCredential::new(id)?.get();
+                    let credential = OsCredential::steam(id)?.get();
                     Ok::<_, anyhow::Error>((last, credential))
                 })
                 .await;
@@ -263,7 +276,7 @@ impl SettingsView {
             let result = cx
                 .background_spawn(async move {
                     let key = if input.is_empty() {
-                        SteamCredential::new(manifest.library_id)?
+                        OsCredential::steam(manifest.library_id)?
                             .get()?
                             .ok_or_else(|| anyhow::anyhow!("Enter a Steam API key."))?
                     } else {
@@ -324,7 +337,7 @@ impl SettingsView {
                         LibraryStore::open(root)?.bind_steam(manifest.revision_id, &account)?;
                         Ok(())
                     };
-                    replace_checked(&SteamCredential::new(manifest.library_id)?, &key, bind)
+                    replace_checked(&OsCredential::steam(manifest.library_id)?, &key, bind)
                 })
                 .await;
             let _ = this.update(cx, |this, cx| {
@@ -355,7 +368,7 @@ impl SettingsView {
         self.busy = true;
         cx.spawn(async move |this, cx| {
             let result = cx
-                .background_spawn(async move { SteamCredential::new(id)?.remove() })
+                .background_spawn(async move { OsCredential::steam(id)?.remove() })
                 .await;
             let _ = this.update(cx, |this, cx| {
                 this.busy = false;
@@ -395,7 +408,7 @@ impl SettingsView {
         let display_progress = progress.clone();
         cx.spawn(async move |this, cx| {
             let task = cx.background_spawn(async move {
-                let key = SteamCredential::new(manifest.library_id)?
+                let key = OsCredential::steam(manifest.library_id)?
                     .get()?
                     .ok_or_else(|| anyhow::anyhow!("Enter your Steam key in Settings"))?;
                 let result = steam::sync(&root, &account, &key, cancel, |state| {

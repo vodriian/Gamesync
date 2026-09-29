@@ -1,6 +1,6 @@
 //! The Sync section: folder, devices, status, and review of conflicting edits.
 use super::*;
-use crate::sync_runtime::{self, SyncState};
+use crate::sync_runtime::{self, KeyState, SyncState};
 use gamesync_desktop::sync::{Conflict, FieldKey, Target};
 use gpui::{div, px, PathPromptOptions};
 use gpui_component::{
@@ -193,6 +193,138 @@ impl SettingsView {
         cx.notify();
     }
 
+    /// Run a key action with the entered passphrase. Scrypt takes about a
+    /// second, so it runs in the background.
+    fn key_action(
+        &mut self,
+        confirm: bool,
+        action: fn(&sync_runtime::Handle, &str) -> anyhow::Result<()>,
+        done: &'static str,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(handle) = self.sync.read(cx).handle.clone() else {
+            return;
+        };
+        let passphrase = self.passphrase.read(cx).value().to_string();
+        if confirm && passphrase != self.passphrase_confirm.read(cx).value().as_ref() {
+            self.message = "The passphrases are different.".into();
+            cx.notify();
+            return;
+        }
+        if self.sync_busy {
+            return;
+        }
+        self.sync_busy = true;
+        self.message = "Working with the passphrase…".into();
+        cx.spawn(async move |this, cx| {
+            let result = cx
+                .background_spawn(async move { action(&handle, &passphrase) })
+                .await;
+            let _ = this.update(cx, |this, cx| {
+                this.sync_busy = false;
+                match result {
+                    Ok(()) => {
+                        this.clear_passphrase = true;
+                        this.message = done.into();
+                        cx.emit(SettingsEvent::Refresh);
+                    }
+                    Err(error) => this.message = format!("{error:#}"),
+                }
+                cx.notify();
+            });
+        })
+        .detach();
+        cx.notify();
+    }
+
+    fn keys_group(&mut self, keys: KeyState, cx: &mut Context<Self>) -> impl IntoElement {
+        let muted = cx.theme().muted_foreground;
+        let busy = self.sync_busy;
+        let input = |state: &Entity<InputState>| div().w(px(320.)).child(Input::new(state));
+        let group = v_flex()
+            .p_5()
+            .gap_4()
+            .rounded(cx.theme().radius_lg)
+            .bg(cx.theme().secondary)
+            .child(div().font_semibold().child("API keys"));
+        match keys {
+            KeyState::Off => group
+                .child(
+                    "Sync the Steam API key, and later AI keys, encrypted with a passphrase. \
+                     Enter the same passphrase once on each computer.",
+                )
+                .child(input(&self.passphrase))
+                .child(input(&self.passphrase_confirm))
+                .child(
+                    h_flex().child(
+                        Button::new("enable-keys")
+                            .primary()
+                            .label("Turn on key sync")
+                            .disabled(busy)
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                this.key_action(
+                                    true,
+                                    sync_runtime::enable_keys,
+                                    "Key sync is on. Enter the same passphrase on your other computers.",
+                                    cx,
+                                )
+                            })),
+                    ),
+                )
+                .child(div().text_sm().text_color(muted).child(
+                    "Use at least 10 characters. GameSync cannot recover a lost passphrase. \
+                     A computer that already has the keys can set a new one.",
+                )),
+            KeyState::Locked | KeyState::Replaced => group
+                .child(if keys == KeyState::Replaced {
+                    "The sync key changed on another computer. Enter the passphrase again."
+                } else {
+                    "Key sync is on. Enter its passphrase to send and receive keys on this computer."
+                })
+                .child(input(&self.passphrase))
+                .child(
+                    h_flex().child(
+                        Button::new("unlock-keys")
+                            .primary()
+                            .label("Unlock")
+                            .disabled(busy)
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                this.key_action(
+                                    false,
+                                    sync_runtime::unlock_keys,
+                                    "Keys unlocked on this computer.",
+                                    cx,
+                                )
+                            })),
+                    ),
+                ),
+            KeyState::Review => group.child(
+                "Two computers turned on key sync at the same time. \
+                 Choose one in Review changes, then unlock with its passphrase.",
+            ),
+            KeyState::Unlocked => group
+                .child("Keys sync on this computer: Steam API key.")
+                .child(div().font_semibold().child("Change passphrase"))
+                .child(input(&self.passphrase))
+                .child(input(&self.passphrase_confirm))
+                .child(
+                    h_flex().child(
+                        Button::new("change-passphrase")
+                            .label("Change passphrase")
+                            .disabled(busy)
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                this.key_action(
+                                    true,
+                                    sync_runtime::change_passphrase,
+                                    "Passphrase changed. Other computers keep their keys.",
+                                    cx,
+                                )
+                            })),
+                    ),
+                ),
+        }
+    }
+
     fn device_label(&self, device: uuid::Uuid, cx: &gpui::App) -> String {
         let sync = self.sync.read(cx);
         if sync.device == Some(device) {
@@ -230,6 +362,8 @@ impl SettingsView {
                 ),
             Target::Library => "Library".into(),
             Target::Settings => "Settings".into(),
+            Target::Secret(name) if name == "sync_key" => "Key sync".into(),
+            Target::Secret(name) if name == "steam_api_key" => "Steam API key".into(),
             other => other.to_string(),
         }
     }
@@ -274,6 +408,8 @@ impl SettingsView {
             "library_display" => "Sort and grouping",
             "smart_groups_open" => "Open smart groups",
             "store_country" => "Store country",
+            "wrapped" => "Passphrase",
+            "value" => "Value",
             other => other,
         }
         .into()
@@ -282,6 +418,8 @@ impl SettingsView {
     fn value_label(&self, field: &str, value: &Value, cx: &gpui::App) -> String {
         let text = match (field, value) {
             (_, Value::Null) => "Not set".into(),
+            // Encrypted values cannot be shown; the device name tells them apart.
+            (_, Value::Object(object)) if object.contains_key("age") => "Protected value".into(),
             ("personal.rating", Value::Number(n)) => {
                 let stars = n.as_f64().unwrap_or(0.) / 2.;
                 format!("{stars} stars")
@@ -411,6 +549,7 @@ impl SettingsView {
             .collect();
         let conflicts = sync.conflicts.clone();
         let own = sync.device;
+        let keys = sync.keys;
 
         let status_group = group()
             .child(div().font_semibold().child("Folder"))
@@ -488,6 +627,9 @@ impl SettingsView {
         let mut column = v_flex().gap_6().child(status_group);
         if !conflicts.is_empty() {
             column = column.child(self.review_group(&conflicts, own, cx));
+        }
+        if connected {
+            column = column.child(self.keys_group(keys, cx));
         }
         column.child(device_group)
     }

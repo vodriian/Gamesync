@@ -2,11 +2,13 @@
 //! after each disk read, so every round sees fresh local values.
 use anyhow::{Context as _, Result};
 use gamesync_desktop::{
+    credentials::{CredentialStore, OsCredential},
     library_reader::LoadedLibrary,
     settings,
     sync::{
-        apply_library, apply_settings, project, wall_ms, Conflict, DeviceInfo, FieldKey,
-        SyncEngine, Target,
+        apply_library, apply_settings, project,
+        secrets::{ExposeSecret as _, SyncKey, SYNC_KEY, VALUE_FIELD, WRAPPED_FIELD},
+        wall_ms, Apply, Conflict, DeviceInfo, FieldKey, Projection, SyncEngine, Target,
     },
 };
 use serde_json::Value;
@@ -24,6 +26,26 @@ use uuid::Uuid;
 pub struct Handle {
     engine: Mutex<SyncEngine>,
     closed: AtomicBool,
+    /// The sync key on this device, after the passphrase was entered once.
+    key: Mutex<Option<SyncKey>>,
+}
+
+/// The synced Steam Web API key. AI provider keys use the same path later.
+const STEAM_KEY: &str = "steam_api_key";
+
+/// Whether this device can send and receive API keys.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum KeyState {
+    /// No device has turned on key sync.
+    #[default]
+    Off,
+    /// Key sync is on; this device needs the passphrase once.
+    Locked,
+    /// Another device replaced the sync key; enter the passphrase again.
+    Replaced,
+    /// Two devices turned on key sync at the same time; see the review.
+    Review,
+    Unlocked,
 }
 
 /// Sync status shared by the refresh loop, Settings, and the sidebar.
@@ -40,6 +62,7 @@ pub struct SyncState {
     pub last_received: Option<(u64, usize)>,
     pub waiting: usize,
     pub pending: usize,
+    pub keys: KeyState,
     pub issues: Vec<String>,
 }
 
@@ -60,6 +83,7 @@ impl SyncState {
         }
         self.waiting = report.waiting;
         self.pending = report.pending;
+        self.keys = report.keys;
         self.issues = report.issues;
     }
 }
@@ -76,6 +100,9 @@ pub struct Report {
     pub library_changed: bool,
     /// Shared settings written. The caller applies them to the open windows.
     pub settings_changed: bool,
+    /// An API key from another device was saved on this device.
+    pub keys_changed: bool,
+    pub keys: KeyState,
     pub issues: Vec<String>,
 }
 
@@ -118,10 +145,82 @@ pub fn host_name() -> String {
 pub fn open(folder: &Path, create: bool) -> Result<Arc<Handle>> {
     let info = device_info(&settings::load()?);
     let engine = SyncEngine::open(folder, &state_path()?, info, create)?;
+    // A locked credential store leaves keys locked; the rest of sync works.
+    let key = OsCredential::sync_key(engine.sync_id())
+        .and_then(|entry| entry.get())
+        .ok()
+        .flatten()
+        .and_then(|text| SyncKey::from_secret(&text).ok());
     Ok(Arc::new(Handle {
         engine: Mutex::new(engine),
         closed: AtomicBool::new(false),
+        key: Mutex::new(key),
     }))
+}
+
+fn sync_key_target() -> Target {
+    Target::Secret(SYNC_KEY.into())
+}
+
+fn key_state(engine: &SyncEngine, key: Option<&SyncKey>) -> KeyState {
+    match engine.value(&sync_key_target(), WRAPPED_FIELD) {
+        Some(wrapped) => match key {
+            Some(key) if key.matches(wrapped) => KeyState::Unlocked,
+            Some(_) => KeyState::Replaced,
+            None => KeyState::Locked,
+        },
+        None if engine.has_conflict(&sync_key_target(), WRAPPED_FIELD) => KeyState::Review,
+        None => KeyState::Off,
+    }
+}
+
+/// Add sealed API keys to the local values. Only an unlocked device reads
+/// them; otherwise their targets stay absent and received keys wait.
+fn project_keys(local: &mut Projection, key: &SyncKey, library: uuid::Uuid) -> Result<()> {
+    let target = Target::Secret(STEAM_KEY.into());
+    let secret = OsCredential::steam(library)?.get()?;
+    local.targets.insert(target.clone());
+    if let Some(secret) = secret {
+        local
+            .fields
+            .insert((target, VALUE_FIELD.into()), key.seal(STEAM_KEY, &secret)?);
+    }
+    Ok(())
+}
+
+/// Save received API keys. Returns the indexes written.
+fn apply_keys(
+    values: &[Apply],
+    key: Option<&SyncKey>,
+    library: uuid::Uuid,
+    issues: &mut Vec<String>,
+) -> Vec<usize> {
+    let mut done = Vec::new();
+    for (index, item) in values.iter().enumerate() {
+        let Target::Secret(name) = &item.key.0 else {
+            continue;
+        };
+        // The protected sync key is read from the folder, never stored here.
+        if name == SYNC_KEY {
+            done.push(index);
+            continue;
+        }
+        let (Some(key), true) = (key, name == STEAM_KEY) else {
+            continue;
+        };
+        let result = OsCredential::steam(library).and_then(|entry| {
+            if item.value.is_null() {
+                entry.remove()
+            } else {
+                entry.set(key.open(&item.value)?.expose_secret())
+            }
+        });
+        match result {
+            Ok(()) => done.push(index),
+            Err(error) => issues.push(format!("Steam API key: {error:#}")),
+        }
+    }
+    done
 }
 
 fn lock(handle: &Handle) -> Result<std::sync::MutexGuard<'_, SyncEngine>> {
@@ -135,14 +234,28 @@ fn lock(handle: &Handle) -> Result<std::sync::MutexGuard<'_, SyncEngine>> {
 pub fn run_round(handle: &Handle, root: &Path, loaded: &LoadedLibrary) -> Result<Report> {
     let mut engine = lock(handle)?;
     anyhow::ensure!(!handle.closed.load(Ordering::SeqCst), "Sync is stopped");
-    let local = project(
+    let mut local = project(
         &loaded.manifest.definitions,
         &loaded.games,
         &settings::load()?,
     );
+    let key_guard = handle
+        .key
+        .lock()
+        .map_err(|_| anyhow::anyhow!("Sync keys are unavailable. Restart GameSync."))?;
+    let library_id = loaded.manifest.library_id;
+    let mut issues = Vec::new();
+    let unlocked = key_guard
+        .as_ref()
+        .filter(|key| key_state(&engine, Some(key)) == KeyState::Unlocked);
+    if let Some(key) = unlocked {
+        if let Err(error) = project_keys(&mut local, key, library_id) {
+            issues.push(format!("Could not read the Steam API key: {error:#}"));
+        }
+    }
     let at_ms = wall_ms();
     let round = engine.round(&local, at_ms);
-    let mut issues = round.issues.clone();
+    issues.extend(round.issues.iter().cloned());
 
     let library = apply_library(root, &loaded.games, &round.apply);
     issues.extend(library.issues);
@@ -159,7 +272,13 @@ pub fn run_round(handle: &Handle, root: &Path, loaded: &LoadedLibrary) -> Result
             issues.extend(applied.issues);
         }
     }
+    let keys = apply_keys(&round.apply, unlocked, library_id, &mut issues);
+    let keys_changed = keys
+        .iter()
+        .any(|i| round.apply[*i].key.0 != sync_key_target());
+    done.extend(keys);
     engine.confirm(&round.apply, &done)?;
+    let key_state = key_state(&engine, key_guard.as_ref());
     let devices = match engine.devices() {
         Ok(found) => found.devices,
         Err(_) => Vec::new(),
@@ -174,8 +293,75 @@ pub fn run_round(handle: &Handle, root: &Path, loaded: &LoadedLibrary) -> Result
         pending: library.pending,
         library_changed,
         settings_changed,
+        keys_changed,
+        keys: key_state,
         issues,
     })
+}
+
+/// Turn on key sync with a new sync key. Scrypt runs before the engine lock.
+pub fn enable_keys(handle: &Handle, passphrase: &str) -> Result<()> {
+    {
+        let engine = lock(handle)?;
+        anyhow::ensure!(
+            key_state(&engine, None) == KeyState::Off,
+            "Key sync is already on. Enter its passphrase to unlock this device."
+        );
+    }
+    let key = SyncKey::generate();
+    let wrapped = key.wrap(passphrase)?;
+    let mut engine = lock(handle)?;
+    // Save the key on this device first: a folder value that no device can
+    // open would lock every device out.
+    OsCredential::sync_key(engine.sync_id())?.set(key.to_secret().expose_secret())?;
+    engine.resolve(
+        &(sync_key_target(), WRAPPED_FIELD.into()),
+        wrapped,
+        wall_ms(),
+    );
+    *handle
+        .key
+        .lock()
+        .map_err(|_| anyhow::anyhow!("Sync keys are unavailable"))? = Some(key);
+    Ok(())
+}
+
+/// Open the sync key from the folder with the passphrase.
+pub fn unlock_keys(handle: &Handle, passphrase: &str) -> Result<()> {
+    let (wrapped, sync_id) = {
+        let engine = lock(handle)?;
+        let wrapped = engine
+            .value(&sync_key_target(), WRAPPED_FIELD)
+            .cloned()
+            .context("No device has turned on key sync yet")?;
+        (wrapped, engine.sync_id())
+    };
+    let key = SyncKey::unwrap(&wrapped, passphrase)?;
+    OsCredential::sync_key(sync_id)?.set(key.to_secret().expose_secret())?;
+    *handle
+        .key
+        .lock()
+        .map_err(|_| anyhow::anyhow!("Sync keys are unavailable"))? = Some(key);
+    Ok(())
+}
+
+/// Protect the same sync key with a new passphrase. API keys stay as they are.
+pub fn change_passphrase(handle: &Handle, passphrase: &str) -> Result<()> {
+    let wrapped = {
+        let key = handle
+            .key
+            .lock()
+            .map_err(|_| anyhow::anyhow!("Sync keys are unavailable"))?;
+        key.as_ref()
+            .context("Unlock key sync on this device first")?
+            .wrap(passphrase)?
+    };
+    lock(handle)?.resolve(
+        &(sync_key_target(), WRAPPED_FIELD.into()),
+        wrapped,
+        wall_ms(),
+    );
+    Ok(())
 }
 
 /// Write the user's choices. The next round applies them locally.
@@ -201,6 +387,8 @@ pub fn stop(handle: Option<&Handle>) -> Result<()> {
         Some(handle) => {
             let guard = lock(handle)?;
             handle.closed.store(true, Ordering::SeqCst);
+            // Joining again asks for the passphrase again.
+            OsCredential::sync_key(guard.sync_id())?.remove()?;
             Some(guard)
         }
         None => None,

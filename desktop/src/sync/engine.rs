@@ -13,6 +13,7 @@
 //! The first round after joining has no known values. Then a value set on only
 //! one side is taken, and different values become conflicts for review.
 
+use super::secrets::same_value;
 use super::{
     apply::Apply, project::Projection, Change, ChangeSet, Cursor, DeviceInfo, Devices,
     DuplicateDevice, FieldKey, FieldState, Insert, SyncFolder, Target, MAX_BATCH_CHANGES,
@@ -165,8 +166,24 @@ impl SyncEngine {
         self.device
     }
 
+    pub fn sync_id(&self) -> Uuid {
+        self.folder.sync_id()
+    }
+
     pub fn folder(&self) -> &Path {
         self.folder.root()
+    }
+
+    /// The merged folder value of one field, if it is not in conflict.
+    pub fn value(&self, target: &Target, field: &str) -> Option<&Value> {
+        match self.set.state(target, field)? {
+            FieldState::Value(change) => Some(&change.value),
+            FieldState::Conflict(_) => None,
+        }
+    }
+
+    pub fn has_conflict(&self, target: &Target, field: &str) -> bool {
+        matches!(self.set.state(target, field), Some(FieldState::Conflict(_)))
     }
 
     pub fn devices(&self) -> Result<Devices> {
@@ -216,7 +233,7 @@ impl SyncEngine {
                 // Not here now: offer the value, which waits until the target
                 // is present. Never read absence as a cleared value.
                 if let Some(FieldState::Value(change)) = state {
-                    if change.value != known {
+                    if !same_value(&change.value, &known) {
                         round.apply.push(Apply {
                             key,
                             value: change.value.clone(),
@@ -228,7 +245,7 @@ impl SyncEngine {
             }
             let here = local.fields.get(&key).cloned().unwrap_or(Value::Null);
             match state {
-                Some(FieldState::Conflict(heads)) if here == known => {
+                Some(FieldState::Conflict(heads)) if same_value(&here, &known) => {
                     round.conflicts.push(Conflict {
                         key,
                         local: here,
@@ -240,8 +257,8 @@ impl SyncEngine {
                     let base = heads.iter().map(|c| c.id).collect();
                     edits.push((key, here, base));
                 }
-                Some(FieldState::Value(change)) if here == known => {
-                    if change.value != known {
+                Some(FieldState::Value(change)) if same_value(&here, &known) => {
+                    if !same_value(&change.value, &known) {
                         round.apply.push(Apply {
                             key,
                             value: change.value.clone(),
@@ -253,12 +270,12 @@ impl SyncEngine {
                         changed = true;
                     }
                 }
-                Some(FieldState::Value(change)) if change.value == here => {
+                Some(FieldState::Value(change)) if same_value(&change.value, &here) => {
                     let id = change.id;
                     self.known.insert(key, (here, vec![id]));
                     changed = true;
                 }
-                _ if here == known => {}
+                _ if same_value(&here, &known) => {}
                 _ => edits.push((key, here, known_ids)),
             }
         }
@@ -300,8 +317,10 @@ impl SyncEngine {
         self.save()
     }
 
-    /// Resolve a conflict with the value the user chose. The next round
-    /// applies it locally if it differs from the local value.
+    /// Write a value the user chose: a conflict resolution, or a value that
+    /// is not read from local data, such as the protected sync key. It
+    /// replaces every current candidate. The next round applies it locally
+    /// if it differs from the local value.
     pub fn resolve(&mut self, key: &FieldKey, value: Value, wall_ms: u64) -> Round {
         let change = self.set.edit(wall_ms, key.0.clone(), &key.1, value);
         self.outbox.push(change);

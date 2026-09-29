@@ -12,6 +12,7 @@ impl GameSyncApp {
         cx: &mut Context<Self>,
     ) -> Option<Appearance> {
         let mut settings_changed = false;
+        let mut keys_changed = false;
         self.sync.update(cx, |sync, cx| {
             // The user stopped sync while this round ran.
             if !sync.enabled() {
@@ -23,12 +24,18 @@ impl GameSyncApp {
             match outcome.report {
                 Ok(report) => {
                     settings_changed = report.settings_changed;
+                    keys_changed = report.keys_changed;
                     sync.apply(report);
                 }
                 Err(error) => sync.issues = vec![error],
             }
             cx.notify();
         });
+        if keys_changed {
+            if let Some(view) = &self.settings_view {
+                view.update(cx, |view, cx| view.reload_connection(cx));
+            }
+        }
         if settings_changed {
             self.reload_shared_settings(cx)
         } else {

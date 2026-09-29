@@ -14,6 +14,11 @@ impl Render for SettingsView {
             self.clear_key = false;
             self.key = Self::masked_input("Saved securely · enter a replacement", window, cx);
         }
+        if self.clear_passphrase {
+            self.clear_passphrase = false;
+            self.passphrase = Self::masked_input("Sync passphrase", window, cx);
+            self.passphrase_confirm = Self::masked_input("Repeat the passphrase", window, cx);
+        }
         let source = self.library.read(cx).source.clone();
         let id = source.as_ref().map(|(_, m)| m.library_id);
         if id != self.library_id && !self.busy {

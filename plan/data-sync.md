@@ -1,8 +1,8 @@
 # Data sync across devices
 
-Status: approved direction, September 29. Steps 1 to 4 implemented: the
+Status: approved direction, September 29. Steps 1 to 5 implemented: the
 engine in `desktop/src/sync/`, the app connection in `desktop/src/sync_runtime.rs`,
-and the Settings section. Next: step 5, encrypted keys. Branch: `data-sync-mode`.
+the Settings section, and encrypted keys. Next: step 6, the live check. Branch: `data-sync-mode`.
 
 ## Goal
 
@@ -192,22 +192,36 @@ A change sets one value:
 
 ## Keys and encryption
 
-- API keys are changes with target `secret:<name>`, for example
-  `secret:steam_api_key` and `secret:ai.openai`. Their value is encrypted.
-  Target and field names are not secret; the key value is.
-- Encryption uses the `age` format with a passphrase (scrypt key derivation).
-  This is a standard format with an audited Rust crate and a command-line tool
-  for manual recovery. GameSync does not use custom cryptography.
-- `sync.json` stores a small encrypted check value. A wrong passphrase is
-  found at once and changes nothing.
-- The user enters the passphrase once on each device. GameSync saves it in the
-  OS credential store (macOS Keychain, Linux Secret Service, later Windows
-  Credential Manager). Received keys also go to the OS credential store, never
-  to a plain file.
-- A lost passphrase: personal data and settings still sync. Keys cannot be
-  read. The user enters keys again and sets a new passphrase; this makes new
-  encrypted values and a new check value.
-- Changing the passphrase encrypts all keys again in new changes.
+- A random **sync key** (an `age` X25519 identity) encrypts each API key.
+  The passphrase encrypts only the sync key (age scrypt), because passphrase
+  encryption is slow on purpose and rounds run every 10 seconds.
+- The protected sync key is the synced value `secret:sync_key`, field
+  `wrapped`: the age text and the public recipient. A wrong passphrase fails
+  to open it and changes nothing. The recipient shows a device that its saved
+  sync key was replaced; it asks for the passphrase again.
+- API keys are changes with target `secret:<name>`, field `value`:
+  `secret:steam_api_key` now, AI provider keys later. The value is the age
+  text and a fingerprint: a SHA-256 hash of the sync key, the name, and the
+  API key. Encryption gives new bytes each round, so the engine compares
+  fingerprints. Without the sync key the fingerprint tells nothing.
+- The user enters the passphrase once on each device. The device saves the
+  **sync key**, not the passphrase, in the OS credential store. Received API
+  keys go to the same store, never to a file. Stop syncing removes the saved
+  sync key.
+- A device without the sync key does not read or send API keys; received
+  keys wait. Removing a key on an unlocked device removes it on the others.
+- Changing the passphrase protects the same sync key again. API keys and
+  other devices are not affected.
+- A lost passphrase: devices that still have the sync key keep working and
+  can set a new passphrase. If no device has it, API keys must be entered
+  again. A reset control for that case is deferred.
+- Two devices that turn on key sync at the same time make a conflict on
+  `secret:sync_key`. The review shows it; after the choice, the other device
+  unlocks with the chosen passphrase.
+- Minimum passphrase length: 10 characters. `age` uses its default scrypt
+  work factor.
+- Dependencies: `age` 0.12.1 with `armor`, and `sha2`, which was already in
+  the lock through other crates.
 
 Personal data and settings are not encrypted, by user decision. The cloud
 provider can read notes, tags, and settings.
@@ -279,7 +293,9 @@ A **Sync** section after General, where the Steam connection is:
 - **Review changes** (only when there are conflicts).
 - **This device:** an editable name; the default is the host name.
 - **Devices:** name, platform, and the time of the last written change.
-- Step 5 adds the passphrase and the wrong-passphrase message.
+- **API keys:** turn on key sync with a passphrase (entered twice), unlock
+  with it on other devices, or change it. "The passphrase is wrong." when it
+  does not open the sync key.
 
 ## Provider notes
 
@@ -304,8 +320,9 @@ A **Sync** section after General, where the Steam connection is:
    games, and archive state are deferred until a feature needs them.
 4. **App connection, Settings section, and review:** run rounds in the app,
    the Sync section, conflict review, join review, and conflict marks on cards.
-5. **Encrypted keys:** `age` dependency, passphrase, check value, key changes,
-   and credential store writes. Include the Steam key; AI keys use the same path.
+5. **Encrypted keys:** sync key protected by the passphrase, sealed API keys
+   with keyed fingerprints, credential store writes, and the API keys group.
+   The Steam key now; AI keys use the same path.
 6. **Live check** between macOS and Omarchy on one Dropbox folder and one
    Google Drive folder.
 7. **Windows build:** GPUI Windows backend, `keyring` `windows-native`,

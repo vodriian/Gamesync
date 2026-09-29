@@ -13,6 +13,7 @@ mod engine;
 mod folder;
 mod merge;
 mod project;
+pub mod secrets;
 
 pub use apply::{apply_library, apply_settings, Applied, Apply};
 pub use change::{Change, Target};
