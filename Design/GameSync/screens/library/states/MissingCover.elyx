@@ -1,0 +1,108 @@
+import "tokens/desktop.elyx" as c
+import "resources/images/646570.jpg" as cover646570
+import "resources/images/1145360.jpg" as cover1145360
+import "resources/images/367520.jpg" as cover367520
+import "resources/images/2379780.jpg" as cover2379780
+import "blocks/shell/LibraryShell.elyx" as librarySource
+import "blocks/library/GridTile.elyx" as gridTileSource
+
+export MissingCover = frame : librarySource.Library {
+  doc: "04 · Empty, loading and errors / MissingCover",
+  left: 0px,
+  top: 0px,
+
+  librarySource.Library.panel {
+    librarySource.Library.panel.body {
+      overrides: [insert(content, after = .nil)]
+    }
+  }
+
+  content = frame {
+    left: 0px,
+    top: 0px,
+    width: 970px,
+    layout: {item-gap: 23px, wrap: .true, line-gap: 22px},
+    children: [game0, game1, game2, game3, game4],
+
+    game0 = frame : gridTileSource.GridTile {
+      left: 0px,
+      top: 0px,
+
+      gridTileSource.GridTile.cover {
+        fill[0].color: c.ui.subtle
+      }
+
+      gridTileSource.GridTile.meta {
+        contents: "Playing    ★ 4.5"
+      }
+    }
+
+    game1 = frame : gridTileSource.GridTile {
+      left: 0px,
+      top: 0px,
+
+      gridTileSource.GridTile.cover {
+        fill[0].image.ref: cover646570
+      }
+
+      gridTileSource.GridTile.meta {
+        contents: "Playing    ★ 4.5"
+      }
+
+      gridTileSource.GridTile.title {
+        contents: "Slay the Spire"
+      }
+    }
+
+    game2 = frame : gridTileSource.GridTile {
+      left: 0px,
+      top: 0px,
+
+      gridTileSource.GridTile.cover {
+        fill[0].image.ref: cover1145360
+      }
+
+      gridTileSource.GridTile.meta {
+        contents: "Want to play    ★ 5.0"
+      }
+
+      gridTileSource.GridTile.title {
+        contents: "Hades"
+      }
+    }
+
+    game3 = frame : gridTileSource.GridTile {
+      left: 0px,
+      top: 0px,
+
+      gridTileSource.GridTile.cover {
+        fill[0].image.ref: cover367520
+      }
+
+      gridTileSource.GridTile.meta {
+        contents: "Paused    ★ 4.5"
+      }
+
+      gridTileSource.GridTile.title {
+        contents: "Hollow Knight"
+      }
+    }
+
+    game4 = frame : gridTileSource.GridTile {
+      left: 0px,
+      top: 0px,
+
+      gridTileSource.GridTile.cover {
+        fill[0].image.ref: cover2379780
+      }
+
+      gridTileSource.GridTile.meta {
+        contents: "Playing    ★ 4.5"
+      }
+
+      gridTileSource.GridTile.title {
+        contents: "Balatro"
+      }
+    }
+  }
+}

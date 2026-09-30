@@ -1,0 +1,272 @@
+import "tokens/desktop.elyx" as c
+import "tokens/typography.elyx" as typography
+import "screens/library/states/TableSelection.elyx" as itemTableSelection
+import "screens/library/states/LibraryEmpty.elyx" as itemLibraryEmpty
+import "screens/library/states/SearchEmpty.elyx" as itemSearchEmpty
+import "screens/library/states/LibraryLoading.elyx" as itemLibraryLoading
+import "screens/library/states/LibraryError.elyx" as itemLibraryError
+import "screens/library/states/SearchResults.elyx" as itemSearchResults
+import "screens/library/states/MissingCover.elyx" as itemMissingCover
+import "screens/library/states/LibraryWriteIssue.elyx" as itemLibraryWriteIssue
+import "screens/library/states/BulkPartialFailure.elyx" as itemBulkPartialFailure
+import "screens/library/states/EditNote.elyx" as itemEditNote
+import "screens/library/states/GridKeyboardFocus.elyx" as itemGridKeyboardFocus
+import "screens/library/states/FilteredLibrary.elyx" as itemFilteredLibrary
+import "screens/library/states/GroupedLibrary.elyx" as itemGroupedLibrary
+import "screens/library/states/SidebarCollapsed.elyx" as itemSidebarCollapsed
+import "screens/library/states/TableInlineStatus.elyx" as itemTableInlineStatus
+import "screens/library/states/TableInlineRating.elyx" as itemTableInlineRating
+import "screens/library/states/WishlistPriceLoading.elyx" as itemWishlistPriceLoading
+import "screens/library/states/WishlistPriceUnavailable.elyx" as itemWishlistPriceUnavailable
+
+TableSelectionLabel = text {
+  left: 0px,
+  top: 0px,
+  fill: c.ui.muted,
+  contents: "TableSelection",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+TableSelection = frame : itemTableSelection.TableSelection {
+  left: 0px,
+  top: 40px
+}
+
+LibraryEmptyLabel = text {
+  left: 1400px,
+  top: 0px,
+  fill: c.ui.muted,
+  contents: "LibraryEmpty",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+LibraryEmpty = frame : itemLibraryEmpty.LibraryEmpty {
+  left: 1400px,
+  top: 40px
+}
+
+SearchEmptyLabel = text {
+  left: 2800px,
+  top: 0px,
+  fill: c.ui.muted,
+  contents: "SearchEmpty",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+SearchEmpty = frame : itemSearchEmpty.SearchEmpty {
+  left: 2800px,
+  top: 40px
+}
+
+LibraryLoadingLabel = text {
+  left: 0px,
+  top: 1020px,
+  fill: c.ui.muted,
+  contents: "LibraryLoading",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+LibraryLoading = frame : itemLibraryLoading.LibraryLoading {
+  left: 0px,
+  top: 1060px
+}
+
+LibraryErrorLabel = text {
+  left: 1400px,
+  top: 1020px,
+  fill: c.ui.muted,
+  contents: "LibraryError",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+LibraryError = frame : itemLibraryError.LibraryError {
+  left: 1400px,
+  top: 1060px
+}
+
+SearchResultsLabel = text {
+  left: 2800px,
+  top: 1020px,
+  fill: c.ui.muted,
+  contents: "SearchResults",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+SearchResults = frame : itemSearchResults.SearchResults {
+  left: 2800px,
+  top: 1060px
+}
+
+MissingCoverLabel = text {
+  left: 0px,
+  top: 2040px,
+  fill: c.ui.muted,
+  contents: "MissingCover",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+MissingCover = frame : itemMissingCover.MissingCover {
+  left: 0px,
+  top: 2080px
+}
+
+LibraryWriteIssueLabel = text {
+  left: 1400px,
+  top: 2040px,
+  fill: c.ui.muted,
+  contents: "LibraryWriteIssue",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+LibraryWriteIssue = frame : itemLibraryWriteIssue.LibraryWriteIssue {
+  left: 1400px,
+  top: 2080px
+}
+
+BulkPartialFailureLabel = text {
+  left: 2800px,
+  top: 2040px,
+  fill: c.ui.muted,
+  contents: "BulkPartialFailure",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+BulkPartialFailure = frame : itemBulkPartialFailure.BulkPartialFailure {
+  left: 2800px,
+  top: 2080px
+}
+
+EditNoteLabel = text {
+  left: 0px,
+  top: 3060px,
+  fill: c.ui.muted,
+  contents: "EditNote",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+EditNote = frame : itemEditNote.EditNote {
+  left: 0px,
+  top: 3100px
+}
+
+GridKeyboardFocusLabel = text {
+  left: 1400px,
+  top: 3060px,
+  fill: c.ui.muted,
+  contents: "GridKeyboardFocus",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+GridKeyboardFocus = frame : itemGridKeyboardFocus.GridKeyboardFocus {
+  left: 1400px,
+  top: 3100px
+}
+
+FilteredLibraryLabel = text {
+  left: 2800px,
+  top: 3060px,
+  fill: c.ui.muted,
+  contents: "FilteredLibrary",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+FilteredLibrary = frame : itemFilteredLibrary.FilteredLibrary {
+  left: 2800px,
+  top: 3100px
+}
+
+GroupedLibraryLabel = text {
+  left: 0px,
+  top: 4080px,
+  fill: c.ui.muted,
+  contents: "GroupedLibrary",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+GroupedLibrary = frame : itemGroupedLibrary.GroupedLibrary {
+  left: 0px,
+  top: 4120px
+}
+
+SidebarCollapsedLabel = text {
+  left: 1400px,
+  top: 4080px,
+  fill: c.ui.muted,
+  contents: "SidebarCollapsed",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+SidebarCollapsed = frame : itemSidebarCollapsed.SidebarCollapsed {
+  left: 1400px,
+  top: 4120px
+}
+
+TableInlineStatusLabel = text {
+  left: 2800px,
+  top: 4080px,
+  fill: c.ui.muted,
+  contents: "TableInlineStatus",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+TableInlineStatus = frame : itemTableInlineStatus.TableInlineStatus {
+  left: 2800px,
+  top: 4120px
+}
+
+TableInlineRatingLabel = text {
+  left: 0px,
+  top: 5100px,
+  fill: c.ui.muted,
+  contents: "TableInlineRating",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+TableInlineRating = frame : itemTableInlineRating.TableInlineRating {
+  left: 0px,
+  top: 5140px
+}
+
+WishlistPriceLoadingLabel = text {
+  left: 1400px,
+  top: 5100px,
+  fill: c.ui.muted,
+  contents: "WishlistPriceLoading",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+WishlistPriceLoading = frame : itemWishlistPriceLoading.WishlistPriceLoading {
+  left: 1400px,
+  top: 5140px
+}
+
+WishlistPriceUnavailableLabel = text {
+  left: 2800px,
+  top: 5100px,
+  fill: c.ui.muted,
+  contents: "WishlistPriceUnavailable",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+WishlistPriceUnavailable = frame : itemWishlistPriceUnavailable.WishlistPriceUnavailable {
+  left: 2800px,
+  top: 5140px
+}

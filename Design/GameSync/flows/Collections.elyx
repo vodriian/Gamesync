@@ -1,0 +1,77 @@
+import "tokens/desktop.elyx" as c
+import "tokens/typography.elyx" as typography
+import "screens/library/sections/Collection.elyx" as itemCollection
+import "screens/library/collections/CollectionNew.elyx" as itemCollectionNew
+import "screens/library/collections/CollectionRename.elyx" as itemCollectionRename
+import "screens/library/collections/CollectionContextMenu.elyx" as itemCollectionContextMenu
+import "screens/library/collections/CollectionSaveFailed.elyx" as itemCollectionSaveFailed
+
+CollectionLabel = text {
+  left: 0px,
+  top: 0px,
+  fill: c.ui.muted,
+  contents: "Collection",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+Collection = frame : itemCollection.Collection {
+  left: 0px,
+  top: 40px
+}
+
+CollectionNewLabel = text {
+  left: 1400px,
+  top: 0px,
+  fill: c.ui.muted,
+  contents: "CollectionNew",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+CollectionNew = frame : itemCollectionNew.CollectionNew {
+  left: 1400px,
+  top: 40px
+}
+
+CollectionRenameLabel = text {
+  left: 2800px,
+  top: 0px,
+  fill: c.ui.muted,
+  contents: "CollectionRename",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+CollectionRename = frame : itemCollectionRename.CollectionRename {
+  left: 2800px,
+  top: 40px
+}
+
+CollectionContextMenuLabel = text {
+  left: 0px,
+  top: 1020px,
+  fill: c.ui.muted,
+  contents: "CollectionContextMenu",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+CollectionContextMenu = frame : itemCollectionContextMenu.CollectionContextMenu {
+  left: 0px,
+  top: 1060px
+}
+
+CollectionSaveFailedLabel = text {
+  left: 1400px,
+  top: 1020px,
+  fill: c.ui.muted,
+  contents: "CollectionSaveFailed",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+CollectionSaveFailed = frame : itemCollectionSaveFailed.CollectionSaveFailed {
+  left: 1400px,
+  top: 1060px
+}

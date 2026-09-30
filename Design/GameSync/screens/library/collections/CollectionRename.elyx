@@ -1,0 +1,128 @@
+import "tokens/desktop.elyx" as c
+import "resources/images/2379780.jpg" as cover2379780
+import "blocks/shell/LibraryShell.elyx" as librarySource
+import "tokens/typography.elyx" as typography
+import "blocks/library/GridTile.elyx" as gridTileSource
+import "controls/Button.elyx" as buttons
+import "controls/TextField.elyx" as fields
+
+export CollectionRename = frame : librarySource.Library {
+  doc: "07 · Collections / CollectionRename",
+  left: 0px,
+  top: 0px,
+
+  librarySource.Library.panel {
+    librarySource.Library.panel.body {
+      overrides: [insert(content, after = .nil)]
+    }
+  }
+
+  librarySource.Library.overlay {
+    overrides: [insert(popover, after = .nil)]
+  }
+
+  content = frame {
+    left: 0px,
+    top: 0px,
+    width: 970px,
+    layout: {item-gap: 23px, wrap: .true, line-gap: 22px},
+    children: [game0, game1],
+
+    game0 = frame : gridTileSource.GridTile {
+      left: 0px,
+      top: 0px,
+
+      gridTileSource.GridTile.meta {
+        contents: "Playing    ★ 4.5"
+      }
+    }
+
+    game1 = frame : gridTileSource.GridTile {
+      left: 0px,
+      top: 0px,
+
+      gridTileSource.GridTile.cover {
+        fill[0].image.ref: cover2379780
+      }
+
+      gridTileSource.GridTile.meta {
+        contents: "Playing    ★ 4.5"
+      }
+
+      gridTileSource.GridTile.title {
+        contents: "Balatro"
+      }
+    }
+  }
+
+  popover = frame {
+    left: 8px,
+    top: 240px,
+    width: 238px,
+    height: 100px,
+    fill: c.ui.chrome,
+    padding: 8px,
+    children: form,
+
+    form = frame {
+      left: 0px,
+      top: 0px,
+      width: 220px,
+      layout: {direction: .column, item-gap: 8px},
+      children: [name, actions],
+
+      name = frame {
+        left: 0px,
+        top: 0px,
+        width: 220px,
+        layout: {direction: .column, item-gap: 10px},
+        children: [label, input],
+
+        label = text {
+          left: 0px,
+          top: 0px,
+          fill: c.ui.text,
+          contents: "Collection",
+          font-size: typography.size.body,
+          font-family: typography.family.interface
+        }
+
+        input = frame : fields.TextField {
+          left: 0px,
+          top: 0px,
+          width: 220px,
+
+          fields.TextField.value {
+            contents: "Cozy evenings"
+          }
+        }
+      }
+
+      actions = frame {
+        left: 0px,
+        top: 0px,
+        width: 220px,
+        layout: {item-gap: 6px},
+        children: [save, cancel],
+
+        save = frame : buttons.Primary {
+          left: 0px,
+          top: 0px,
+
+          buttons.Button.label {
+            contents: "Save"
+          }
+        }
+
+        cancel = frame : buttons.Button {
+          left: 0px,
+          top: 0px,
+
+          buttons.Button.label {
+            contents: "Cancel"
+          }
+        }
+      }
+    }
+  }
+}

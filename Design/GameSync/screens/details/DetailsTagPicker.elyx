@@ -1,0 +1,521 @@
+import "tokens/desktop.elyx" as c
+import "resources/images/413150.jpg" as cover413150
+import "resources/images/646570.jpg" as cover646570
+import "resources/images/1145360.jpg" as cover1145360
+import "resources/images/367520.jpg" as cover367520
+import "resources/images/2379780.jpg" as cover2379780
+import "resources/images/620.jpg" as cover620
+import "resources/images/632360.jpg" as cover632360
+import "resources/images/1055540.jpg" as cover1055540
+import "resources/images/1091500.jpg" as cover1091500
+import "controls/WindowButtons.elyx" as trafficSource
+import "tokens/radius.elyx" as radius
+import "blocks/menus/Menu.elyx" as menuSource
+import "blocks/shell/FocusedShell.elyx" as focusedSource
+import "controls/Button.elyx" as buttons
+import "tokens/typography.elyx" as typography
+
+export DetailsTagPicker = frame : focusedSource.Focused {
+  doc: "08 · Focused card / DetailsTagPicker",
+  left: 0px,
+  top: 0px,
+
+  focusedSource.Focused.body {
+    overrides: [insert(content, after = .nil)]
+  }
+
+  content = frame {
+    left: 0px,
+    top: 0px,
+    width: 1280px,
+    height: 900px,
+    children: [chrome, panel, card, flip, filmstrip, popover],
+
+    chrome = frame {
+      left: 0px,
+      top: 0px,
+      width: 1280px,
+      height: 900px,
+      fill: c.ui.chrome,
+      children: traffic,
+
+      traffic = frame : trafficSource.Traffic {
+        left: 16px,
+        top: 16px
+      }
+    }
+
+    panel = frame {
+      left: 8px,
+      top: 42px,
+      width: 1264px,
+      height: 850px,
+      fill: c.ui.surface,
+      border: c.ui.border,
+      corner-radius: radius.corner.panel,
+      children: [back, navigation],
+
+      back = text {
+        left: 40px,
+        top: 25px,
+        fill: c.ui.text,
+        contents: "←  Back to library",
+        font-size: typography.size.title,
+        font-family: typography.family.interface
+      }
+
+      navigation = text {
+        left: 1130px,
+        top: 22px,
+        fill: c.ui.text,
+        contents: "‹     ›",
+        font-size: 19,
+        font-family: typography.family.interface
+      }
+    }
+
+    card = frame {
+      left: 420px,
+      top: 135px,
+      width: 440px,
+      height: 574px,
+      layout: {direction: .column, item-gap: 13px},
+      fill: c.ui.surface,
+      border: c.ui.border,
+      shadow: {
+        drop-shadow: {
+          color: rgb(0%, 0%, 0%, 12.549%),
+          offset: point(0px, 14px),
+          blur-radius: 22px
+        }
+      },
+      corner-radius: 16px,
+      padding: 16px,
+      children: [
+        eyebrow,
+        title,
+        hours,
+        description,
+        genres,
+        statusLabel,
+        status,
+        ratingGroup,
+        collectionsLabel,
+        collection,
+        tagsLabel,
+        tags,
+        notes,
+        feedback
+      ],
+
+      eyebrow = text {
+        left: 0px,
+        top: 0px,
+        fill: c.ui.muted,
+        contents: "GameSync / Card details                         ...",
+        font-size: typography.size.caption,
+        font-family: typography.family.interface
+      }
+
+      title = text {
+        left: 0px,
+        top: 0px,
+        fill: c.ui.text,
+        contents: "Stardew Valley",
+        font-size: typography.size.heading,
+        font-family: typography.family.interface,
+        font-style: "Bold"
+      }
+
+      hours = text {
+        left: 0px,
+        top: 0px,
+        width: 408px,
+        fill: c.ui.muted,
+        contents: "70.0 hours played",
+        font-size: typography.size.caption,
+        font-family: typography.family.interface
+      }
+
+      description = text {
+        left: 0px,
+        top: 0px,
+        width: 408px,
+        fill: c.ui.text,
+        contents: "Build a farm, meet your neighbors, and take each day at your own pace.",
+        font-size: typography.size.body,
+        font-family: typography.family.interface
+      }
+
+      genres = text {
+        left: 0px,
+        top: 0px,
+        fill: c.ui.text,
+        contents: "Indie    RPG    Simulation",
+        font-size: typography.size.caption,
+        font-family: typography.family.interface
+      }
+
+      statusLabel = text {
+        left: 0px,
+        top: 0px,
+        fill: c.ui.muted,
+        contents: "Status",
+        font-size: typography.size.caption,
+        font-family: typography.family.interface
+      }
+
+      status = frame : buttons.Button {
+        left: 0px,
+        top: 0px,
+        width: 408px,
+
+        buttons.Button.label {
+          contents: "Playing"
+        }
+      }
+
+      ratingGroup = frame {
+        left: 0px,
+        top: 0px,
+        width: 408px,
+        layout: {item-gap: 12px},
+        children: [rating, favorite],
+
+        rating = frame {
+          left: 0px,
+          top: 0px,
+          width: 190px,
+          layout: {direction: .column, item-gap: 6px},
+          children: [label, stars],
+
+          label = text {
+            left: 0px,
+            top: 0px,
+            fill: c.ui.muted,
+            contents: "Your rating",
+            font-size: typography.size.caption,
+            font-family: typography.family.interface
+          }
+
+          stars = text {
+            left: 0px,
+            top: 0px,
+            fill: c.ui.text,
+            contents: "★ ★ ★ ★ ☆",
+            font-size: 24,
+            font-family: typography.family.interface
+          }
+        }
+
+        favorite = frame {
+          left: 0px,
+          top: 0px,
+          width: 150px,
+          layout: {direction: .column, item-gap: 6px},
+          children: [label, heart],
+
+          label = text {
+            left: 0px,
+            top: 0px,
+            fill: c.ui.muted,
+            contents: "Favorite",
+            font-size: typography.size.caption,
+            font-family: typography.family.interface
+          }
+
+          heart = text {
+            left: 0px,
+            top: 0px,
+            fill: c.ui.text,
+            contents: "♥",
+            font-size: 24,
+            font-family: typography.family.interface
+          }
+        }
+      }
+
+      collectionsLabel = text {
+        left: 0px,
+        top: 0px,
+        fill: c.ui.muted,
+        contents: "Collections",
+        font-size: typography.size.caption,
+        font-family: typography.family.interface
+      }
+
+      collection = frame : buttons.Button {
+        left: 0px,
+        top: 0px,
+
+        buttons.Button.label {
+          contents: "Cozy evenings"
+        }
+      }
+
+      tagsLabel = text {
+        left: 0px,
+        top: 0px,
+        fill: c.ui.muted,
+        contents: "Tags",
+        font-size: typography.size.caption,
+        font-family: typography.family.interface
+      }
+
+      tags = text {
+        left: 0px,
+        top: 0px,
+        fill: c.ui.text,
+        contents: "Cozy ×     Farming ×     + Add tag",
+        font-size: typography.size.caption,
+        font-family: typography.family.interface
+      }
+
+      notes = frame {
+        left: 0px,
+        top: 0px,
+        width: 408px,
+        layout: {direction: .column, item-gap: 10px},
+        children: [label, input],
+
+        label = text {
+          left: 0px,
+          top: 0px,
+          fill: c.ui.muted,
+          contents: "Notes",
+          font-size: typography.size.caption,
+          font-family: typography.family.interface
+        }
+
+        input = frame {
+          left: 0px,
+          top: 0px,
+          width: 408px,
+          height: 74px,
+          fill: c.ui.surface,
+          border: c.ui.border,
+          corner-radius: radius.corner.control
+        }
+      }
+
+      feedback = text {
+        left: 0px,
+        top: 0px,
+        width: 408px,
+        fill: c.ui.muted,
+        contents: "",
+        font-size: typography.size.caption,
+        font-family: typography.family.interface
+      }
+    }
+
+    flip = text {
+      left: 582px,
+      top: 738px,
+      fill: c.ui.text,
+      contents: "Front     Details",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    filmstrip = frame {
+      left: 9px,
+      top: 799px,
+      width: 1262px,
+      height: 92px,
+      layout: {item-gap: 6px},
+      fill: c.ui.chrome,
+      padding: 8px,
+      children: [game0, game1, game2, game3, game4, game5, game6, game7, game8],
+
+      game0 = frame {
+        left: 0px,
+        top: 0px,
+        width: 72px,
+        height: 78px,
+        fill: {image: {ref: cover413150}},
+        corner-radius: 7px
+      }
+
+      game1 = frame {
+        left: 0px,
+        top: 0px,
+        width: 72px,
+        height: 78px,
+        fill: {image: {ref: cover646570}},
+        corner-radius: 7px
+      }
+
+      game2 = frame {
+        left: 0px,
+        top: 0px,
+        width: 72px,
+        height: 78px,
+        fill: {image: {ref: cover1145360}},
+        corner-radius: 7px
+      }
+
+      game3 = frame {
+        left: 0px,
+        top: 0px,
+        width: 72px,
+        height: 78px,
+        fill: {image: {ref: cover367520}},
+        corner-radius: 7px
+      }
+
+      game4 = frame {
+        left: 0px,
+        top: 0px,
+        width: 72px,
+        height: 78px,
+        fill: {image: {ref: cover2379780}},
+        corner-radius: 7px
+      }
+
+      game5 = frame {
+        left: 0px,
+        top: 0px,
+        width: 72px,
+        height: 78px,
+        fill: {image: {ref: cover620}},
+        corner-radius: 7px
+      }
+
+      game6 = frame {
+        left: 0px,
+        top: 0px,
+        width: 72px,
+        height: 78px,
+        fill: {image: {ref: cover632360}},
+        corner-radius: 7px
+      }
+
+      game7 = frame {
+        left: 0px,
+        top: 0px,
+        width: 72px,
+        height: 78px,
+        fill: {image: {ref: cover1055540}},
+        corner-radius: 7px
+      }
+
+      game8 = frame {
+        left: 0px,
+        top: 0px,
+        width: 72px,
+        height: 78px,
+        fill: {image: {ref: cover1091500}},
+        corner-radius: 7px
+      }
+    }
+
+    popover = frame : menuSource.Menu {
+      left: 650px,
+      top: 360px,
+      width: 218px,
+      overrides: [
+        insert(item0, after = .nil),
+        insert(item1, after = item0),
+        insert(item2, after = item1),
+        insert(item3, after = item2),
+        insert(item4, after = item3)
+      ],
+
+      item0 = frame {
+        left: 0px,
+        top: 0px,
+        width: 206px,
+        height: 28px,
+        layout: {align-items: .center},
+        padding: [5px, 7px],
+        children: label,
+
+        label = text {
+          left: 0px,
+          top: 0px,
+          fill: c.ui.text,
+          contents: "Search or create a tag",
+          font-size: typography.size.body,
+          font-family: typography.family.interface
+        }
+      }
+
+      item1 = frame {
+        left: 0px,
+        top: 0px,
+        width: 206px,
+        height: 28px,
+        layout: {align-items: .center},
+        padding: [5px, 7px],
+        children: label,
+
+        label = text {
+          left: 0px,
+          top: 0px,
+          fill: c.ui.text,
+          contents: "Cozy",
+          font-size: typography.size.body,
+          font-family: typography.family.interface
+        }
+      }
+
+      item2 = frame {
+        left: 0px,
+        top: 0px,
+        width: 206px,
+        height: 28px,
+        layout: {align-items: .center},
+        padding: [5px, 7px],
+        children: label,
+
+        label = text {
+          left: 0px,
+          top: 0px,
+          fill: c.ui.text,
+          contents: "Co-op",
+          font-size: typography.size.body,
+          font-family: typography.family.interface
+        }
+      }
+
+      item3 = frame {
+        left: 0px,
+        top: 0px,
+        width: 206px,
+        height: 28px,
+        layout: {align-items: .center},
+        padding: [5px, 7px],
+        children: label,
+
+        label = text {
+          left: 0px,
+          top: 0px,
+          fill: c.ui.text,
+          contents: "Puzzle",
+          font-size: typography.size.body,
+          font-family: typography.family.interface
+        }
+      }
+
+      item4 = frame {
+        left: 0px,
+        top: 0px,
+        width: 206px,
+        height: 28px,
+        layout: {align-items: .center},
+        padding: [5px, 7px],
+        children: label,
+
+        label = text {
+          left: 0px,
+          top: 0px,
+          fill: c.ui.text,
+          contents: "Create tag",
+          font-size: typography.size.body,
+          font-family: typography.family.interface
+        }
+      }
+    }
+  }
+}

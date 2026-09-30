@@ -1,0 +1,7 @@
+import "screens/details/CardDetails.elyx" as source
+
+@context(theme="dark")
+export CardDetailsDark = frame : source.CardDetails {
+  left: 0px,
+  top: 0px
+}

@@ -1,0 +1,77 @@
+import "tokens/desktop.elyx" as c
+import "resources/images/646570.jpg" as cover646570
+import "resources/images/2379780.jpg" as cover2379780
+import "blocks/shell/LibraryShell.elyx" as librarySource
+import "blocks/library/GridTile.elyx" as gridTileSource
+
+export FilteredLibrary = frame : librarySource.Library {
+  left: 0px,
+  top: 0px,
+
+  librarySource.Library.panel {
+    librarySource.Library.panel.count {
+      contents: "3 games"
+    }
+
+    librarySource.Library.panel.body {
+      overrides: [insert(content, after = .nil)]
+    }
+
+    librarySource.Library.panel.toolbar {
+      librarySource.Library.panel.toolbar.display {
+        fill[0].color: c.ui.selected
+      }
+    }
+  }
+
+  content = frame {
+    left: 0px,
+    top: 0px,
+    width: 970px,
+    layout: {item-gap: 23px, wrap: .true, line-gap: 22px},
+    children: [game0, game1, game2],
+
+    game0 = frame : gridTileSource.GridTile {
+      left: 0px,
+      top: 0px,
+
+      gridTileSource.GridTile.meta {
+        contents: "Playing    ★ 4.5"
+      }
+    }
+
+    game1 = frame : gridTileSource.GridTile {
+      left: 0px,
+      top: 0px,
+
+      gridTileSource.GridTile.cover {
+        fill[0].image.ref: cover646570
+      }
+
+      gridTileSource.GridTile.meta {
+        contents: "Playing    ★ 4.5"
+      }
+
+      gridTileSource.GridTile.title {
+        contents: "Slay the Spire"
+      }
+    }
+
+    game2 = frame : gridTileSource.GridTile {
+      left: 0px,
+      top: 0px,
+
+      gridTileSource.GridTile.cover {
+        fill[0].image.ref: cover2379780
+      }
+
+      gridTileSource.GridTile.meta {
+        contents: "Playing    ★ 4.5"
+      }
+
+      gridTileSource.GridTile.title {
+        contents: "Balatro"
+      }
+    }
+  }
+}

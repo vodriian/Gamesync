@@ -1,0 +1,125 @@
+import "tokens/desktop.elyx" as c
+import "resources/images/1091500.jpg" as cover1091500
+import "blocks/shell/LibraryShell.elyx" as librarySource
+import "tokens/typography.elyx" as typography
+import "blocks/library/GridTile.elyx" as gridTileSource
+import "blocks/menus/Menu.elyx" as menuSource
+
+export HiddenGames = frame : librarySource.Library {
+  doc: "02 · Library views / HiddenGames",
+  left: 0px,
+  top: 0px,
+
+  librarySource.Library.panel {
+    librarySource.Library.panel.toolbar {
+      librarySource.Library.panel.toolbar.title {
+        contents: "Hidden games"
+      }
+    }
+
+    librarySource.Library.panel.count {
+      contents: "1 game · ⓘ"
+    }
+
+    librarySource.Library.panel.body {
+      overrides: [insert(content, after = .nil)]
+    }
+  }
+
+  librarySource.Library.overlay {
+    overrides: [insert(popover, after = .nil)]
+  }
+
+  content = frame {
+    left: 0px,
+    top: 0px,
+    width: 970px,
+    layout: {item-gap: 23px, wrap: .true, line-gap: 22px},
+    children: game0,
+
+    game0 = frame : gridTileSource.GridTile {
+      left: 0px,
+      top: 0px,
+
+      gridTileSource.GridTile.cover {
+        fill[0].image.ref: cover1091500
+      }
+
+      gridTileSource.GridTile.meta {
+        contents: "Backlog    ★ —"
+      }
+
+      gridTileSource.GridTile.title {
+        contents: "Cyberpunk 2077"
+      }
+    }
+  }
+
+  popover = frame : menuSource.Menu {
+    left: 490px,
+    top: 270px,
+    width: 218px,
+    overrides: [
+      insert(item0, after = .nil),
+      insert(item1, after = item0),
+      insert(item2, after = item1)
+    ],
+
+    item0 = frame {
+      left: 0px,
+      top: 0px,
+      width: 206px,
+      height: 28px,
+      layout: {align-items: .center},
+      padding: [5px, 7px],
+      children: label,
+
+      label = text {
+        left: 0px,
+        top: 0px,
+        fill: c.ui.text,
+        contents: "Unhide",
+        font-size: typography.size.body,
+        font-family: typography.family.interface
+      }
+    }
+
+    item1 = frame {
+      left: 0px,
+      top: 0px,
+      width: 206px,
+      height: 28px,
+      layout: {align-items: .center},
+      padding: [5px, 7px],
+      children: label,
+
+      label = text {
+        left: 0px,
+        top: 0px,
+        fill: c.ui.text,
+        contents: "Status                       ›",
+        font-size: typography.size.body,
+        font-family: typography.family.interface
+      }
+    }
+
+    item2 = frame {
+      left: 0px,
+      top: 0px,
+      width: 206px,
+      height: 28px,
+      layout: {align-items: .center},
+      padding: [5px, 7px],
+      children: label,
+
+      label = text {
+        left: 0px,
+        top: 0px,
+        fill: c.ui.text,
+        contents: "Collections                ›",
+        font-size: typography.size.body,
+        font-family: typography.family.interface
+      }
+    }
+  }
+}

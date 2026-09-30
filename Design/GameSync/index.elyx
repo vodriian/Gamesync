@@ -1,0 +1,75 @@
+import "tokens/desktop.elyx" as c
+import "blocks/library/PhysicalCard.elyx" as physicalCardSource
+import "tokens/typography.elyx" as typography
+import "controls/Button.elyx" as buttons
+import "controls/TextField.elyx" as fields
+import "screens/Desktop.elyx" as mainScreen
+import "screens/settings/general/SettingsGeneral.elyx" as settingsScreen
+
+intro = text {
+  left: 0px,
+  top: 0px,
+  fill: c.ui.text,
+  contents: "GameSync · Design workspace",
+  font-size: 32,
+  font-family: typography.family.interface
+}
+
+help = text {
+  left: 0px,
+  top: 54px,
+  fill: c.ui.muted,
+  contents: "Open a gallery for individual states. Use flows for comparisons. Edit shared controls and blocks to improve all instances.",
+  font-size: 16,
+  font-family: typography.family.interface
+}
+
+mainLabel = text {
+  left: 0px,
+  top: 120px,
+  fill: c.ui.text,
+  contents: "Main screen · screens/Desktop.elyx",
+  font-size: 20
+}
+
+main = frame : mainScreen.Desktop {
+  left: 0px,
+  top: 165px
+}
+
+settingsLabel = text {
+  left: 1400px,
+  top: 120px,
+  fill: c.ui.text,
+  contents: "Settings · flows/Settings.elyx",
+  font-size: 20
+}
+
+settingsExample = frame : settingsScreen.SettingsGeneral {
+  left: 1400px,
+  top: 165px
+}
+
+componentsLabel = text {
+  left: 2320px,
+  top: 120px,
+  fill: c.ui.text,
+  contents: "Components · flows/Components.elyx",
+  font-size: 20
+}
+
+cardExample = frame : physicalCardSource.PhysicalCard {
+  left: 2320px,
+  top: 165px
+}
+
+buttonExample = frame : buttons.Button {
+  left: 2640px,
+  top: 165px
+}
+
+fieldExample = frame : fields.TextField {
+  left: 2640px,
+  top: 235px,
+  width: 300px
+}

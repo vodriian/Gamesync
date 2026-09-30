@@ -1,0 +1,17 @@
+import "tokens/desktop.elyx" as base
+
+@context(theme="dark")
+__file__
+
+export darkUi = tokens : base.ui {
+  chrome: rgb(9.8%, 9.8%, 9.8%),
+  surface: rgb(12.549%, 12.549%, 12.549%),
+  text: rgb(90.98%, 90.5882%, 89.41%),
+  muted: rgb(66.6667%, 66.6667%, 64.7059%),
+  border: rgb(21.1765%, 21.1765%, 20%),
+  subtle: rgb(16.47%, 16.47%, 16.0784%),
+  selected: rgb(16.0784%, 24.7059%, 31.37%),
+  accent: rgb(50.1961%, 65.49%, 87.0588%),
+  error: rgb(89.0196%, 55.29%, 50.98%),
+  success: rgb(51.37%, 70.5882%, 58.82%)
+}

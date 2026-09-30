@@ -39,13 +39,16 @@ that a behavior works in GPUI.
 
 ## Structure
 
-Start with the existing `tokens/colors.elyx`. Add folders only when needed:
+Open the [workspace guide](README.md) or `index.elyx`. The main window is
+`screens/Desktop.elyx`; the full atlas is `flows/AllStates.elyx`. Each of the
+90 reference states has its own file, grouped by feature.
 
 - `tokens/`: shared design values.
 - `controls/`: buttons, toggles, text fields, and other small controls.
 - `blocks/`: reusable cards, navigation, toolbars, dialogs, and panels.
-- `screens/`: complete windows and app views.
-- `flows/`: related screens and states that explain a user journey.
+- `screens/`: complete windows and app states, grouped by main, library, details, Settings, review, and appearance.
+- `flows/`: overview canvases that import the canonical screen files.
+- `elyx.collections.json`: folder galleries for browsing designs in the editor.
 - `resources/icons/` and `resources/images/`: local design assets, as configured in `elyx.json`.
 
 ## Working in this project
@@ -57,3 +60,16 @@ Start with the existing `tokens/colors.elyx`. Add folders only when needed:
 - Run Elyx diagnostics and inspect a render after design edits. Report which checks ran and any limits.
 - Verify implemented UI in the native app separately. An Elyx render is a design check.
 - Keep this file current as the project evolves.
+
+## Reuse and compatibility
+
+- Keep imports directed from tokens/assets to controls, blocks, screens, then flows.
+- Use project-root import paths. Edit shared sources for changes that apply everywhere.
+- Keep state-specific changes in the relevant screen file. Overview canvases only arrange instances.
+- Reuse `controls/Button.elyx` and `controls/TextField.elyx` for matching controls.
+- Keep font values in `tokens/typography.elyx` and corner radii in `tokens/radius.elyx`.
+- Preserve explicit cross-file override paths, such as `gridTileSource.GridTile.title`.
+  The installed Preview 14918 cannot resolve some shorthand emitted by the newer global CLI.
+- On this workstation, normalize and render with
+  `/Applications/Elyx Preview.app/Contents/Resources/bin/elyx`.
+  Run full diagnostics after moving files. Compare renders when reorganizing without design changes.

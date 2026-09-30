@@ -1,0 +1,193 @@
+import "tokens/desktop.elyx" as c
+import "blocks/shell/SettingsShell.elyx" as settingsSource
+import "tokens/typography.elyx" as typography
+import "controls/Button.elyx" as buttons
+import "controls/TextField.elyx" as fields
+
+export SettingsGeneral = frame : settingsSource.Settings {
+  left: 0px,
+  top: 0px,
+
+  settingsSource.Settings.body {
+    overrides: [insert(content, after = .nil)]
+  }
+
+  content = frame {
+    left: 0px,
+    top: 0px,
+    width: 562px,
+    layout: {direction: .column, item-gap: 24px},
+    children: [
+      profile,
+      key,
+      keyActions,
+      storage,
+      syncActions,
+      time,
+      country,
+      saveCountry
+    ],
+
+    profile = frame {
+      left: 0px,
+      top: 0px,
+      width: 540px,
+      layout: {direction: .column, item-gap: 10px},
+      children: [label, input],
+
+      label = text {
+        left: 0px,
+        top: 0px,
+        fill: c.ui.text,
+        contents: "Steam profile or ID",
+        font-size: typography.size.body,
+        font-family: typography.family.interface
+      }
+
+      input = frame : fields.TextField {
+        left: 0px,
+        top: 0px,
+        width: 540px,
+
+        fields.TextField.value {
+          contents: "Steam profile link or SteamID64"
+        }
+      }
+    }
+
+    key = frame {
+      left: 0px,
+      top: 0px,
+      width: 540px,
+      layout: {direction: .column, item-gap: 10px},
+      children: [label, input],
+
+      label = text {
+        left: 0px,
+        top: 0px,
+        fill: c.ui.text,
+        contents: "Steam API key",
+        font-size: typography.size.body,
+        font-family: typography.family.interface
+      }
+
+      input = frame : fields.TextField {
+        left: 0px,
+        top: 0px,
+        width: 540px,
+
+        fields.TextField.value {
+          contents: "Enter a key to save or replace"
+        }
+      }
+    }
+
+    keyActions = frame {
+      left: 0px,
+      top: 0px,
+      width: 540px,
+      layout: {item-gap: 12px},
+      children: [test, save],
+
+      test = frame : buttons.Button {
+        left: 0px,
+        top: 0px,
+
+        buttons.Button.label {
+          contents: "Test key"
+        }
+      }
+
+      save = frame : buttons.Primary {
+        left: 0px,
+        top: 0px,
+
+        buttons.Button.label {
+          contents: "Save key"
+        }
+      }
+    }
+
+    storage = text {
+      left: 0px,
+      top: 0px,
+      width: 540px,
+      fill: c.ui.muted,
+      contents: "Saved keys stay in this device’s secure storage, separate from game data.",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    syncActions = frame {
+      left: 0px,
+      top: 0px,
+      width: 540px,
+      layout: {item-gap: 12px},
+      children: [sync, cancel],
+
+      sync = frame : buttons.Primary {
+        left: 0px,
+        top: 0px,
+
+        buttons.Button.label {
+          contents: "Sync now"
+        }
+      }
+
+      cancel = frame : buttons.Button {
+        left: 0px,
+        top: 0px,
+
+        buttons.Button.label {
+          contents: "Cancel sync"
+        }
+      }
+    }
+
+    time = text {
+      left: 0px,
+      top: 0px,
+      width: 540px,
+      fill: c.ui.muted,
+      contents: "No Steam sync time recorded",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    country = frame {
+      left: 0px,
+      top: 0px,
+      width: 220px,
+      layout: {direction: .column, item-gap: 10px},
+      children: [label, input],
+
+      label = text {
+        left: 0px,
+        top: 0px,
+        fill: c.ui.text,
+        contents: "Store country for wishlist prices",
+        font-size: typography.size.body,
+        font-family: typography.family.interface
+      }
+
+      input = frame : fields.TextField {
+        left: 0px,
+        top: 0px,
+        width: 220px,
+
+        fields.TextField.value {
+          contents: "Default"
+        }
+      }
+    }
+
+    saveCountry = frame : buttons.Button {
+      left: 0px,
+      top: 0px,
+
+      buttons.Button.label {
+        contents: "Save country"
+      }
+    }
+  }
+}

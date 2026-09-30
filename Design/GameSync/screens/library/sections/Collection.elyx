@@ -1,0 +1,59 @@
+import "resources/images/2379780.jpg" as cover2379780
+import "blocks/shell/LibraryShell.elyx" as librarySource
+import "blocks/library/GridTile.elyx" as gridTileSource
+
+export Collection = frame : librarySource.Library {
+  doc: "02 · Library views / Collection",
+  left: 0px,
+  top: 0px,
+
+  librarySource.Library.panel {
+    librarySource.Library.panel.toolbar {
+      librarySource.Library.panel.toolbar.title {
+        contents: "Cozy evenings"
+      }
+    }
+
+    librarySource.Library.panel.count {
+      contents: "2 games · ⓘ"
+    }
+
+    librarySource.Library.panel.body {
+      overrides: [insert(content, after = .nil)]
+    }
+  }
+
+  content = frame {
+    left: 0px,
+    top: 0px,
+    width: 970px,
+    layout: {item-gap: 23px, wrap: .true, line-gap: 22px},
+    children: [game0, game1],
+
+    game0 = frame : gridTileSource.GridTile {
+      left: 0px,
+      top: 0px,
+
+      gridTileSource.GridTile.meta {
+        contents: "Playing    ★ 4.5"
+      }
+    }
+
+    game1 = frame : gridTileSource.GridTile {
+      left: 0px,
+      top: 0px,
+
+      gridTileSource.GridTile.cover {
+        fill[0].image.ref: cover2379780
+      }
+
+      gridTileSource.GridTile.meta {
+        contents: "Playing    ★ 4.5"
+      }
+
+      gridTileSource.GridTile.title {
+        contents: "Balatro"
+      }
+    }
+  }
+}
