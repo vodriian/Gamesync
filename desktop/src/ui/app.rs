@@ -584,7 +584,8 @@ impl Render for GameSyncApp {
                             Button::new("library-status")
                                 .ghost()
                                 .small()
-                                .label(format!("{} games · ⓘ", self.library.read(cx).visible.len()))
+                                .label(format!("{} games", self.library.read(cx).visible.len()))
+                                .child(Icon::new(IconName::Info).size_4())
                                 .tooltip(format!(
                                     "Arrow keys to browse · Enter to open\n{}",
                                     sync_status

@@ -139,9 +139,17 @@ pub fn front(
                         h_flex()
                             .flex_shrink_0()
                             .gap_1()
-                            .child(game.rating.map_or("✦".to_owned(), |r| {
-                                format!("★ {:.1}", f32::from(r) / 2.)
-                            }))
+                            .child(
+                                if game.rating.is_some() {
+                                    Icon::new(crate::assets::RatingIcon)
+                                } else {
+                                    Icon::new(gpui_component::IconName::Star)
+                                }
+                                .size_3(),
+                            )
+                            .when_some(game.rating, |row, rating| {
+                                row.child(format!("{:.1}", f32::from(rating) / 2.))
+                            })
                             .when(game.favorite, |row| {
                                 row.child(Icon::new(FavoriteIcon).size_3())
                             }),

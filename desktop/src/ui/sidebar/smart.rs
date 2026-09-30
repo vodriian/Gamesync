@@ -1,7 +1,7 @@
 //! Sidebar smart collections. Values come from `Library::smart`; nothing here writes
 //! library data. Only the expanded groups are saved, in device settings.
 use super::*;
-use gamesync_desktop::smart::SmartKind;
+use gamesync_desktop::smart::{RatingBand, SmartKind};
 use std::collections::BTreeSet;
 
 /// Text groups (genres and tags) show this many values before **Show all**.
@@ -9,6 +9,7 @@ const SHORT_LIST: usize = 12;
 
 pub(super) struct SmartState {
     pub open: bool,
+    tags_open: bool,
     groups_open: BTreeSet<SmartKind>,
     show_all: BTreeSet<SmartKind>,
     save: Option<gpui::Task<()>>,
@@ -21,6 +22,7 @@ impl SmartState {
             .unwrap_or_default();
         Self {
             open: true,
+            tags_open: false,
             groups_open,
             show_all: BTreeSet::new(),
             save: None,
@@ -64,60 +66,138 @@ impl LibrarySidebar {
                 )
                 .into_any_element();
         }
-        for group in groups.into_iter().filter(|group| !group.values.is_empty()) {
-            let kind = group.kind;
-            let open = self.smart.groups_open.contains(&kind);
+        for group in &groups {
+            if group.kind == SmartKind::SteamTag {
+                section = section.child(self.smart_heading(
+                    None,
+                    "Tags",
+                    Some(SidebarIcon::Tags),
+                    self.smart.tags_open,
+                    false,
+                    cx,
+                ));
+                if self.smart.tags_open {
+                    for tags in groups
+                        .iter()
+                        .filter(|g| matches!(g.kind, SmartKind::SteamTag | SmartKind::MyTag))
+                    {
+                        section = section.child(self.smart_group(tags, true, cx));
+                    }
+                }
+            } else if group.kind != SmartKind::MyTag && !group.values.is_empty() {
+                section = section.child(self.smart_group(group, false, cx));
+            }
+        }
+        section.into_any_element()
+    }
+
+    /// Parent Tags only controls visibility; provider and personal scopes stay distinct.
+    fn smart_heading(
+        &self,
+        kind: Option<SmartKind>,
+        label: &'static str,
+        icon: Option<SidebarIcon>,
+        open: bool,
+        nested: bool,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
+        self.row_base(format!("smart-heading-{label}"), false, cx)
+            .pl(px(if nested { 30. } else { 10. }))
+            .gap(px(10.))
+            .child(
+                Icon::new(if open {
+                    IconName::ChevronDown
+                } else {
+                    IconName::ChevronRight
+                })
+                .size(px(12.))
+                .text_color(cx.theme().sidebar_foreground.opacity(0.6)),
+            )
+            .when_some(icon, |row, icon| {
+                row.child(
+                    Icon::new(icon)
+                        .size(px(18.))
+                        .text_color(cx.theme().sidebar_foreground.opacity(0.7)),
+                )
+            })
+            .child(label)
+            .on_click(cx.listener(move |this, _, _, cx| {
+                if let Some(kind) = kind {
+                    this.toggle_group(kind, cx);
+                } else {
+                    this.smart.tags_open = !this.smart.tags_open;
+                    cx.notify();
+                }
+            }))
+    }
+
+    fn smart_group(
+        &self,
+        group: &crate::model::SmartGroup,
+        nested: bool,
+        cx: &mut Context<Self>,
+    ) -> gpui::AnyElement {
+        let kind = group.kind;
+        let open = self.smart.groups_open.contains(&kind);
+        let icon = match kind {
+            SmartKind::Genre => Some(SidebarIcon::Genres),
+            SmartKind::Rating => Some(SidebarIcon::Rating),
+            SmartKind::Playtime => Some(SidebarIcon::Playtime),
+            SmartKind::SteamTag | SmartKind::MyTag => None,
+        };
+        let mut section = v_flex().gap(px(2.)).child(self.smart_heading(
+            Some(kind),
+            kind.label(),
+            icon,
+            open,
+            nested,
+            cx,
+        ));
+        if !open {
+            return section.into_any_element();
+        }
+        let banded = matches!(kind, SmartKind::Rating | SmartKind::Playtime);
+        let all = banded || self.smart.show_all.contains(&kind);
+        let total = group.values.len();
+        let shown = if all { total } else { total.min(SHORT_LIST) };
+        for (rule, count) in group.values.iter().take(shown) {
             section = section.child(
-                Button::new(gpui::SharedString::from(format!("smart-group-{kind:?}")))
-                    .text_color(cx.theme().sidebar_foreground)
-                    .ghost()
-                    .small()
-                    .justify_start()
-                    .ml_2()
-                    .icon(if open {
-                        IconName::ChevronDown
-                    } else {
-                        IconName::ChevronRight
-                    })
-                    .label(kind.label())
-                    .on_click(cx.listener(move |this, _, _, cx| this.toggle_group(kind, cx))),
+                self.scope_row(Scope::Smart(rule.clone()), None, *count, cx)
+                    .pl(px(if nested { 52. } else { 40. }))
+                    .text_color(cx.theme().sidebar_foreground.opacity(0.9)),
             );
-            if !open {
-                continue;
-            }
-            let banded = matches!(kind, SmartKind::Rating | SmartKind::Playtime);
-            let all = banded || self.smart.show_all.contains(&kind);
-            let total = group.values.len();
-            let shown = if all { total } else { total.min(SHORT_LIST) };
-            for (rule, count) in group.values.into_iter().take(shown) {
-                section = section.child(
-                    self.scope_row(Scope::Smart(rule), None, count, cx)
-                        .pl_10()
-                        .text_color(cx.theme().sidebar_foreground.opacity(0.9)),
-                );
-            }
-            if !banded && total > SHORT_LIST {
-                let expanded = self.smart.show_all.contains(&kind);
-                section = section.child(
-                    Button::new(gpui::SharedString::from(format!("smart-more-{kind:?}")))
-                        .text_color(cx.theme().sidebar_foreground.opacity(0.75))
-                        .ghost()
-                        .xsmall()
-                        .ml_8()
-                        .justify_start()
-                        .label(if expanded {
-                            "Show fewer".to_string()
-                        } else {
-                            format!("Show all {total}")
-                        })
-                        .on_click(cx.listener(move |this, _, _, cx| {
-                            if !this.smart.show_all.remove(&kind) {
-                                this.smart.show_all.insert(kind);
-                            }
-                            cx.notify();
-                        })),
-                );
-            }
+        }
+        if total == 0 {
+            section = section.child(
+                div()
+                    .pl(px(52.))
+                    .py_1()
+                    .text_xs()
+                    .text_color(cx.theme().sidebar_foreground.opacity(0.6))
+                    .child("No tags yet"),
+            );
+        }
+        if !banded && total > SHORT_LIST {
+            let expanded = self.smart.show_all.contains(&kind);
+            section = section.child(
+                Button::new(gpui::SharedString::from(format!("smart-more-{kind:?}")))
+                    .text_color(cx.theme().sidebar_foreground.opacity(0.75))
+                    .ghost()
+                    .xsmall()
+                    .ml(px(if nested { 52. } else { 40. }))
+                    .justify_start()
+                    .label(if expanded {
+                        "Show fewer".to_string()
+                    } else {
+                        format!("Show all {total}")
+                    })
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        if !this.smart.show_all.remove(&kind) {
+                            this.smart.show_all.insert(kind);
+                        }
+                        cx.notify();
+                    })),
+            );
         }
         section.into_any_element()
     }
@@ -146,5 +226,35 @@ impl LibrarySidebar {
             }
         }));
         cx.notify();
+    }
+}
+
+/// Retain the existing 1–2 bucket while making its range visible without text stars.
+pub(super) fn rating_label(band: RatingBand) -> gpui::AnyElement {
+    let stars = |filled: usize, size: f32| {
+        h_flex().gap(px(1.)).children((0..5).map(move |index| {
+            if index < filled {
+                Icon::new(crate::assets::RatingIcon)
+            } else {
+                Icon::new(IconName::Star)
+            }
+            .size(px(size))
+        }))
+    };
+    match band {
+        RatingBand::Five => stars(5, 16.).into_any_element(),
+        RatingBand::Four => stars(4, 16.).into_any_element(),
+        RatingBand::Three => stars(3, 16.).into_any_element(),
+        RatingBand::OneToTwo => h_flex()
+            .gap(px(4.))
+            .child(stars(1, 12.))
+            .child("–")
+            .child(stars(2, 12.))
+            .into_any_element(),
+        RatingBand::Unrated => h_flex()
+            .gap(px(6.))
+            .child(stars(0, 12.))
+            .child(div().text_xs().child("Unrated"))
+            .into_any_element(),
     }
 }

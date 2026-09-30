@@ -92,3 +92,27 @@ the same family. The bundled set has no discount-badge icon.
 
 `icons/heart-filled.svg` is Lucide's `heart` icon (ISC license) with a filled
 shape. The bundled set has only the outline heart.
+
+
+## Hugeicons sidebar — 2026-09-30
+
+The user supplied the SVGs in `Design/GameSync/resources/icons-new/`.
+`Sidebar_v2` in `blocks/navigation/Sidebar.elyx` is the visual reference.
+The selected files are copied to `desktop/icons/hugeicons/`. Their stroke
+widths are set to 1.75 per the final user decision. Filled-path outlines and
+solid variants retain their supplied geometry.
+The app uses the Home, game controller, heart, star, folder, settings-04, and
+plus assets in the sidebar. Shared left, right, and down chevron asset paths
+use the supplied rounded chevrons, including component menus and buttons.
+Other app icons still use the existing sources.
+
+The next icon round uses the supplied sidebar-left, dashboard-square-01,
+cards-02, layout-list, kanban, filter-horizontal, search-01, info, layout-bottom,
+more-horizontal-square-01, and arrow-left-02 assets. Settings sections use
+spaceship, cloud-sync, palette, and bot-message-square. Shared IconName paths
+resolve to these app-owned SVGs. Favorite and rating controls use the supplied
+outline/solid heart and star files; half ratings still clip the solid overlay.
+
+Smart collection groups use bookshelf-03, tags, star-square, and time-04 from
+the same supplied icon folder. The disclosure/icon/label hierarchy follows
+the user's Bear screenshot; no Bear source code was used.

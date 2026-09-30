@@ -69,11 +69,7 @@ impl GameSyncApp {
             .w(px(36.))
             .h(px(38.))
             .selected(active)
-            .tooltip(if wishlist {
-                "Sort wishlist"
-            } else {
-                "Filter, sort and group"
-            })
+            .tooltip("View")
             .dropdown_menu(move |menu, window, cx| {
                 let lib = app.read(cx).library.read(cx);
                 let wishlist_sort = lib.wishlist_sort;

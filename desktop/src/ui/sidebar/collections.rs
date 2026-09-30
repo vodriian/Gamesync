@@ -191,7 +191,11 @@ impl LibrarySidebar {
                     },
                 ))
             })
-            .child(self.row(crate::model::Scope::Collection(id), IconName::Folder, cx))
+            .child(self.row(
+                crate::model::Scope::Collection(id),
+                SidebarIcon::Collection,
+                cx,
+            ))
             .context_menu(move |menu, _, _| {
                 let rename = rename.clone();
                 let remove = remove.clone();

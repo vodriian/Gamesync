@@ -61,14 +61,12 @@ impl Render for Filmstrip {
             .relative()
             .h(px(96.))
             .w_full()
-            .px_2()
+            // Reserve equal insets around the fixed 80 px thumbnail viewport.
+            .p_2()
             .flex_shrink_0()
-            .border_t_1()
-            .border_color(cx.theme().border.opacity(0.4))
-            .bg(cx.theme().muted)
             .child(
                 image_cache(self.cache.clone()).size_full().child(
-                    h_flex().id("strip-inner").size_full().child(
+                    h_flex().id("strip-inner").w_full().h(CELL).child(
                         h_virtual_list(
                             cx.entity(),
                             "strip",
@@ -99,17 +97,33 @@ impl Render for Filmstrip {
                                             .rounded(crate::theme::interface_radius(cx, px(4.)))
                                             .cursor_pointer()
                                             .child(
-                                                img(game
-                                                    .cover_path
-                                                    .map(gpui::ImageSource::from)
-                                                    .unwrap_or_else(|| game.cover.into()))
-                                                .size_full()
-                                                .rounded(crate::theme::interface_radius(cx, px(4.)))
-                                                .when(!active, |image| image.opacity(0.55))
-                                                .object_fit(ObjectFit::Cover)
-                                                .with_fallback(|| {
-                                                    div().size_full().child("✦").into_any_element()
-                                                }),
+                                                // Round the cropped square, not the full portrait image.
+                                                gpui::card_layer(
+                                                    super::card::surface_id(game.id, 90),
+                                                    size(CELL, CELL),
+                                                    gpui::CardPose::default(),
+                                                    crate::theme::interface_radius(cx, px(4.)),
+                                                    div().w(CELL).h(CELL).overflow_hidden().child(
+                                                        img(game
+                                                            .cover_path
+                                                            .map(gpui::ImageSource::from)
+                                                            .unwrap_or_else(|| game.cover.into()))
+                                                        .w(CELL)
+                                                        .h(CELL)
+                                                        .rounded(crate::theme::interface_radius(
+                                                            cx,
+                                                            px(4.),
+                                                        ))
+                                                        .when(!active, |image| image.opacity(0.55))
+                                                        .object_fit(ObjectFit::Cover)
+                                                        .with_fallback(|| {
+                                                            div()
+                                                                .size_full()
+                                                                .child("✦")
+                                                                .into_any_element()
+                                                        }),
+                                                    ),
+                                                ),
                                             )
                                             .child(
                                                 div()
