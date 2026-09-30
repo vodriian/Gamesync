@@ -30,8 +30,9 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 - Milestone 2: file records, definitions, folder loading, and a local index are in place. Inspector draft edits, guarded saves, and saved-game conflict review are implemented.
 - Desktop v1 merged to `main` in PR #1 on September 28.
 - Cross-platform view, board, settings, and wishlist fixes merged in PR #3.
-- Working branch: `data-sync-mode` (from `main`) includes [data sync](data-sync.md) steps 1–5, library UI fixes, and the Elyx design workspace.
+- Prior branch: `data-sync-mode` (merged into `main` in PR #4) includes [data sync](data-sync.md) steps 1–5, library UI fixes, and the Elyx design workspace.
 - Initial macOS/Omarchy Dropbox check is logged; full cross-device acceptance remains pending.
+- Working branch: `hugeicons-ui`, created from `data-sync-mode` at `109b367`, starts the sidebar icon update.
 - Use the [Elyx workspace](../Design/GameSync/README.md) as the design source for the next UI improvements.
 - Runtime targets: macOS and Linux. Windows follows after sync works between them.
 - Existing React/Express app: retained as a reference.

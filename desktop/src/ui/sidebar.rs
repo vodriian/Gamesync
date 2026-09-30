@@ -1,6 +1,7 @@
-//! Eagle's sidebar row geometry. Statuses live on the board view; the sidebar
-//! keeps library scopes, collections, and computed smart collections.
+//! Library navigation follows Elyx Sidebar_v2. Statuses stay on the board;
+//! the sidebar keeps scopes, collections, and computed smart collections.
 
+use crate::assets::SidebarIcon;
 use crate::model::{Library, Scope};
 use gpui::{div, prelude::*, px, Entity, Window};
 use gpui_component::{
@@ -68,21 +69,30 @@ impl LibrarySidebar {
         cx.notify();
     }
 
-    fn row(&self, scope: Scope, icon: IconName, cx: &mut Context<Self>) -> impl IntoElement {
+    fn row(&self, scope: Scope, icon: SidebarIcon, cx: &mut Context<Self>) -> impl IntoElement {
         let count = self.library.read(cx).count(&scope);
-        self.scope_row(scope, Some(icon), count, cx)
+        let selected = !self.library.read(cx).home && self.library.read(cx).scope == scope;
+        self.scope_row(scope, Some(Icon::new(icon.selected(selected))), count, cx)
     }
 
     /// Callers pass `count` so smart rows can use cached counts.
     fn scope_row(
         &self,
         scope: Scope,
-        icon: Option<IconName>,
+        icon: Option<Icon>,
         count: usize,
         cx: &mut Context<Self>,
     ) -> gpui::Stateful<gpui::Div> {
         let active = !self.library.read(cx).home && self.library.read(cx).scope == scope;
-        let label = self.library.read(cx).scope_label(&scope);
+        let label = match &scope {
+            Scope::Smart(gamesync_desktop::smart::SmartRule::Rating(band)) => {
+                smart::rating_label(*band)
+            }
+            _ => div()
+                .truncate()
+                .child(self.library.read(cx).scope_label(&scope))
+                .into_any_element(),
+        };
         self.row_base(format!("scope-{scope:?}"), active, cx)
             .when(
                 matches!(scope, Scope::Collection(_)) && !self.busy && self.edit.is_none(),
@@ -100,7 +110,7 @@ impl LibrarySidebar {
                     cx.notify();
                 });
             }))
-            .when_some(icon, |row, icon| row.child(Icon::new(icon).size_4()))
+            .when_some(icon, |row, icon| row.child(icon.size(px(18.))))
             .child(div().flex_1().min_w_0().truncate().child(label))
             .child(div().text_xs().child(count.to_string()))
     }
@@ -114,7 +124,7 @@ impl LibrarySidebar {
                     cx.notify();
                 });
             }))
-            .child(Icon::new(crate::assets::HomeIcon).size_4())
+            .child(Icon::new(SidebarIcon::Home.selected(active)).size(px(18.)))
             .child(div().flex_1().child("Home"))
     }
 
@@ -128,9 +138,9 @@ impl LibrarySidebar {
             .id(gpui::SharedString::from(id))
             .h_8()
             .flex_shrink_0()
-            .px_2()
+            .px(px(10.))
             .py_1()
-            .gap_x_2()
+            .gap_x(px(10.))
             .rounded(cx.theme().radius)
             .text_sm()
             .cursor_pointer()
@@ -164,13 +174,18 @@ impl Render for LibrarySidebar {
                 v_flex()
                     .px_2()
                     .pt_4()
-                    .gap_1()
+                    .gap(px(2.))
                     .child(self.home_row(cx))
-                    .child(self.row(Scope::All, IconName::LayoutDashboard, cx))
-                    .child(self.row(Scope::Favorites, IconName::Heart, cx))
-                    .child(self.row(Scope::Wishlist, IconName::Star, cx))
+                    .child(self.row(Scope::All, SidebarIcon::AllGames, cx))
+                    .child(self.row(Scope::Favorites, SidebarIcon::Favorites, cx))
+                    .child(self.row(Scope::Wishlist, SidebarIcon::Wishlist, cx))
                     .when(self.library.read(cx).show_hidden_games, |column| {
-                        column.child(self.row(Scope::Hidden, IconName::EyeOff, cx))
+                        column.child(self.scope_row(
+                            Scope::Hidden,
+                            Some(Icon::new(IconName::EyeOff)),
+                            self.library.read(cx).count(&Scope::Hidden),
+                            cx,
+                        ))
                     }),
             )
             .child(
@@ -218,7 +233,7 @@ impl Render for LibrarySidebar {
                                     .text_color(cx.theme().sidebar_foreground)
                                     .ghost()
                                     .small()
-                                    .icon(IconName::Plus)
+                                    .icon(SidebarIcon::Plus)
                                     .tooltip("New collection")
                                     .disabled(self.busy || self.edit.is_some())
                                     .on_click(cx.listener(|this, _, window, cx| {
@@ -294,7 +309,8 @@ impl Render for LibrarySidebar {
                     .justify_between()
                     .child(
                         div()
-                            .font_semibold()
+                            .text_sm()
+                            .font_medium()
                             .text_color(cx.theme().sidebar_foreground.opacity(0.6))
                             .child("GameSync"),
                     )
@@ -318,7 +334,7 @@ impl Render for LibrarySidebar {
                             .text_color(cx.theme().sidebar_foreground)
                             .ghost()
                             .small()
-                            .icon(IconName::Settings)
+                            .child(Icon::new(SidebarIcon::Settings).size(px(18.)))
                             .tooltip("Settings")
                             .on_click(|_, window, cx| {
                                 window.dispatch_action(Box::new(crate::OpenSettings), cx)

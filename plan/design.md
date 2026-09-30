@@ -20,6 +20,13 @@ verification limits. Use Elyx as the design source for the next UI work:
 replace all UI icons, polish cards, and polish Settings. Keep accepted product
 decisions in this plan.
 
+The `hugeicons-ui` branch implements the sidebar from Elyx `Sidebar_v2`:
+18 px navigation and Settings icons, 10 px icon-to-label spacing, and a
+14 px medium footer wordmark. Main navigation rows have a 2 px gap.
+Use a 1.75 stroke width for stroked Hugeicons, including the plus and shared
+chevrons. Filled-path outlines and solid variants keep their supplied shapes.
+Selected collections use the open `folder-03` icon.
+
 The September 21 card references replace the inspector with a focused card.
 Keep the useful left navigation sidebar while browsing. Treat games as physical cards: artwork and title on the front, personal
 and provider details on the back. Use Cards, Grid, Table, and Board presentations.
@@ -127,3 +134,9 @@ geometry and appearance. It replaces the old palette selection and KDE overrides
 Keep the sidebar on solid chrome and the toolbar inside the rounded content panel.
 Use semantic native tokens for content and chrome; Vivid must retain separate
 foreground colors for each surface.
+
+For icon iterations, launch a temporary build with `--demo` and a separate
+profile. Do not open the personal library or require repeated Keychain prompts.
+
+Sidebar Home uses `home-07`. Home, All games, Favorites, and Wishlist use
+the supplied solid variants when selected and outlined 1.75-stroke icons otherwise.

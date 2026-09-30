@@ -1,4 +1,4 @@
-//! Cover fixtures and the same component icon source used by Eagle.
+//! Bundled covers and app icons, with gpui-component as the fallback source.
 use gpui::{AssetSource, Result, SharedString};
 use std::borrow::Cow;
 const COVERS: &[(&str, &[u8])] = &[
@@ -51,16 +51,156 @@ const COVERS: &[(&str, &[u8])] = &[
         include_bytes!("../fixtures/covers/990080.jpg"),
     ),
 ];
-/// Lucide `square-kanban` (ISC), the icon set gpui-component already bundles.
+/// App-owned SVGs. Sidebar Hugeicons use the chosen 1.75 stroke width.
 const ICONS: &[(&str, &[u8])] = &[
     (
-        "icons/square-kanban.svg",
-        include_bytes!("../icons/square-kanban.svg"),
+        "icons/hugeicons/bookshelf-03-stroke-rounded.svg",
+        include_bytes!("../icons/hugeicons/bookshelf-03-stroke-rounded.svg"),
     ),
-    ("icons/house.svg", include_bytes!("../icons/house.svg")),
+    (
+        "icons/hugeicons/tags-stroke-rounded.svg",
+        include_bytes!("../icons/hugeicons/tags-stroke-rounded.svg"),
+    ),
+    (
+        "icons/hugeicons/star-square-stroke-rounded.svg",
+        include_bytes!("../icons/hugeicons/star-square-stroke-rounded.svg"),
+    ),
+    (
+        "icons/hugeicons/time-04-stroke-rounded.svg",
+        include_bytes!("../icons/hugeicons/time-04-stroke-rounded.svg"),
+    ),
+    (
+        "icons/panel-left.svg",
+        include_bytes!("../icons/hugeicons/sidebar-left-stroke-rounded.svg"),
+    ),
+    (
+        "icons/layout-dashboard.svg",
+        include_bytes!("../icons/hugeicons/dashboard-square-01-stroke-rounded.svg"),
+    ),
+    (
+        "icons/gallery-vertical-end.svg",
+        include_bytes!("../icons/hugeicons/cards-02-stroke-rounded.svg"),
+    ),
+    (
+        "icons/menu.svg",
+        include_bytes!("../icons/hugeicons/layout-list-stroke-rounded.svg"),
+    ),
+    (
+        "icons/settings-2.svg",
+        include_bytes!("../icons/hugeicons/filter-horizontal-stroke-rounded.svg"),
+    ),
+    (
+        "icons/search.svg",
+        include_bytes!("../icons/hugeicons/search-01-stroke-rounded.svg"),
+    ),
+    (
+        "icons/info.svg",
+        include_bytes!("../icons/hugeicons/info-stroke-rounded.svg"),
+    ),
+    (
+        "icons/panel-bottom.svg",
+        include_bytes!("../icons/hugeicons/layout-bottom-stroke-rounded.svg"),
+    ),
+    (
+        "icons/ellipsis.svg",
+        include_bytes!("../icons/hugeicons/more-horizontal-square-01-stroke-rounded.svg"),
+    ),
+    (
+        "icons/arrow-left.svg",
+        include_bytes!("../icons/hugeicons/arrow-left-02-stroke-rounded.svg"),
+    ),
+    (
+        "icons/settings.svg",
+        include_bytes!("../icons/hugeicons/spaceship-stroke-rounded.svg"),
+    ),
+    (
+        "icons/folder-open.svg",
+        include_bytes!("../icons/hugeicons/cloud-sync-stroke-rounded.svg"),
+    ),
+    (
+        "icons/palette.svg",
+        include_bytes!("../icons/hugeicons/palette-stroke-rounded.svg"),
+    ),
+    (
+        "icons/bot.svg",
+        include_bytes!("../icons/hugeicons/bot-message-square-stroke-rounded.svg"),
+    ),
+    (
+        "icons/heart.svg",
+        include_bytes!("../icons/hugeicons/heart-stroke-rounded.svg"),
+    ),
+    (
+        "icons/star.svg",
+        include_bytes!("../icons/hugeicons/star-stroke-rounded.svg"),
+    ),
+    (
+        "icons/hugeicons/folder-03-stroke-rounded.svg",
+        include_bytes!("../icons/hugeicons/folder-03-stroke-rounded.svg"),
+    ),
+    (
+        "icons/hugeicons/home-07-stroke-rounded-solid.svg",
+        include_bytes!("../icons/hugeicons/home-07-stroke-rounded-solid.svg"),
+    ),
+    (
+        "icons/hugeicons/game-controller-03-stroke-rounded-solid.svg",
+        include_bytes!("../icons/hugeicons/game-controller-03-stroke-rounded-solid.svg"),
+    ),
+    (
+        "icons/hugeicons/heart-stroke-rounded-solid.svg",
+        include_bytes!("../icons/hugeicons/heart-stroke-rounded-solid.svg"),
+    ),
+    (
+        "icons/hugeicons/star-stroke-rounded-solid.svg",
+        include_bytes!("../icons/hugeicons/star-stroke-rounded-solid.svg"),
+    ),
+    (
+        "icons/hugeicons/home-07-stroke-rounded.svg",
+        include_bytes!("../icons/hugeicons/home-07-stroke-rounded.svg"),
+    ),
+    (
+        "icons/hugeicons/game-controller-03-stroke-rounded.svg",
+        include_bytes!("../icons/hugeicons/game-controller-03-stroke-rounded.svg"),
+    ),
+    (
+        "icons/hugeicons/heart-stroke-rounded.svg",
+        include_bytes!("../icons/hugeicons/heart-stroke-rounded.svg"),
+    ),
+    (
+        "icons/hugeicons/star-stroke-rounded.svg",
+        include_bytes!("../icons/hugeicons/star-stroke-rounded.svg"),
+    ),
+    (
+        "icons/hugeicons/folder-01-stroke-rounded.svg",
+        include_bytes!("../icons/hugeicons/folder-01-stroke-rounded.svg"),
+    ),
+    (
+        "icons/hugeicons/settings-04-stroke-rounded.svg",
+        include_bytes!("../icons/hugeicons/settings-04-stroke-rounded.svg"),
+    ),
+    (
+        "icons/hugeicons/plus-stroke-rounded.svg",
+        include_bytes!("../icons/hugeicons/plus-stroke-rounded.svg"),
+    ),
+    // Override shared paths so buttons and menus use the same chevrons.
+    (
+        "icons/chevron-down.svg",
+        include_bytes!("../icons/hugeicons/chevron-down-stroke-rounded.svg"),
+    ),
+    (
+        "icons/chevron-left.svg",
+        include_bytes!("../icons/hugeicons/chevron-left-stroke-rounded.svg"),
+    ),
+    (
+        "icons/chevron-right.svg",
+        include_bytes!("../icons/hugeicons/chevron-right-stroke-rounded.svg"),
+    ),
+    (
+        "icons/square-kanban.svg",
+        include_bytes!("../icons/hugeicons/kanban-stroke-rounded.svg"),
+    ),
     (
         "icons/heart-filled.svg",
-        include_bytes!("../icons/heart-filled.svg"),
+        include_bytes!("../icons/hugeicons/heart-stroke-rounded-solid.svg"),
     ),
     (
         "icons/badge-percent.svg",
@@ -76,13 +216,6 @@ impl gpui_component::IconNamed for BoardIcon {
     }
 }
 
-pub struct HomeIcon;
-impl gpui_component::IconNamed for HomeIcon {
-    fn path(self) -> SharedString {
-        "icons/house.svg".into()
-    }
-}
-
 pub struct DiscountIcon;
 impl gpui_component::IconNamed for DiscountIcon {
     fn path(self) -> SharedString {
@@ -95,6 +228,78 @@ pub struct FavoriteIcon;
 impl gpui_component::IconNamed for FavoriteIcon {
     fn path(self) -> SharedString {
         "icons/heart-filled.svg".into()
+    }
+}
+
+/// Sidebar_v2 icons; keep these separate from icons in other app views.
+#[derive(Clone, Copy)]
+pub enum SidebarIcon {
+    Genres,
+    Tags,
+    Rating,
+    Playtime,
+
+    HomeSelected,
+    AllGamesSelected,
+    FavoritesSelected,
+    WishlistSelected,
+    CollectionSelected,
+
+    Home,
+    AllGames,
+    Favorites,
+    Wishlist,
+    Collection,
+    Settings,
+    Plus,
+}
+impl SidebarIcon {
+    pub fn selected(self, selected: bool) -> Self {
+        if !selected {
+            return self;
+        }
+        match self {
+            Self::Home => Self::HomeSelected,
+            Self::AllGames => Self::AllGamesSelected,
+            Self::Favorites => Self::FavoritesSelected,
+            Self::Wishlist => Self::WishlistSelected,
+            Self::Collection => Self::CollectionSelected,
+            other => other,
+        }
+    }
+}
+
+impl gpui_component::IconNamed for SidebarIcon {
+    fn path(self) -> SharedString {
+        match self {
+            Self::Genres => "icons/hugeicons/bookshelf-03-stroke-rounded.svg",
+            Self::Tags => "icons/hugeicons/tags-stroke-rounded.svg",
+            Self::Rating => "icons/hugeicons/star-square-stroke-rounded.svg",
+            Self::Playtime => "icons/hugeicons/time-04-stroke-rounded.svg",
+
+            Self::HomeSelected => "icons/hugeicons/home-07-stroke-rounded-solid.svg",
+            Self::AllGamesSelected => "icons/hugeicons/game-controller-03-stroke-rounded-solid.svg",
+            Self::FavoritesSelected => "icons/hugeicons/heart-stroke-rounded-solid.svg",
+            Self::WishlistSelected => "icons/hugeicons/star-stroke-rounded-solid.svg",
+            Self::CollectionSelected => "icons/hugeicons/folder-03-stroke-rounded.svg",
+
+            Self::Home => "icons/hugeicons/home-07-stroke-rounded.svg",
+            Self::AllGames => "icons/hugeicons/game-controller-03-stroke-rounded.svg",
+            Self::Favorites => "icons/hugeicons/heart-stroke-rounded.svg",
+            Self::Wishlist => "icons/hugeicons/star-stroke-rounded.svg",
+            Self::Collection => "icons/hugeicons/folder-01-stroke-rounded.svg",
+            Self::Settings => "icons/hugeicons/settings-04-stroke-rounded.svg",
+            Self::Plus => "icons/hugeicons/plus-stroke-rounded.svg",
+        }
+        .into()
+    }
+}
+
+/// Filled rating mark, shared with the editable star control.
+pub struct RatingIcon;
+impl gpui_component::IconNamed for RatingIcon {
+    fn path(self) -> SharedString {
+        "icons/hugeicons/star-stroke-rounded-solid.svg".into()
     }
 }
 

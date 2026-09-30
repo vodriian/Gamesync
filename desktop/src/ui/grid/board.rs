@@ -596,10 +596,17 @@ impl GameGrid {
                                     .text_color(muted)
                                     .child(hours)
                                     .when_some(game.rating, |row, rating| {
-                                        row.child(format!("★ {:.1}", f32::from(rating) / 2.))
+                                        row.child(
+                                            h_flex()
+                                                .gap_1()
+                                                .child(
+                                                    Icon::new(crate::assets::RatingIcon).size_3(),
+                                                )
+                                                .child(format!("{:.1}", f32::from(rating) / 2.)),
+                                        )
                                     })
                                     .when(game.favorite, |row| {
-                                        row.child(Icon::new(IconName::Heart).size_3())
+                                        row.child(Icon::new(crate::assets::FavoriteIcon).size_3())
                                     }),
                             ),
                     ),

@@ -76,6 +76,12 @@ computes the groups from current records. They store nothing and write nothing.
 | Rating | 5 stars, 4 stars, 3 stars, 1–2 stars, Unrated | `PersonalData.rating` |
 | Time played | Not played, Under 1 h, 1–10 h, 10–50 h, 50 h or more | `SteamData.playtime_minutes` |
 
+- Group rows use a disclosure chevron, an 18 px icon, and a label, following
+  the supplied Bear sidebar reference. Tags is a parent for Steam tags and My
+  tags; these retain separate rules, values, counts, and expansion state.
+- Rating values use solid/outlined star SVGs. The existing 1–2 range remains
+  one filter, shown as two star strips separated by a dash. Unrated shows
+  outlined stars and its label.
 - A group row expands to its values. Each value shows its game count.
   Selecting a value sets the library scope.
 - Genres and tags show the 12 largest values and a **Show all** row.

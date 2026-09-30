@@ -17,16 +17,7 @@ export SettingsGeneral = frame : settingsSource.Settings {
     top: 0px,
     width: 562px,
     layout: {direction: .column, item-gap: 24px},
-    children: [
-      profile,
-      key,
-      keyActions,
-      storage,
-      syncActions,
-      time,
-      country,
-      saveCountry
-    ],
+    children: [profile, key, keyActions, storage, syncActions, time, layer1],
 
     profile = frame {
       left: 0px,
@@ -153,41 +144,53 @@ export SettingsGeneral = frame : settingsSource.Settings {
       font-size: typography.size.body,
       font-family: typography.family.interface
     }
+  }
 
-    country = frame {
+  country = frame {
+    left: 0px,
+    top: 0px,
+    width: 220px,
+    height: 59px,
+    layout: {direction: .column, item-gap: 10px},
+    children: [label, input],
+
+    label = text {
+      left: 0px,
+      top: 0px,
+      fill: c.ui.text,
+      contents: "Store country for wishlist prices",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    input = frame : fields.TextField {
       left: 0px,
       top: 0px,
       width: 220px,
-      layout: {direction: .column, item-gap: 10px},
-      children: [label, input],
 
-      label = text {
-        left: 0px,
-        top: 0px,
-        fill: c.ui.text,
-        contents: "Store country for wishlist prices",
-        font-size: typography.size.body,
-        font-family: typography.family.interface
-      }
-
-      input = frame : fields.TextField {
-        left: 0px,
-        top: 0px,
-        width: 220px,
-
-        fields.TextField.value {
-          contents: "Default"
-        }
+      fields.TextField.value {
+        contents: "Default"
       }
     }
+  }
 
-    saveCountry = frame : buttons.Button {
-      left: 0px,
-      top: 0px,
+  saveCountry = frame : buttons.Button {
+    left: 0px,
+    top: 83px,
+    width: 107px,
 
-      buttons.Button.label {
-        contents: "Save country"
-      }
+    buttons.Button.label {
+      contents: "Save country"
     }
+  }
+
+  layer1 = frame {
+    left: 0px,
+    top: 356px,
+    width: 220px,
+    height: 113px,
+    layout: {direction: .column, justify-content: .center, item-gap: 24px},
+    overflow: .visible,
+    children: [country, saveCountry]
   }
 }

@@ -13,7 +13,7 @@ use gpui_component::{
     input::{Input, InputEvent, InputState},
     menu::{DropdownMenu as _, PopupMenuItem},
     popover::Popover,
-    v_flex, ActiveTheme as _, Disableable as _, IconName, Sizable as _, StyledExt as _,
+    v_flex, ActiveTheme as _, Disableable as _, Icon, IconName, Sizable as _, StyledExt as _,
 };
 use std::path::PathBuf;
 
@@ -685,10 +685,10 @@ impl Render for InspectorEditor {
                                                     div()
                                                         .relative()
                                                         .w(px(24.))
-                                                        .h(px(28.))
-                                                        .text_size(px(26.))
-                                                        .line_height(px(28.))
-                                                        .child("☆")
+                                                        .h(px(24.))
+                                                        .child(
+                                                            Icon::new(IconName::Star).size(px(24.)),
+                                                        )
                                                         .child(
                                                             div()
                                                                 .absolute()
@@ -697,7 +697,12 @@ impl Render for InspectorEditor {
                                                                 .overflow_hidden()
                                                                 .w(px(f32::from(fill) * 12.))
                                                                 .h_full()
-                                                                .child(div().w(px(24.)).child("★")),
+                                                                .child(
+                                                                    Icon::new(
+                                                                        crate::assets::RatingIcon,
+                                                                    )
+                                                                    .size(px(24.)),
+                                                                ),
                                                         ),
                                                 )
                                                 .on_click(cx.listener(move |this, _, _, cx| {
@@ -720,16 +725,13 @@ impl Render for InspectorEditor {
                                                 } else {
                                                     "Add to favorites"
                                                 })
-                                                // Glyphs match the rating stars: outlined off, filled on.
                                                 .child(
-                                                    div()
-                                                        .text_size(px(26.))
-                                                        .line_height(px(28.))
-                                                        .child(if favorite {
-                                                            "♥"
-                                                        } else {
-                                                            "♡"
-                                                        }),
+                                                    if favorite {
+                                                        Icon::new(crate::assets::FavoriteIcon)
+                                                    } else {
+                                                        Icon::new(IconName::Heart)
+                                                    }
+                                                    .size(px(24.)),
                                                 )
                                                 .on_click(cx.listener(|this, _, _, cx| {
                                                     this.personal.favorite =
