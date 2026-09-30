@@ -38,12 +38,34 @@ pub enum LibraryView {
     Board,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(default)]
 pub struct LibraryDisplay {
     pub sort: SortBy,
     pub descending: bool,
     pub group: GroupBy,
+    /// Board columns put manually placed games first. When false, Board
+    /// follows `sort` fully; manual positions stay saved for later.
+    pub board_manual: bool,
+    /// Grid cells show the game title under the cover.
+    pub grid_title: bool,
+    /// Grid cells show status and rating, or the price in Wishlist.
+    pub grid_metadata: bool,
+}
+
+impl Default for LibraryDisplay {
+    /// Manual order is on, so settings from before this field keep the board
+    /// that the user arranged.
+    fn default() -> Self {
+        Self {
+            sort: SortBy::default(),
+            descending: false,
+            group: GroupBy::default(),
+            board_manual: true,
+            grid_title: true,
+            grid_metadata: true,
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize)]
@@ -75,6 +97,12 @@ pub struct Settings {
     /// The user's choice; it wins over the detected country.
     #[serde(default)]
     pub store_country: Option<String>,
+    /// The folder the user selected for data sync. None means sync is off.
+    #[serde(default)]
+    pub sync_folder: Option<PathBuf>,
+    /// This device's name for other devices. None uses the host name.
+    #[serde(default)]
+    pub device_name: Option<String>,
     #[serde(flatten)]
     extra: std::collections::BTreeMap<String, serde_json::Value>,
 }
@@ -142,6 +170,8 @@ impl Default for Settings {
             smart_groups_open: Vec::new(),
             detected_country: None,
             store_country: None,
+            sync_folder: None,
+            device_name: None,
             extra: Default::default(),
         }
     }
@@ -211,12 +241,17 @@ mod display_tests {
         let old: Settings =
             serde_json::from_str(r#"{"library_path":null,"future_setting":42}"#).unwrap();
         assert_eq!(old.library_display, LibraryDisplay::default());
+        assert!(old.library_display.board_manual);
+        assert!(old.library_display.grid_title && old.library_display.grid_metadata);
         assert!(old.section_views.is_empty());
         let mut settings = old;
         settings.library_display = LibraryDisplay {
             sort: SortBy::Hours,
             descending: true,
             group: GroupBy::Collections,
+            board_manual: false,
+            grid_title: false,
+            grid_metadata: true,
         };
         settings
             .section_views

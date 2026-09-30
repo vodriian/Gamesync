@@ -58,22 +58,12 @@ impl Quote {
     }
 
     pub fn display(&self, now: i64) -> PriceDisplay {
+        // The price is already the discounted one; the percentage alone keeps
+        // the row short enough for a card.
         let discount = match self {
-            Self::Price(price) if price.discount_pct > 0 => price
-                .original_cents
-                .and_then(|original| original.checked_sub(price.final_cents))
-                .filter(|savings| *savings > 0)
-                .map(|savings| {
-                    let template = price
-                        .formatted_original
-                        .as_deref()
-                        .unwrap_or(&price.formatted_final);
-                    format!(
-                        "−{}% ({})",
-                        price.discount_pct,
-                        format_minor_like(savings, template)
-                    )
-                }),
+            Self::Price(price) if price.discount_pct > 0 => {
+                Some(format!("−{}%", price.discount_pct))
+            }
             _ => None,
         };
         let sale_label = self.sale_label(now);
@@ -120,48 +110,6 @@ impl Quote {
             Self::Free => Some(0),
             Self::Unavailable => None,
         }
-    }
-}
-
-/// Format a minor-unit value with the separators and symbol placement from a
-/// Steam-formatted price. This keeps savings in the same locale as the price.
-fn format_minor_like(cents: u64, template: &str) -> String {
-    let chars: Vec<char> = template.chars().collect();
-    let Some(first) = chars.iter().position(|c| c.is_ascii_digit()) else {
-        return format!("{:.2}", cents as f64 / 100.);
-    };
-    let Some(last) = chars.iter().rposition(|c| c.is_ascii_digit()) else {
-        return format!("{:.2}", cents as f64 / 100.);
-    };
-    let core = &chars[first..=last];
-    let decimal = (core.len() >= 3
-        && matches!(core[core.len() - 3], '.' | ',')
-        && core[core.len() - 2..].iter().all(|c| c.is_ascii_digit()))
-    .then_some(core[core.len() - 3]);
-    let integer_end = if decimal.is_some() {
-        core.len() - 3
-    } else {
-        core.len()
-    };
-    let grouping = core[..integer_end]
-        .iter()
-        .copied()
-        .find(|c| !c.is_ascii_digit());
-    let whole = (cents / 100).to_string();
-    let mut grouped = String::new();
-    for (index, ch) in whole.chars().enumerate() {
-        if index > 0 && (whole.len() - index).is_multiple_of(3) {
-            if let Some(separator) = grouping {
-                grouped.push(separator);
-            }
-        }
-        grouped.push(ch);
-    }
-    let prefix: String = chars[..first].iter().collect();
-    let suffix: String = chars[last + 1..].iter().collect();
-    match decimal {
-        Some(separator) => format!("{prefix}{grouped}{separator}{:02}{suffix}", cents % 100),
-        None => format!("{prefix}{grouped}{suffix}"),
     }
 }
 
@@ -301,7 +249,7 @@ mod tests {
             quotes[&2].display(900_000 - 10),
             PriceDisplay {
                 price: "$14.99".into(),
-                discount: Some("−50% ($15.00)".into()),
+                discount: Some("−50%".into()),
                 sale_ends_soon: true,
                 sale_label: Some("Sale ends today".into()),
             }
@@ -323,13 +271,6 @@ mod tests {
         assert_eq!(quotes[&3], Quote::Free);
         assert_eq!(quotes[&4], Quote::Unavailable);
         assert_eq!(quotes.len(), 4);
-    }
-
-    #[test]
-    fn savings_follow_steam_currency_formatting() {
-        assert_eq!(format_minor_like(38_700, "515,00₴"), "387,00₴");
-        assert_eq!(format_minor_like(159_900, "1 999,00₴"), "1 599,00₴");
-        assert_eq!(format_minor_like(1_500, "$29.99"), "$15.00");
     }
 
     #[test]

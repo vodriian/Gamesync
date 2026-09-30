@@ -1,0 +1,10 @@
+export family = tokens {
+  interface: "Helvetica Neue"
+}
+
+export size = tokens {
+  caption: 12,
+  body: 14,
+  title: 16,
+  heading: 18
+}

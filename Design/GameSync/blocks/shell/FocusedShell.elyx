@@ -1,0 +1,13 @@
+export Focused = frame {
+  left: 0px,
+  top: 0px,
+  width: 1280px,
+  height: 900px,
+  children: body,
+
+  body = frame {
+    width: 1280px,
+    height: 900px,
+    slot: .true
+  }
+}

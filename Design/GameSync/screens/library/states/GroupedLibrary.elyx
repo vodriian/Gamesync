@@ -1,0 +1,139 @@
+import "tokens/desktop.elyx" as c
+import "resources/images/646570.jpg" as cover646570
+import "resources/images/2379780.jpg" as cover2379780
+import "resources/images/620.jpg" as cover620
+import "resources/images/1055540.jpg" as cover1055540
+import "blocks/shell/LibraryShell.elyx" as librarySource
+import "tokens/typography.elyx" as typography
+import "blocks/library/GridTile.elyx" as gridTileSource
+
+export GroupedLibrary = frame : librarySource.Library {
+  doc: "03 · Selection and editing / GroupedLibrary",
+  left: 0px,
+  top: 0px,
+
+  librarySource.Library.panel {
+    librarySource.Library.panel.body {
+      overrides: [insert(content, after = .nil)]
+    }
+  }
+
+  content = frame {
+    left: 0px,
+    top: 0px,
+    width: 970px,
+    layout: {direction: .column, item-gap: 20px},
+    children: [playing, playingGames, completed, completedGames],
+
+    playing = text {
+      left: 0px,
+      top: 0px,
+      fill: c.ui.text,
+      contents: "Playing",
+      font-size: typography.size.title,
+      font-family: typography.family.interface
+    }
+
+    playingGames = frame {
+      left: 0px,
+      top: 0px,
+      width: 970px,
+      layout: {item-gap: 23px, wrap: .true, line-gap: 22px},
+      children: [game0, game1, game2],
+
+      game0 = frame : gridTileSource.GridTile {
+        left: 0px,
+        top: 0px,
+
+        gridTileSource.GridTile.meta {
+          contents: "Playing    ★ 4.5"
+        }
+      }
+
+      game1 = frame : gridTileSource.GridTile {
+        left: 0px,
+        top: 0px,
+
+        gridTileSource.GridTile.cover {
+          fill[0].image.ref: cover646570
+        }
+
+        gridTileSource.GridTile.meta {
+          contents: "Playing    ★ 4.5"
+        }
+
+        gridTileSource.GridTile.title {
+          contents: "Slay the Spire"
+        }
+      }
+
+      game2 = frame : gridTileSource.GridTile {
+        left: 0px,
+        top: 0px,
+
+        gridTileSource.GridTile.cover {
+          fill[0].image.ref: cover2379780
+        }
+
+        gridTileSource.GridTile.meta {
+          contents: "Playing    ★ 4.5"
+        }
+
+        gridTileSource.GridTile.title {
+          contents: "Balatro"
+        }
+      }
+    }
+
+    completed = text {
+      left: 0px,
+      top: 0px,
+      fill: c.ui.text,
+      contents: "Completed",
+      font-size: typography.size.title,
+      font-family: typography.family.interface
+    }
+
+    completedGames = frame {
+      left: 0px,
+      top: 0px,
+      width: 970px,
+      layout: {item-gap: 23px, wrap: .true, line-gap: 22px},
+      children: [game0, game1],
+
+      game0 = frame : gridTileSource.GridTile {
+        left: 0px,
+        top: 0px,
+
+        gridTileSource.GridTile.cover {
+          fill[0].image.ref: cover620
+        }
+
+        gridTileSource.GridTile.meta {
+          contents: "Completed    ★ 5.0"
+        }
+
+        gridTileSource.GridTile.title {
+          contents: "Portal 2"
+        }
+      }
+
+      game1 = frame : gridTileSource.GridTile {
+        left: 0px,
+        top: 0px,
+
+        gridTileSource.GridTile.cover {
+          fill[0].image.ref: cover1055540
+        }
+
+        gridTileSource.GridTile.meta {
+          contents: "Completed    ★ 4.5"
+        }
+
+        gridTileSource.GridTile.title {
+          contents: "A Short Hike"
+        }
+      }
+    }
+  }
+}

@@ -27,6 +27,8 @@ const GAP: Pixels = px(24.);
 // Keep spacing inside the full-width scroll mask so shadows can use the gutter.
 const CONTENT_INSET: Pixels = px(20.);
 const CAPTION: Pixels = px(52.);
+/// Caption height with only the title or only the details line.
+const CAPTION_ONE_LINE: Pixels = px(30.);
 
 /// The source library identity prevents drops into a different loaded store.
 #[derive(Clone)]
@@ -87,6 +89,9 @@ pub struct GameGrid {
     width: Pixels,
     columns: usize,
     cell: Pixels,
+    /// Grid caption parts from the display settings.
+    show_title: bool,
+    show_metadata: bool,
     minimum: Pixels,
     last_visible: Arc<Vec<usize>>,
     row_sizes: Rc<Vec<Size<Pixels>>>,
@@ -126,6 +131,11 @@ impl GameGrid {
             let preserve_next_update = std::mem::take(&mut this.preserve_next_library_update);
             this.selection
                 .retain(|id| visible.iter().any(|&i| lib.games[i].id == *id));
+            let caption = (lib.display.grid_title, lib.display.grid_metadata);
+            if caption != (this.show_title, this.show_metadata) {
+                (this.show_title, this.show_metadata) = caption;
+                this.rebuild_rows();
+            }
             if *this.last_visible != *visible || this.groups != lib.groups {
                 this.groups = lib.groups.clone();
                 this.hovered = None;
@@ -161,6 +171,8 @@ impl GameGrid {
             width: px(0.),
             columns: 1,
             cell: px(150.),
+            show_title: library.read(cx).display.grid_title,
+            show_metadata: library.read(cx).display.grid_metadata,
             minimum: Self::minimum_for(LibraryView::Grid),
             row_sizes: Rc::new(Vec::new()),
             groups: library.read(cx).groups.clone(),
@@ -223,7 +235,7 @@ impl GameGrid {
                                 LibraryView::Cards => self.cell * 1.46 + GAP,
                                 // The board does not use grid rows.
                                 LibraryView::Grid | LibraryView::Board => {
-                                    self.cell * 1.5 + CAPTION + GAP
+                                    self.cell * 1.5 + self.caption() + GAP
                                 }
                                 LibraryView::Table => px(66.),
                             }
@@ -232,6 +244,15 @@ impl GameGrid {
                 })
                 .collect(),
         );
+    }
+
+    /// Height under a Grid cover. Hidden parts take no space.
+    fn caption(&self) -> Pixels {
+        match (self.show_title, self.show_metadata) {
+            (true, true) => CAPTION,
+            (false, false) => px(0.),
+            _ => CAPTION_ONE_LINE,
+        }
     }
 
     fn row_for_slot(&self, slot: usize) -> usize {
@@ -499,7 +520,14 @@ impl GameGrid {
                                                         &data, cell_size, active, window, cx,
                                                     );
                                                 }
-                                                cell(&data, cell_size, active, cx)
+                                                cell(
+                                                    &data,
+                                                    cell_size,
+                                                    active,
+                                                    (this.show_title, this.show_metadata),
+                                                    this.caption(),
+                                                    cx,
+                                                )
                                             }))
                                             .into_any_element()
                                     })
@@ -682,12 +710,16 @@ impl GameCell {
     }
 }
 
+/// `parts` is (title, metadata); `caption` is their height from the grid.
 fn cell(
     data: &GameCell,
     width: Pixels,
     selected: bool,
+    parts: (bool, bool),
+    caption: Pixels,
     cx: &mut Context<GameGrid>,
 ) -> gpui::AnyElement {
+    let (show_title, show_metadata) = parts;
     let slot = data.slot;
     let muted = cx.theme().muted_foreground;
     v_flex()
@@ -757,38 +789,50 @@ fn cell(
                         .active(|style| style.border_color(cx.theme().ring.opacity(0.5))),
                 ),
         )
-        .child(
-            v_flex()
-                .h(CAPTION - px(8.))
-                .px_1()
-                .gap_0p5()
-                .overflow_hidden()
-                .child(
-                    div()
-                        .text_sm()
-                        .font_medium()
-                        .truncate()
-                        .child(data.game.title.clone()),
-                )
-                .child(
-                    h_flex()
-                        .justify_between()
-                        .text_xs()
-                        .text_color(muted)
-                        // Wishlist games show price and discount, not status and rating.
-                        .map(|row| {
-                            if data.game.wishlisted() {
-                                row.child(super::price::wishlist_price(&data.game, cx))
-                            } else {
-                                row.child(data.game.status_label.clone()).child(
-                                    data.game.rating.map_or(String::new(), |rating| {
-                                        format!("{:.1}", f32::from(rating) / 2.)
-                                    }),
-                                )
-                            }
-                        }),
-                ),
-        )
+        .when(caption > px(0.), |cell| {
+            cell.child(
+                v_flex()
+                    .h(caption - px(8.))
+                    .px_1()
+                    .gap_0p5()
+                    .overflow_hidden()
+                    .when(show_title, |caption| {
+                        caption.child(
+                            div()
+                                .text_sm()
+                                .font_medium()
+                                .truncate()
+                                .child(data.game.title.clone()),
+                        )
+                    })
+                    .when(show_metadata, |caption| {
+                        caption.child(
+                            h_flex()
+                                .justify_between()
+                                .text_xs()
+                                .text_color(muted)
+                                // Wishlist games show price and discount, not status and rating.
+                                .map(|row| {
+                                    if data.game.wishlisted() {
+                                        row.child(super::price::wishlist_price(&data.game, cx))
+                                    } else {
+                                        row.child(data.game.status_label.clone()).child(
+                                            h_flex()
+                                                .flex_shrink_0()
+                                                .gap_1()
+                                                .children(data.game.rating.map(|rating| {
+                                                    format!("{:.1}", f32::from(rating) / 2.)
+                                                }))
+                                                .when(data.game.favorite, |row| {
+                                                    row.child(favorite_icon())
+                                                }),
+                                        )
+                                    }
+                                }),
+                        )
+                    }),
+            )
+        })
         .context_menu({
             let grid = cx.entity();
             let id = data.game.id;
@@ -898,7 +942,14 @@ fn table_row(
                     .text_sm()
                     .child(data.game.status_label.clone()),
             )
-            .child(div().w(px(100.)).text_sm().child(data.game.rating_label()))
+            .child(
+                h_flex()
+                    .w(px(100.))
+                    .gap_1()
+                    .text_sm()
+                    .child(data.game.rating_label())
+                    .when(data.game.favorite, |cell| cell.child(favorite_icon())),
+            )
             .child(
                 div()
                     .w(px(100.))
@@ -912,4 +963,9 @@ fn table_row(
             move |menu, window, cx| actions::menu(grid.clone(), id, menu, window, cx)
         })
         .into_any_element()
+}
+
+/// Marks a favorite after the rating, as in Cards and Board.
+fn favorite_icon() -> gpui_component::Icon {
+    gpui_component::Icon::new(crate::assets::FavoriteIcon).size_3()
 }

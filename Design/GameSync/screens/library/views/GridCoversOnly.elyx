@@ -1,0 +1,205 @@
+import "resources/images/646570.jpg" as cover646570
+import "resources/images/1145360.jpg" as cover1145360
+import "resources/images/367520.jpg" as cover367520
+import "resources/images/2379780.jpg" as cover2379780
+import "resources/images/620.jpg" as cover620
+import "resources/images/632360.jpg" as cover632360
+import "resources/images/1055540.jpg" as cover1055540
+import "resources/images/1091500.jpg" as cover1091500
+import "blocks/shell/LibraryShell.elyx" as librarySource
+import "blocks/library/GridTile.elyx" as gridTileSource
+
+export GridCoversOnly = frame : librarySource.Library {
+  doc: "02 · Library views / GridCoversOnly",
+  left: 0px,
+  top: 0px,
+
+  librarySource.Library.panel {
+    librarySource.Library.panel.body {
+      overrides: [insert(content, after = .nil)]
+    }
+  }
+
+  content = frame {
+    left: 0px,
+    top: 0px,
+    width: 970px,
+    layout: {item-gap: 23px, wrap: .true, line-gap: 22px},
+    children: [game0, game1, game2, game3, game4, game5, game6, game7, game8],
+
+    game0 = frame : gridTileSource.GridTile {
+      left: 0px,
+      top: 0px,
+      height: 262px,
+
+      gridTileSource.GridTile.meta {
+        display: .none,
+        contents: "Playing    ★ 4.5"
+      }
+
+      gridTileSource.GridTile.title {
+        display: .none
+      }
+    }
+
+    game1 = frame : gridTileSource.GridTile {
+      left: 0px,
+      top: 0px,
+      height: 262px,
+
+      gridTileSource.GridTile.cover {
+        fill[0].image.ref: cover646570
+      }
+
+      gridTileSource.GridTile.meta {
+        display: .none,
+        contents: "Playing    ★ 4.5"
+      }
+
+      gridTileSource.GridTile.title {
+        display: .none,
+        contents: "Slay the Spire"
+      }
+    }
+
+    game2 = frame : gridTileSource.GridTile {
+      left: 0px,
+      top: 0px,
+      height: 262px,
+
+      gridTileSource.GridTile.cover {
+        fill[0].image.ref: cover1145360
+      }
+
+      gridTileSource.GridTile.meta {
+        display: .none,
+        contents: "Want to play    ★ 5.0"
+      }
+
+      gridTileSource.GridTile.title {
+        display: .none,
+        contents: "Hades"
+      }
+    }
+
+    game3 = frame : gridTileSource.GridTile {
+      left: 0px,
+      top: 0px,
+      height: 262px,
+
+      gridTileSource.GridTile.cover {
+        fill[0].image.ref: cover367520
+      }
+
+      gridTileSource.GridTile.meta {
+        display: .none,
+        contents: "Paused    ★ 4.5"
+      }
+
+      gridTileSource.GridTile.title {
+        display: .none,
+        contents: "Hollow Knight"
+      }
+    }
+
+    game4 = frame : gridTileSource.GridTile {
+      left: 0px,
+      top: 0px,
+      height: 262px,
+
+      gridTileSource.GridTile.cover {
+        fill[0].image.ref: cover2379780
+      }
+
+      gridTileSource.GridTile.meta {
+        display: .none,
+        contents: "Playing    ★ 4.5"
+      }
+
+      gridTileSource.GridTile.title {
+        display: .none,
+        contents: "Balatro"
+      }
+    }
+
+    game5 = frame : gridTileSource.GridTile {
+      left: 0px,
+      top: 0px,
+      height: 262px,
+
+      gridTileSource.GridTile.cover {
+        fill[0].image.ref: cover620
+      }
+
+      gridTileSource.GridTile.meta {
+        display: .none,
+        contents: "Completed    ★ 5.0"
+      }
+
+      gridTileSource.GridTile.title {
+        display: .none,
+        contents: "Portal 2"
+      }
+    }
+
+    game6 = frame : gridTileSource.GridTile {
+      left: 0px,
+      top: 0px,
+      height: 262px,
+
+      gridTileSource.GridTile.cover {
+        fill[0].image.ref: cover632360
+      }
+
+      gridTileSource.GridTile.meta {
+        display: .none,
+        contents: "Dropped    ★ 3.0"
+      }
+
+      gridTileSource.GridTile.title {
+        display: .none,
+        contents: "Risk of Rain 2"
+      }
+    }
+
+    game7 = frame : gridTileSource.GridTile {
+      left: 0px,
+      top: 0px,
+      height: 262px,
+
+      gridTileSource.GridTile.cover {
+        fill[0].image.ref: cover1055540
+      }
+
+      gridTileSource.GridTile.meta {
+        display: .none,
+        contents: "Completed    ★ 4.5"
+      }
+
+      gridTileSource.GridTile.title {
+        display: .none,
+        contents: "A Short Hike"
+      }
+    }
+
+    game8 = frame : gridTileSource.GridTile {
+      left: 0px,
+      top: 0px,
+      height: 262px,
+
+      gridTileSource.GridTile.cover {
+        fill[0].image.ref: cover1091500
+      }
+
+      gridTileSource.GridTile.meta {
+        display: .none,
+        contents: "Backlog    ★ —"
+      }
+
+      gridTileSource.GridTile.title {
+        display: .none,
+        contents: "Cyberpunk 2077"
+      }
+    }
+  }
+}

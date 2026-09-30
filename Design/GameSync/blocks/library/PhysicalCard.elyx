@@ -1,0 +1,83 @@
+import "tokens/desktop.elyx" as c
+import "resources/images/413150.jpg" as cover413150
+import "tokens/typography.elyx" as typography
+
+export PhysicalCard = frame {
+  left: 0px,
+  top: 0px,
+  width: 282px,
+  height: 414px,
+  fill: c.ui.surface,
+  border: c.ui.border,
+  shadow: {
+    drop-shadow: {
+      color: rgb(0%, 0%, 0%, 9.41%),
+      offset: point(0px, 12px),
+      blur-radius: 22px
+    }
+  },
+  corner-radius: 18px,
+  children: [cover, shade, title, status, rating],
+
+  cover = frame {
+    left: 10px,
+    top: 10px,
+    width: 262px,
+    height: 364px,
+    fill: {image: {ref: cover413150}},
+    corner-radius: 7px
+  }
+
+  shade = frame {
+    left: 10px,
+    top: 210px,
+    width: 262px,
+    height: 164px,
+    fill: {
+      linear-gradient: {
+        angle: 90deg,
+        stops: [stop(0%, .transparent), stop(100%, rgb(0%, 0%, 0%, 85.098%))]
+      }
+    },
+    corner-radius: 10px
+  }
+
+  title = text {
+    left: 27px,
+    top: 327px,
+    fill: .white,
+    contents: "Stardew Valley",
+    font-size: 23,
+    font-family: "Georgia"
+  }
+
+  status = frame {
+    left: 14px,
+    top: 382px,
+    width: 90px,
+    height: 21px,
+    layout: {align-items: .center},
+    fill: c.ui.subtle,
+    corner-radius: 11px,
+    padding: [3px, 7px],
+    children: label,
+
+    label = text {
+      left: 0px,
+      top: 0px,
+      fill: c.ui.muted,
+      contents: "Playing",
+      font-size: 10,
+      font-family: typography.family.interface
+    }
+  }
+
+  rating = text {
+    left: 221px,
+    top: 386px,
+    fill: c.ui.muted,
+    contents: "★ 4.5  ♥",
+    font-size: 10,
+    font-family: typography.family.interface
+  }
+}

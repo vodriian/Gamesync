@@ -52,10 +52,10 @@ fn saving_a_tested_key_twice_writes_once() {
 #[ignore = "Uses OS secure storage with a disposable UUID and dummy value"]
 fn native_store_round_trip_and_removal() {
     let id = uuid::Uuid::new_v4();
-    let store = gamesync_desktop::credentials::SteamCredential::new(id).unwrap();
+    let store = gamesync_desktop::credentials::OsCredential::steam(id).unwrap();
     assert!(store.get().unwrap().is_none());
     store.set("gamesync-disposable-test-value").unwrap();
-    let fresh_entry = gamesync_desktop::credentials::SteamCredential::new(id).unwrap();
+    let fresh_entry = gamesync_desktop::credentials::OsCredential::steam(id).unwrap();
     let actual = fresh_entry.get().unwrap();
     let removed = store.remove();
     assert_eq!(actual.as_deref(), Some("gamesync-disposable-test-value"));
@@ -68,10 +68,9 @@ fn native_store_round_trip_and_removal() {
 fn native_key_survives_process_restart() {
     const PROBE: &str = "GAMESYNC_TEST_KEYCHAIN_ID";
     if let Ok(id) = std::env::var(PROBE) {
-        let entry = gamesync_desktop::credentials::SteamCredential::new(
-            uuid::Uuid::parse_str(&id).unwrap(),
-        )
-        .unwrap();
+        let entry =
+            gamesync_desktop::credentials::OsCredential::steam(uuid::Uuid::parse_str(&id).unwrap())
+                .unwrap();
         assert_eq!(
             entry.get().unwrap().as_deref(),
             Some("disposable-process-test")
@@ -79,7 +78,7 @@ fn native_key_survives_process_restart() {
         return;
     }
     let id = uuid::Uuid::new_v4();
-    let entry = gamesync_desktop::credentials::SteamCredential::new(id).unwrap();
+    let entry = gamesync_desktop::credentials::OsCredential::steam(id).unwrap();
     entry.set("disposable-process-test").unwrap();
     let result = std::process::Command::new(std::env::current_exe().unwrap())
         .args([

@@ -1,0 +1,4 @@
+export corner = tokens {
+  control: 6,
+  panel: 12
+}

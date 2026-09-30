@@ -1,0 +1,235 @@
+import "tokens/desktop.elyx" as c
+import "resources/icons/layout-dashboard.svg" as icon_layout_dashboard
+import "resources/icons/folder.svg" as icon_folder
+import "resources/icons/panel-left.svg" as icon_panel_left
+import "resources/icons/menu.svg" as icon_menu
+import "resources/icons/square-kanban.svg" as icon_square_kanban
+import "resources/icons/settings-2.svg" as icon_settings_2
+import "blocks/navigation/Sidebar.elyx" as sidebarSource
+import "tokens/typography.elyx" as typography
+import "tokens/radius.elyx" as radius
+import "controls/WindowButtons.elyx" as trafficSource
+
+export Library = frame {
+  left: 0px,
+  top: 0px,
+  width: 1280px,
+  height: 900px,
+  fill: c.ui.chrome,
+  corner-radius: radius.corner.panel,
+  children: [sidebar, traffic, panel, overlay],
+
+  sidebar = frame : sidebarSource.Sidebar {
+    left: 0px,
+    top: 0px
+  }
+
+  traffic = frame : trafficSource.Traffic {
+    left: 16px,
+    top: 16px
+  }
+
+  panel = frame {
+    left: 263px,
+    top: 8px,
+    width: 1009px,
+    height: 884px,
+    fill: c.ui.surface,
+    border: c.ui.border,
+    corner-radius: radius.corner.panel,
+    children: [toolbar, body, count],
+
+    toolbar = frame {
+      left: 0px,
+      top: 0px,
+      width: 1007px,
+      height: 68px,
+      border: {color: c.ui.subtle, sides: .bottom},
+      children: [toggle, title, views, display, search],
+
+      toggle = icon {
+        left: 24px,
+        top: 23px,
+        width: 19px,
+        height: 19px,
+        fill: c.ui.text,
+        contents: icon_panel_left
+      }
+
+      title = text {
+        left: 56px,
+        top: 24px,
+        fill: c.ui.text,
+        contents: "All games",
+        font-size: typography.size.title,
+        font-family: typography.family.interface
+      }
+
+      views = frame {
+        left: 545px,
+        top: 15px,
+        width: 160px,
+        height: 36px,
+        layout: {item-gap: 4px},
+        children: [grid, cards, table, boardView],
+
+        grid = frame {
+          left: 0px,
+          top: 0px,
+          width: 36px,
+          height: 30px,
+          layout: {justify-content: .center, align-items: .center},
+          fill: c.ui.selected,
+          border: c.ui.border,
+          corner-radius: radius.corner.control,
+          padding: [5px, 12px],
+          children: label,
+
+          label = icon {
+            left: 0px,
+            top: 0px,
+            width: 14px,
+            height: 14px,
+            fill: c.ui.text,
+            contents: icon_layout_dashboard
+          }
+        }
+
+        cards = frame {
+          left: 0px,
+          top: 0px,
+          width: 36px,
+          height: 30px,
+          layout: {justify-content: .center, align-items: .center},
+          fill: c.ui.surface,
+          border: c.ui.border,
+          corner-radius: radius.corner.control,
+          padding: [5px, 12px],
+          children: label,
+
+          label = icon {
+            left: 0px,
+            top: 0px,
+            width: 14px,
+            height: 14px,
+            fill: c.ui.text,
+            contents: icon_folder
+          }
+        }
+
+        table = frame {
+          left: 0px,
+          top: 0px,
+          width: 36px,
+          height: 30px,
+          layout: {justify-content: .center, align-items: .center},
+          fill: c.ui.surface,
+          border: c.ui.border,
+          corner-radius: radius.corner.control,
+          padding: [5px, 12px],
+          children: label,
+
+          label = icon {
+            left: 0px,
+            top: 0px,
+            width: 14px,
+            height: 14px,
+            fill: c.ui.text,
+            contents: icon_menu
+          }
+        }
+
+        boardView = frame {
+          left: 0px,
+          top: 0px,
+          width: 36px,
+          height: 30px,
+          layout: {justify-content: .center, align-items: .center},
+          fill: c.ui.surface,
+          border: c.ui.border,
+          corner-radius: radius.corner.control,
+          padding: [5px, 12px],
+          children: label,
+
+          label = icon {
+            left: 0px,
+            top: 0px,
+            width: 14px,
+            height: 14px,
+            fill: c.ui.text,
+            contents: icon_square_kanban
+          }
+        }
+      }
+
+      display = frame {
+        left: 718px,
+        top: 15px,
+        width: 36px,
+        height: 30px,
+        layout: {justify-content: .center, align-items: .center},
+        fill: c.ui.surface,
+        border: c.ui.border,
+        corner-radius: radius.corner.control,
+        padding: [5px, 12px],
+        children: label,
+
+        label = icon {
+          left: 0px,
+          top: 0px,
+          width: 14px,
+          height: 14px,
+          fill: c.ui.text,
+          contents: icon_settings_2
+        }
+      }
+
+      search = frame {
+        left: 768px,
+        top: 15px,
+        width: 220px,
+        height: 36px,
+        layout: {align-items: .center},
+        fill: c.ui.surface,
+        border: c.ui.border,
+        corner-radius: 18px,
+        padding: [9px, 14px],
+        children: value,
+
+        value = text {
+          left: 0px,
+          top: 0px,
+          fill: c.ui.muted,
+          contents: "Search games or tags…",
+          font-size: typography.size.body,
+          font-family: typography.family.interface
+        }
+      }
+    }
+
+    body = frame {
+      left: 20px,
+      top: 80px,
+      width: 970px,
+      height: 778px,
+      slot: .true
+    }
+
+    count = text {
+      left: 916px,
+      top: 862px,
+      fill: c.ui.muted,
+      contents: "9 games",
+      font-size: typography.size.caption,
+      font-family: typography.family.interface
+    }
+  }
+
+  overlay = frame {
+    left: 0px,
+    top: 0px,
+    width: 1280px,
+    height: 900px,
+    slot: .true
+  }
+}

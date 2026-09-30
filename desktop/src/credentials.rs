@@ -8,17 +8,25 @@ pub trait CredentialStore {
     fn set(&self, secret: &str) -> Result<()>;
     fn remove(&self) -> Result<()>;
 }
-pub struct SteamCredential {
+/// One entry in the OS credential store.
+pub struct OsCredential {
     entry: keyring::Entry,
 }
-impl SteamCredential {
-    pub fn new(library: Uuid) -> Result<Self> {
+impl OsCredential {
+    /// The Steam Web API key of one local library.
+    pub fn steam(library: Uuid) -> Result<Self> {
         Ok(Self {
             entry: keyring::Entry::new("app.GameSync.Steam", &library.to_string())?,
         })
     }
+    /// The sync key of one sync folder. See `sync::secrets`.
+    pub fn sync_key(sync_id: Uuid) -> Result<Self> {
+        Ok(Self {
+            entry: keyring::Entry::new("app.GameSync.SyncKey", &sync_id.to_string())?,
+        })
+    }
 }
-impl CredentialStore for SteamCredential {
+impl CredentialStore for OsCredential {
     fn get(&self) -> Result<Option<String>> {
         match self.entry.get_password() {
             Ok(value) => Ok(Some(value)),

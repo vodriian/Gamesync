@@ -1,0 +1,7 @@
+import "screens/library/views/Grid.elyx" as source
+
+@context(theme="dark")
+export GridDark = frame : source.Grid {
+  left: 0px,
+  top: 0px
+}

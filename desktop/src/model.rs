@@ -495,6 +495,10 @@ impl Library {
                     )
                 })
                 .collect();
+            if !self.display.board_manual {
+                // `visible` is already in the Sort menu order.
+                return games;
+            }
             // Stable: equal ranks and unranked games keep the Sort menu order.
             games.sort_by(|&a, &b| {
                 match (self.games[a].board_rank(), self.games[b].board_rank()) {
@@ -1061,6 +1065,48 @@ mod tests {
             columns.iter().map(|c| c.games.len()).sum::<usize>(),
             lib.visible.len()
         );
+    }
+
+    #[test]
+    fn a_sorted_board_ignores_manual_positions() {
+        let mut lib = library();
+        let (a, b, c) = (
+            lib.games[0].clone(),
+            lib.games[1].clone(),
+            lib.games[2].clone(),
+        );
+        lib.apply_personal_records(vec![
+            record(&a, "playing", Some("c")),
+            record(&b, "playing", Some("m")),
+            record(&c, "playing", None),
+        ]);
+        for (game, minutes) in [(&a, 10), (&b, 300), (&c, 5_000)] {
+            let game = lib.games.iter_mut().find(|g| g.id == game.id).unwrap();
+            game.playtime_minutes = minutes;
+        }
+        lib.display.sort = SortBy::Hours;
+        lib.display.descending = true;
+        let playing = |lib: &Library| -> Vec<Uuid> {
+            let column = lib
+                .board_columns()
+                .into_iter()
+                .find(|c| c.key.as_deref() == Some("playing"))
+                .unwrap();
+            column
+                .games
+                .iter()
+                .map(|&i| lib.games[i].id)
+                .filter(|id| [a.id, b.id, c.id].contains(id))
+                .collect()
+        };
+        // Manual order: ranked games first, then the Sort menu order.
+        lib.recompute();
+        assert_eq!(playing(&lib), [a.id, b.id, c.id]);
+        // Sorted: most hours first; the ranks stay saved.
+        lib.display.board_manual = false;
+        lib.recompute();
+        assert_eq!(playing(&lib), [c.id, b.id, a.id]);
+        assert!(lib.games.iter().any(|g| g.board_rank() == Some("c")));
     }
 
     #[test]

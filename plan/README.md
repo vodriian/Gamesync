@@ -11,14 +11,16 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 | [App plan](app-plan.md) | Scope, architecture, data rules, milestones, and acceptance checks |
 | [Guardrails](guardrails.md) | Code quality, tests, writing, and efficient agent work |
 | [Design](design.md) | Eagle GUI reference and design rules |
-| [Latest log](logs/2026-09-28.md) | Omarchy theme integration, 3D card POC, and Kanban board |
-| [Latest UI log](logs/2026-09-28.md) | Current macOS and cross-platform UI fixes and checks |
+| [Latest log](logs/2026-09-30.md) | Elyx design workspace, validation, and session handoff |
+| [Sync log](logs/2026-09-29.md) | Sync implementation, initial live check, and library UI fixes |
+| [UI log](logs/2026-09-28.md) | Omarchy theme, 3D card POC, Kanban board, and macOS UI fixes |
 | [Foundation log](logs/2026-09-11.md) | Initial decisions, changes, checks, and next task |
 | [Desktop demo](../desktop/README.md) | Run commands and current native features |
 | [Source notes](../desktop/SOURCE-NOTES.md) | Eagle code reuse and demo artwork sources |
 | [Record format](storage-format.md) | Versioned game records and conflict rules |
 | [Kanban board](kanban-board.md) | Status board, manual order, and status editing |
 | [Dashboard and smart collections](dashboard-tags.md) | Steam data, Smart collections, Home dashboard, and wishlist prices |
+| [Data sync](data-sync.md) | Personal data, settings, and encrypted keys across devices |
 
 ## Current state
 
@@ -27,9 +29,11 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 - Milestone 1: Linux runtime verification remains pending.
 - Milestone 2: file records, definitions, folder loading, and a local index are in place. Inspector draft edits, guarded saves, and saved-game conflict review are implemented.
 - Desktop v1 merged to `main` in PR #1 on September 28.
-- Working branch: `codex/macos-view-board-wishlist-fixes` (from `main`) for the
-  macOS build and cross-platform view, board, settings, and wishlist fixes.
-- Runtime targets: macOS and Linux. Windows follows later.
+- Cross-platform view, board, settings, and wishlist fixes merged in PR #3.
+- Working branch: `data-sync-mode` (from `main`) includes [data sync](data-sync.md) steps 1–5, library UI fixes, and the Elyx design workspace.
+- Initial macOS/Omarchy Dropbox check is logged; full cross-device acceptance remains pending.
+- Use the [Elyx workspace](../Design/GameSync/README.md) as the design source for the next UI improvements.
+- Runtime targets: macOS and Linux. Windows follows after sync works between them.
 - Existing React/Express app: retained as a reference.
 
 ## Current UI direction
@@ -41,8 +45,13 @@ experimental Blade/Vulkan card projection for Cards and focused fronts.
 
 ## Next task
 
-Verify these cross-platform fixes on Linux, then continue the deferred tuning
-fields and offline feeling/time picker in [Dashboard and smart collections](dashboard-tags.md).
+Use Elyx to replace the UI icons, polish cards, and polish Settings. Record
+accepted design changes before implementing them in GPUI.
+
+Complete [data sync](data-sync.md) step 6 acceptance checks across macOS and
+Omarchy, including Dropbox and Google Drive. Windows and compaction remain
+later steps. Tuning fields and the offline feeling/time picker remain deferred
+in [Dashboard and smart collections](dashboard-tags.md).
 
 Collections, core Settings, and Steam sync are implemented. See
 [Collections, Settings, and Steam](collections-settings-steam.md) for use and limits.

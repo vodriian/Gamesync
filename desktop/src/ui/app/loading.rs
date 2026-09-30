@@ -81,6 +81,10 @@ impl GameSyncApp {
                 this.loading = false;
                 this.refresh = Some(refresh);
                 this.start_refresh(reader, events, watcher, watch_warning, sample_mode, cx);
+                // Sync without waiting for the first periodic scan.
+                if this.sync.read(cx).enabled() && !sample_mode {
+                    this.refresh_library(cx);
+                }
             });
         }));
         cx.notify();
@@ -116,33 +120,54 @@ impl GameSyncApp {
                         }
                     }
                 }
-                let (returned, result) = cx
+                let (sync_handle, sync_folder) = match this.update(cx, |this, cx| {
+                    let sync = this.sync.read(cx);
+                    (sync.handle.clone(), sync.folder.clone())
+                }) {
+                    Ok(sync) => sync,
+                    Err(_) => return,
+                };
+                let (returned, result, synced) = cx
                     .background_spawn(async move {
-                        let result = reader.refresh().map(|loaded| {
+                        let mut synced = None;
+                        let result = reader.refresh().map(|mut loaded| {
+                            // Sample libraries never sync. A round uses the
+                            // library just read, as the engine requires.
+                            if let Some(folder) = sync_folder.filter(|_| !sample_mode) {
+                                let outcome =
+                                    sync_round(&mut reader, &mut loaded, sync_handle, &folder);
+                                synced = Some(outcome);
+                            }
                             let mut model = Library::from_loaded(&loaded);
                             model.demo = sample_mode;
                             (model, loaded.issues)
                         });
-                        (reader, result)
+                        (reader, result, synced)
                     })
                     .await;
                 reader = returned;
                 if this
-                    .update(cx, |this, cx| match result {
-                        Ok((model, mut issues)) => {
-                            if let Some(warning) = &watch_warning {
-                                issues.push(warning.clone());
-                            }
-                            if this.refreshing {
-                                this.refreshing = false;
-                            }
-                            this.apply_library(model, &issues, true, cx);
+                    .update(cx, |this, cx| {
+                        if let Some(synced) = synced {
+                            this.apply_sync(synced, cx);
                         }
-                        Err(error) => {
-                            this.refreshing = false;
-                            this.notice =
-                                format!("Could not refresh: {error:#}. Showing last valid data.");
-                            cx.notify();
+                        match result {
+                            Ok((model, mut issues)) => {
+                                if let Some(warning) = &watch_warning {
+                                    issues.push(warning.clone());
+                                }
+                                if this.refreshing {
+                                    this.refreshing = false;
+                                }
+                                this.apply_library(model, &issues, true, cx);
+                            }
+                            Err(error) => {
+                                this.refreshing = false;
+                                this.notice = format!(
+                                    "Could not refresh: {error:#}. Showing last valid data."
+                                );
+                                cx.notify();
+                            }
                         }
                     })
                     .is_err()
@@ -194,4 +219,42 @@ impl GameSyncApp {
         }
         cx.notify();
     }
+}
+
+/// The result of one sync attempt in the refresh loop.
+pub(super) struct SyncOutcome {
+    /// An engine opened in this attempt; the app keeps it.
+    pub opened: Option<std::sync::Arc<crate::sync_runtime::Handle>>,
+    pub report: Result<crate::sync_runtime::Report, String>,
+}
+
+/// Open sync if needed, run one round, and read the library again when the
+/// round wrote to it. A folder that cannot open is retried next time.
+fn sync_round(
+    reader: &mut LibraryReader,
+    loaded: &mut gamesync_desktop::library_reader::LoadedLibrary,
+    handle: Option<std::sync::Arc<crate::sync_runtime::Handle>>,
+    folder: &std::path::Path,
+) -> SyncOutcome {
+    let (handle, opened) = match handle {
+        Some(handle) => (handle, None),
+        None => match crate::sync_runtime::open(folder, false) {
+            Ok(handle) => (handle.clone(), Some(handle)),
+            Err(error) => {
+                return SyncOutcome {
+                    opened: None,
+                    report: Err(format!("{error:#}")),
+                }
+            }
+        },
+    };
+    let report = crate::sync_runtime::run_round(&handle, reader.root(), loaded)
+        .map_err(|error| format!("{error:#}"));
+    if report.as_ref().is_ok_and(|r| r.library_changed) {
+        match reader.refresh() {
+            Ok(fresh) => *loaded = fresh,
+            Err(error) => log::warn!("Could not read the library after sync: {error:#}"),
+        }
+    }
+    SyncOutcome { opened, report }
 }

@@ -14,6 +14,11 @@ impl Render for SettingsView {
             self.clear_key = false;
             self.key = Self::masked_input("Saved securely · enter a replacement", window, cx);
         }
+        if self.clear_passphrase {
+            self.clear_passphrase = false;
+            self.passphrase = Self::masked_input("Sync passphrase", window, cx);
+            self.passphrase_confirm = Self::masked_input("Repeat the passphrase", window, cx);
+        }
         let source = self.library.read(cx).source.clone();
         let id = source.as_ref().map(|(_, m)| m.library_id);
         if id != self.library_id && !self.busy {
@@ -223,32 +228,37 @@ impl Render for SettingsView {
                             .border_r_1()
                             .border_color(cx.theme().border)
                             .children(
-                                [Section::General, Section::Appearance, Section::Ai]
-                                    .into_iter()
-                                    .map(|section| {
-                                        Button::new(section.label())
-                                            .ghost()
-                                            .label(section.label())
-                                            .icon(match section {
-                                                Section::General => {
-                                                    gpui_component::IconName::Settings
-                                                }
-                                                Section::Appearance => {
-                                                    gpui_component::IconName::Palette
-                                                }
-                                                Section::Ai => gpui_component::IconName::Bot,
-                                            })
-                                            .justify_start()
-                                            .w_full()
-                                            .selected(self.section == section)
-                                            .on_click(cx.listener(move |this, _, _, cx| {
-                                                this.section = section;
-                                                if !this.busy {
-                                                    this.message.clear();
-                                                }
-                                                cx.notify();
-                                            }))
-                                    }),
+                                [
+                                    Section::General,
+                                    Section::Sync,
+                                    Section::Appearance,
+                                    Section::Ai,
+                                ]
+                                .into_iter()
+                                .map(|section| {
+                                    Button::new(section.label())
+                                        .ghost()
+                                        .label(section.label())
+                                        .icon(match section {
+                                            Section::General => gpui_component::IconName::Settings,
+                                            Section::Sync => gpui_component::IconName::FolderOpen,
+                                            Section::Appearance => {
+                                                gpui_component::IconName::Palette
+                                            }
+                                            Section::Ai => gpui_component::IconName::Bot,
+                                        })
+                                        .justify_start()
+                                        .w_full()
+                                        .selected(self.section == section)
+                                        .on_click(cx.listener(move |this, _, _, cx| {
+                                            this.section = section;
+                                            this.stop_confirm = false;
+                                            if !this.busy {
+                                                this.message.clear();
+                                            }
+                                            cx.notify();
+                                        }))
+                                }),
                             ),
                     )
                     .child(
@@ -268,6 +278,9 @@ impl Render for SettingsView {
                             })
                             .when(self.section == Section::General, |column| {
                                 column.child(connection).child(sync)
+                            })
+                            .when(self.section == Section::Sync, |column| {
+                                column.child(self.sync_section(cx))
                             })
                             .when(self.section == Section::Ai, |column| {
                                 column.child(self.ai.clone())

@@ -1,0 +1,319 @@
+import "tokens/desktop.elyx" as c
+import "resources/icons/house.svg" as icon_house
+import "resources/icons/layout-dashboard.svg" as icon_layout_dashboard
+import "resources/icons/heart.svg" as icon_heart
+import "resources/icons/star.svg" as icon_star
+import "resources/icons/folder.svg" as icon_folder
+import "resources/icons/settings.svg" as icon_settings
+import "tokens/typography.elyx" as typography
+import "tokens/radius.elyx" as radius
+
+export Sidebar = frame {
+  left: 0px,
+  top: 0px,
+  width: 255px,
+  height: 900px,
+  fill: c.ui.chrome,
+  children: [navigation, brand, settings],
+
+  navigation = frame {
+    left: 8px,
+    top: 50px,
+    width: 239px,
+    layout: {direction: .column, item-gap: 8px},
+    children: [
+      home,
+      all,
+      favorites,
+      wishlist,
+      spacer,
+      collectionsTitle,
+      collection,
+      space2,
+      smart,
+      genres,
+      steamTags,
+      myTags,
+      rating,
+      hours
+    ],
+
+    home = frame {
+      left: 0px,
+      top: 0px,
+      width: 239px,
+      height: 32px,
+      layout: {align-items: .center, item-gap: 10px},
+      corner-radius: radius.corner.control,
+      padding: [6px, 10px],
+      children: [glyph, label, count],
+
+      glyph = icon {
+        left: 0px,
+        top: 0px,
+        width: 18px,
+        height: 18px,
+        fill: c.ui.text,
+        contents: icon_house
+      }
+
+      label = text {
+        left: 0px,
+        top: 0px,
+        fill: c.ui.text,
+        contents: "Home",
+        font-size: typography.size.body,
+        font-family: typography.family.interface
+      }
+
+      count = text {
+        left: 222px,
+        top: 9px,
+        ignore-stack: .true,
+        fill: c.ui.text,
+        contents: "",
+        font-size: typography.size.caption,
+        font-family: typography.family.interface
+      }
+    }
+
+    all = frame {
+      left: 0px,
+      top: 0px,
+      width: 239px,
+      height: 32px,
+      layout: {align-items: .center, item-gap: 10px},
+      fill: c.ui.selected,
+      corner-radius: radius.corner.control,
+      padding: [6px, 10px],
+      children: [glyph, label, count],
+
+      glyph = icon {
+        left: 0px,
+        top: 0px,
+        width: 18px,
+        height: 18px,
+        fill: c.ui.text,
+        contents: icon_layout_dashboard
+      }
+
+      label = text {
+        left: 0px,
+        top: 0px,
+        fill: c.ui.text,
+        contents: "All games",
+        font-size: typography.size.body,
+        font-family: typography.family.interface
+      }
+
+      count = text {
+        left: 222px,
+        top: 9px,
+        ignore-stack: .true,
+        fill: c.ui.text,
+        contents: "9",
+        font-size: typography.size.caption,
+        font-family: typography.family.interface
+      }
+    }
+
+    favorites = frame {
+      left: 0px,
+      top: 0px,
+      width: 239px,
+      height: 32px,
+      layout: {align-items: .center, item-gap: 10px},
+      corner-radius: radius.corner.control,
+      padding: [6px, 10px],
+      children: [glyph, label, count],
+
+      glyph = icon {
+        left: 0px,
+        top: 0px,
+        width: 18px,
+        height: 18px,
+        fill: c.ui.text,
+        contents: icon_heart
+      }
+
+      label = text {
+        left: 0px,
+        top: 0px,
+        fill: c.ui.text,
+        contents: "Favorites",
+        font-size: typography.size.body,
+        font-family: typography.family.interface
+      }
+
+      count = text {
+        left: 222px,
+        top: 9px,
+        ignore-stack: .true,
+        fill: c.ui.text,
+        contents: "5",
+        font-size: typography.size.caption,
+        font-family: typography.family.interface
+      }
+    }
+
+    wishlist = frame {
+      left: 0px,
+      top: 0px,
+      width: 239px,
+      height: 32px,
+      layout: {align-items: .center, item-gap: 10px},
+      corner-radius: radius.corner.control,
+      padding: [6px, 10px],
+      children: [glyph, label, count],
+
+      glyph = icon {
+        left: 0px,
+        top: 0px,
+        width: 18px,
+        height: 18px,
+        fill: c.ui.text,
+        contents: icon_star
+      }
+
+      label = text {
+        left: 0px,
+        top: 0px,
+        fill: c.ui.text,
+        contents: "Wishlist",
+        font-size: typography.size.body,
+        font-family: typography.family.interface
+      }
+
+      count = text {
+        left: 222px,
+        top: 9px,
+        ignore-stack: .true,
+        fill: c.ui.text,
+        contents: "3",
+        font-size: typography.size.caption,
+        font-family: typography.family.interface
+      }
+    }
+
+    spacer = frame {
+      left: 0px,
+      top: 0px,
+      width: 1px,
+      height: 14px
+    }
+
+    collectionsTitle = text {
+      left: 0px,
+      top: 0px,
+      fill: c.ui.text,
+      contents: "⌄  Collections                         +",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    collection = frame {
+      left: 12px,
+      top: 0px,
+      layout: {align-items: .center, item-gap: 10px},
+      children: [glyphIcon, label],
+
+      glyphIcon = icon {
+        left: 0px,
+        top: 0px,
+        width: 18px,
+        height: 18px,
+        fill: c.ui.text,
+        contents: icon_folder
+      }
+
+      label = text {
+        left: 0px,
+        top: 0px,
+        fill: c.ui.text,
+        contents: "Cozy evenings                       2",
+        font-size: typography.size.body,
+        font-family: typography.family.interface
+      }
+    }
+
+    space2 = frame {
+      left: 0px,
+      top: 0px,
+      width: 1px,
+      height: 8px
+    }
+
+    smart = text {
+      left: 0px,
+      top: 0px,
+      fill: c.ui.text,
+      contents: "⌄  Smart collections",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    genres = text {
+      left: 22px,
+      top: 0px,
+      fill: c.ui.text,
+      contents: "›   Genres",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    steamTags = text {
+      left: 22px,
+      top: 0px,
+      fill: c.ui.text,
+      contents: "›   Steam tags",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    myTags = text {
+      left: 22px,
+      top: 0px,
+      fill: c.ui.text,
+      contents: "›   My tags",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    rating = text {
+      left: 22px,
+      top: 0px,
+      fill: c.ui.text,
+      contents: "›   Rating",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    hours = text {
+      left: 22px,
+      top: 0px,
+      fill: c.ui.text,
+      contents: "›   Time played",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+  }
+
+  brand = text {
+    left: 16px,
+    top: 866px,
+    fill: c.ui.muted,
+    contents: "GameSync",
+    font-size: typography.size.title,
+    font-family: typography.family.interface,
+    font-style: "Bold"
+  }
+
+  settings = icon {
+    left: 221px,
+    top: 865px,
+    width: 18px,
+    height: 18px,
+    fill: c.ui.text,
+    contents: icon_settings
+  }
+}

@@ -42,7 +42,8 @@ pub fn save_record<T: Serialize>(current: &Path, revision: &Path, record: &T) ->
     })
 }
 
-fn publish_revision(path: &Path, bytes: &[u8]) -> Result<()> {
+/// Publish an immutable file. An exact retry succeeds; different bytes fail.
+pub(crate) fn publish_revision(path: &Path, bytes: &[u8]) -> Result<()> {
     let staged = stage(path, bytes)?;
     match staged.persist_noclobber(path) {
         Ok(_) => {}
@@ -71,7 +72,8 @@ pub(crate) fn retain_revision<T: Serialize>(path: &Path, record: &T) -> Result<(
     publish_revision(path, &bytes)
 }
 
-fn replace_current(path: &Path, bytes: &[u8]) -> Result<()> {
+/// Atomically replace a file that has one writer.
+pub(crate) fn replace_current(path: &Path, bytes: &[u8]) -> Result<()> {
     stage(path, bytes)?
         .persist(path)
         .map_err(|error| error.error)

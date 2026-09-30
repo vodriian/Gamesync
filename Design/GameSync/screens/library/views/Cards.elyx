@@ -1,0 +1,143 @@
+import "tokens/desktop.elyx" as c
+import "resources/images/646570.jpg" as cover646570
+import "resources/images/1145360.jpg" as cover1145360
+import "resources/images/367520.jpg" as cover367520
+import "resources/images/2379780.jpg" as cover2379780
+import "resources/images/620.jpg" as cover620
+import "blocks/shell/LibraryShell.elyx" as librarySource
+import "blocks/library/PhysicalCard.elyx" as physicalCardSource
+
+export Cards = frame : librarySource.Library {
+  left: 0px,
+  top: 0px,
+
+  librarySource.Library.panel {
+    librarySource.Library.panel.body {
+      overrides: [insert(content, after = .nil)]
+    }
+
+    librarySource.Library.panel.toolbar {
+      librarySource.Library.panel.toolbar.views {
+        librarySource.Library.panel.toolbar.views.cards {
+          fill[0].color: c.ui.selected
+        }
+
+        librarySource.Library.panel.toolbar.views.grid {
+          fill[0].color: c.ui.surface
+        }
+      }
+    }
+  }
+
+  content = frame {
+    left: 0px,
+    top: 0px,
+    width: 970px,
+    layout: {item-gap: 48px, wrap: .true, line-gap: 58px},
+    children: [game0, game1, game2, game3, game4, game5],
+
+    game0 = frame : physicalCardSource.PhysicalCard {
+      left: 0px,
+      top: 0px
+    }
+
+    game1 = frame : physicalCardSource.PhysicalCard {
+      left: 0px,
+      top: 0px,
+
+      physicalCardSource.PhysicalCard.cover {
+        fill[0].image.ref: cover646570
+      }
+
+      physicalCardSource.PhysicalCard.title {
+        contents: "Slay the Spire"
+      }
+    }
+
+    game2 = frame : physicalCardSource.PhysicalCard {
+      left: 0px,
+      top: 0px,
+
+      physicalCardSource.PhysicalCard.cover {
+        fill[0].image.ref: cover1145360
+      }
+
+      physicalCardSource.PhysicalCard.rating {
+        contents: "★ 5.0  ♥"
+      }
+
+      physicalCardSource.PhysicalCard.status {
+        physicalCardSource.PhysicalCard.status.label {
+          contents: "Want to play"
+        }
+      }
+
+      physicalCardSource.PhysicalCard.title {
+        contents: "Hades"
+      }
+    }
+
+    game3 = frame : physicalCardSource.PhysicalCard {
+      left: 0px,
+      top: 0px,
+
+      physicalCardSource.PhysicalCard.cover {
+        fill[0].image.ref: cover367520
+      }
+
+      physicalCardSource.PhysicalCard.rating {
+        contents: "★ 4.5"
+      }
+
+      physicalCardSource.PhysicalCard.status {
+        physicalCardSource.PhysicalCard.status.label {
+          contents: "Paused"
+        }
+      }
+
+      physicalCardSource.PhysicalCard.title {
+        contents: "Hollow Knight"
+      }
+    }
+
+    game4 = frame : physicalCardSource.PhysicalCard {
+      left: 0px,
+      top: 0px,
+
+      physicalCardSource.PhysicalCard.cover {
+        fill[0].image.ref: cover2379780
+      }
+
+      physicalCardSource.PhysicalCard.rating {
+        contents: "★ 4.5"
+      }
+
+      physicalCardSource.PhysicalCard.title {
+        contents: "Balatro"
+      }
+    }
+
+    game5 = frame : physicalCardSource.PhysicalCard {
+      left: 0px,
+      top: 0px,
+
+      physicalCardSource.PhysicalCard.cover {
+        fill[0].image.ref: cover620
+      }
+
+      physicalCardSource.PhysicalCard.rating {
+        contents: "★ 5.0  ♥"
+      }
+
+      physicalCardSource.PhysicalCard.status {
+        physicalCardSource.PhysicalCard.status.label {
+          contents: "Completed"
+        }
+      }
+
+      physicalCardSource.PhysicalCard.title {
+        contents: "Portal 2"
+      }
+    }
+  }
+}

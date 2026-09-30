@@ -1,0 +1,122 @@
+import "tokens/desktop.elyx" as c
+import "tokens/typography.elyx" as typography
+import "screens/settings/sync/SyncOff.elyx" as itemSyncOff
+import "screens/settings/sync/SyncSampleUnavailable.elyx" as itemSyncSampleUnavailable
+import "screens/settings/sync/SyncUpToDate.elyx" as itemSyncUpToDate
+import "screens/settings/sync/SyncChecking.elyx" as itemSyncChecking
+import "screens/settings/sync/SyncFolderUnavailable.elyx" as itemSyncFolderUnavailable
+import "screens/settings/sync/SyncPending.elyx" as itemSyncPending
+import "screens/settings/sync/SyncStopConfirmation.elyx" as itemSyncStopConfirmation
+import "screens/settings/sync/SyncReviewChanges.elyx" as itemSyncReviewChanges
+
+SyncOffLabel = text {
+  left: 0px,
+  top: 0px,
+  fill: c.ui.muted,
+  contents: "SyncOff",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+SyncOff = frame : itemSyncOff.SyncOff {
+  left: 0px,
+  top: 40px
+}
+
+SyncSampleUnavailableLabel = text {
+  left: 1400px,
+  top: 0px,
+  fill: c.ui.muted,
+  contents: "SyncSampleUnavailable",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+SyncSampleUnavailable = frame : itemSyncSampleUnavailable.SyncSampleUnavailable {
+  left: 1400px,
+  top: 40px
+}
+
+SyncUpToDateLabel = text {
+  left: 2800px,
+  top: 0px,
+  fill: c.ui.muted,
+  contents: "SyncUpToDate",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+SyncUpToDate = frame : itemSyncUpToDate.SyncUpToDate {
+  left: 2800px,
+  top: 40px
+}
+
+SyncCheckingLabel = text {
+  left: 0px,
+  top: 1020px,
+  fill: c.ui.muted,
+  contents: "SyncChecking",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+SyncChecking = frame : itemSyncChecking.SyncChecking {
+  left: 0px,
+  top: 1060px
+}
+
+SyncFolderUnavailableLabel = text {
+  left: 1400px,
+  top: 1020px,
+  fill: c.ui.muted,
+  contents: "SyncFolderUnavailable",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+SyncFolderUnavailable = frame : itemSyncFolderUnavailable.SyncFolderUnavailable {
+  left: 1400px,
+  top: 1060px
+}
+
+SyncPendingLabel = text {
+  left: 2800px,
+  top: 1020px,
+  fill: c.ui.muted,
+  contents: "SyncPending",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+SyncPending = frame : itemSyncPending.SyncPending {
+  left: 2800px,
+  top: 1060px
+}
+
+SyncStopConfirmationLabel = text {
+  left: 0px,
+  top: 2040px,
+  fill: c.ui.muted,
+  contents: "SyncStopConfirmation",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+SyncStopConfirmation = frame : itemSyncStopConfirmation.SyncStopConfirmation {
+  left: 0px,
+  top: 2080px
+}
+
+SyncReviewChangesLabel = text {
+  left: 1400px,
+  top: 2040px,
+  fill: c.ui.muted,
+  contents: "SyncReviewChanges",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+SyncReviewChanges = frame : itemSyncReviewChanges.SyncReviewChanges {
+  left: 1400px,
+  top: 2080px
+}

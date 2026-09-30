@@ -1,0 +1,39 @@
+import "tokens/desktop.elyx" as c
+import "resources/images/413150.jpg" as cover413150
+import "tokens/typography.elyx" as typography
+
+export GridTile = frame {
+  left: 0px,
+  top: 0px,
+  width: 175px,
+  height: 312px,
+  layout: {direction: .column, item-gap: 8px},
+  children: [cover, title, meta],
+
+  cover = frame {
+    left: 0px,
+    top: 0px,
+    width: 175px,
+    height: 262px,
+    fill: {image: {ref: cover413150}},
+    corner-radius: 7px
+  }
+
+  title = text {
+    left: 0px,
+    top: 0px,
+    fill: c.ui.text,
+    contents: "Stardew Valley",
+    font-size: 13,
+    font-family: typography.family.interface
+  }
+
+  meta = text {
+    left: 0px,
+    top: 0px,
+    fill: c.ui.muted,
+    contents: "Playing     ★ 4.5  ♥",
+    font-size: 11,
+    font-family: typography.family.interface
+  }
+}

@@ -59,6 +59,10 @@ const ICONS: &[(&str, &[u8])] = &[
     ),
     ("icons/house.svg", include_bytes!("../icons/house.svg")),
     (
+        "icons/heart-filled.svg",
+        include_bytes!("../icons/heart-filled.svg"),
+    ),
+    (
         "icons/badge-percent.svg",
         include_bytes!("../icons/badge-percent.svg"),
     ),
@@ -83,6 +87,14 @@ pub struct DiscountIcon;
 impl gpui_component::IconNamed for DiscountIcon {
     fn path(self) -> SharedString {
         "icons/badge-percent.svg".into()
+    }
+}
+
+/// A filled heart marks a favorite game.
+pub struct FavoriteIcon;
+impl gpui_component::IconNamed for FavoriteIcon {
+    fn path(self) -> SharedString {
+        "icons/heart-filled.svg".into()
     }
 }
 

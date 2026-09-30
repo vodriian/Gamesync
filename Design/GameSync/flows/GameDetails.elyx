@@ -1,0 +1,182 @@
+import "tokens/desktop.elyx" as c
+import "tokens/typography.elyx" as typography
+import "screens/details/CardFront.elyx" as itemCardFront
+import "screens/details/CardFrontNoFilmstrip.elyx" as itemCardFrontNoFilmstrip
+import "screens/details/CardDetails.elyx" as itemCardDetails
+import "screens/details/DetailsUnsaved.elyx" as itemDetailsUnsaved
+import "screens/details/DetailsSaving.elyx" as itemDetailsSaving
+import "screens/details/DetailsSaved.elyx" as itemDetailsSaved
+import "screens/details/DetailsSaveFailed.elyx" as itemDetailsSaveFailed
+import "screens/details/DetailsConflict.elyx" as itemDetailsConflict
+import "screens/details/DetailsReadOnly.elyx" as itemDetailsReadOnly
+import "screens/details/DetailsStatusMenu.elyx" as itemDetailsStatusMenu
+import "screens/details/DetailsActionsMenu.elyx" as itemDetailsActionsMenu
+import "screens/details/DetailsTagPicker.elyx" as itemDetailsTagPicker
+
+CardFrontLabel = text {
+  left: 0px,
+  top: 0px,
+  fill: c.ui.muted,
+  contents: "CardFront",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+CardFront = frame : itemCardFront.CardFront {
+  left: 0px,
+  top: 40px
+}
+
+CardFrontNoFilmstripLabel = text {
+  left: 1400px,
+  top: 0px,
+  fill: c.ui.muted,
+  contents: "CardFrontNoFilmstrip",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+CardFrontNoFilmstrip = frame : itemCardFrontNoFilmstrip.CardFrontNoFilmstrip {
+  left: 1400px,
+  top: 40px
+}
+
+CardDetailsLabel = text {
+  left: 2800px,
+  top: 0px,
+  fill: c.ui.muted,
+  contents: "CardDetails",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+CardDetails = frame : itemCardDetails.CardDetails {
+  left: 2800px,
+  top: 40px
+}
+
+DetailsUnsavedLabel = text {
+  left: 0px,
+  top: 1020px,
+  fill: c.ui.muted,
+  contents: "DetailsUnsaved",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+DetailsUnsaved = frame : itemDetailsUnsaved.DetailsUnsaved {
+  left: 0px,
+  top: 1060px
+}
+
+DetailsSavingLabel = text {
+  left: 1400px,
+  top: 1020px,
+  fill: c.ui.muted,
+  contents: "DetailsSaving",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+DetailsSaving = frame : itemDetailsSaving.DetailsSaving {
+  left: 1400px,
+  top: 1060px
+}
+
+DetailsSavedLabel = text {
+  left: 2800px,
+  top: 1020px,
+  fill: c.ui.muted,
+  contents: "DetailsSaved",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+DetailsSaved = frame : itemDetailsSaved.DetailsSaved {
+  left: 2800px,
+  top: 1060px
+}
+
+DetailsSaveFailedLabel = text {
+  left: 0px,
+  top: 2040px,
+  fill: c.ui.muted,
+  contents: "DetailsSaveFailed",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+DetailsSaveFailed = frame : itemDetailsSaveFailed.DetailsSaveFailed {
+  left: 0px,
+  top: 2080px
+}
+
+DetailsConflictLabel = text {
+  left: 1400px,
+  top: 2040px,
+  fill: c.ui.muted,
+  contents: "DetailsConflict",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+DetailsConflict = frame : itemDetailsConflict.DetailsConflict {
+  left: 1400px,
+  top: 2080px
+}
+
+DetailsReadOnlyLabel = text {
+  left: 2800px,
+  top: 2040px,
+  fill: c.ui.muted,
+  contents: "DetailsReadOnly",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+DetailsReadOnly = frame : itemDetailsReadOnly.DetailsReadOnly {
+  left: 2800px,
+  top: 2080px
+}
+
+DetailsStatusMenuLabel = text {
+  left: 0px,
+  top: 3060px,
+  fill: c.ui.muted,
+  contents: "DetailsStatusMenu",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+DetailsStatusMenu = frame : itemDetailsStatusMenu.DetailsStatusMenu {
+  left: 0px,
+  top: 3100px
+}
+
+DetailsActionsMenuLabel = text {
+  left: 1400px,
+  top: 3060px,
+  fill: c.ui.muted,
+  contents: "DetailsActionsMenu",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+DetailsActionsMenu = frame : itemDetailsActionsMenu.DetailsActionsMenu {
+  left: 1400px,
+  top: 3100px
+}
+
+DetailsTagPickerLabel = text {
+  left: 2800px,
+  top: 3060px,
+  fill: c.ui.muted,
+  contents: "DetailsTagPicker",
+  font-size: typography.size.heading,
+  font-family: typography.family.interface
+}
+
+DetailsTagPicker = frame : itemDetailsTagPicker.DetailsTagPicker {
+  left: 2800px,
+  top: 3100px
+}

@@ -1,0 +1,7 @@
+import "screens/library/views/Grid.elyx" as library
+
+export Desktop = frame : library.Grid {
+  doc: "Main desktop screen. Browse other states through the project galleries or flows.",
+  left: 0px,
+  top: 0px
+}

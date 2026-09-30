@@ -1,0 +1,43 @@
+import "blocks/shell/LibraryShell.elyx" as librarySource
+import "blocks/library/GridTile.elyx" as gridTileSource
+
+export SearchResults = frame : librarySource.Library {
+  doc: "03 · Selection and editing / SearchResults",
+  left: 0px,
+  top: 0px,
+
+  librarySource.Library.panel {
+    librarySource.Library.panel.toolbar {
+      librarySource.Library.panel.toolbar.search {
+        librarySource.Library.panel.toolbar.search.value {
+          contents: "⌕  stardew"
+        }
+      }
+    }
+
+    librarySource.Library.panel.count {
+      contents: "1 game · ⓘ"
+    }
+
+    librarySource.Library.panel.body {
+      overrides: [insert(content, after = .nil)]
+    }
+  }
+
+  content = frame {
+    left: 0px,
+    top: 0px,
+    width: 970px,
+    layout: {item-gap: 23px, wrap: .true, line-gap: 22px},
+    children: game0,
+
+    game0 = frame : gridTileSource.GridTile {
+      left: 0px,
+      top: 0px,
+
+      gridTileSource.GridTile.meta {
+        contents: "Playing    ★ 4.5"
+      }
+    }
+  }
+}

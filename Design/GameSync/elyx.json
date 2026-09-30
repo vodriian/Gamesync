@@ -1,0 +1,13 @@
+{
+  "git": {
+    "flow": "relaxed"
+  },
+  "assets": {
+    "images": {
+      "writePath": "resources/images",
+      "additionalSourcePaths": [
+        "resources/icons"
+      ]
+    }
+  }
+}

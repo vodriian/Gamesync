@@ -1,0 +1,126 @@
+import "tokens/desktop.elyx" as c
+import "blocks/shell/SettingsShell.elyx" as settingsSource
+import "tokens/typography.elyx" as typography
+import "controls/TextField.elyx" as fields
+
+export SettingsOmarchy = frame : settingsSource.Settings {
+  left: 0px,
+  top: 0px,
+
+  settingsSource.Settings.body {
+    overrides: [insert(content, after = .nil)]
+  }
+
+  settingsSource.Settings.navigation {
+    settingsSource.Settings.navigation.appearance {
+      fill[0].color: c.ui.selected
+    }
+
+    settingsSource.Settings.navigation.general {
+      fill[0].color: c.ui.surface
+    }
+  }
+
+  settingsSource.Settings.section {
+    contents: "Look and feel"
+  }
+
+  content = frame {
+    left: 0px,
+    top: 0px,
+    width: 562px,
+    layout: {direction: .column, item-gap: 24px},
+    children: [omarchy, note, mode, scheme, motion, hidden],
+
+    omarchy = text {
+      left: 0px,
+      top: 0px,
+      fill: c.ui.text,
+      contents: "☑ Sync with Omarchy theme",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    note = text {
+      left: 0px,
+      top: 0px,
+      width: 540px,
+      fill: c.ui.muted,
+      contents: "Use the active Omarchy theme on this Linux computer.",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    mode = frame {
+      left: 0px,
+      top: 0px,
+      width: 540px,
+      layout: {direction: .column, item-gap: 10px},
+      children: [label, input],
+
+      label = text {
+        left: 0px,
+        top: 0px,
+        fill: c.ui.text,
+        contents: "Mode",
+        font-size: typography.size.body,
+        font-family: typography.family.interface
+      }
+
+      input = frame : fields.TextField {
+        left: 0px,
+        top: 0px,
+        width: 540px,
+
+        fields.TextField.value {
+          contents: "Dark"
+        }
+      }
+    }
+
+    scheme = frame {
+      left: 0px,
+      top: 0px,
+      width: 540px,
+      layout: {direction: .column, item-gap: 10px},
+      children: [label, input],
+
+      label = text {
+        left: 0px,
+        top: 0px,
+        fill: c.ui.text,
+        contents: "Color scheme",
+        font-size: typography.size.body,
+        font-family: typography.family.interface
+      }
+
+      input = frame : fields.TextField {
+        left: 0px,
+        top: 0px,
+        width: 540px,
+
+        fields.TextField.value {
+          contents: "Controlled by Omarchy"
+        }
+      }
+    }
+
+    motion = text {
+      left: 0px,
+      top: 0px,
+      fill: c.ui.text,
+      contents: "☐ Reduce motion",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    hidden = text {
+      left: 0px,
+      top: 0px,
+      fill: c.ui.text,
+      contents: "☐ Show hidden games in sidebar",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+  }
+}

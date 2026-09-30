@@ -1,0 +1,488 @@
+{
+  "schemaVersion": 1,
+  "collections": [
+    {
+      "id": "659a1495-7463-5bc9-a59d-d7ba95529f58",
+      "name": "Start and overviews",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "flows",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "9c212f53-15cc-5a12-bab5-cf2ed8052617",
+      "name": "Main screens",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "screens/main",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "f8e997f8-89f4-53c0-a74c-6bd00513dd80",
+      "name": "Library views",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "screens/library/views",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "68016183-c6ad-590b-b27a-95a4b23132d5",
+      "name": "Library sections",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "screens/library/sections",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "4b8841cd-c407-5040-9ca4-0525f4d8d05a",
+      "name": "Library states",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "screens/library/states",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "88ccaa2c-a06d-51a2-b208-bf58520f88c2",
+      "name": "Menus",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "screens/library/menus",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "77bfbeb9-8181-5286-aee3-9cb062adf1cf",
+      "name": "Board states",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "screens/library/board",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "29a6369c-c02a-50b6-9177-25679ee08a20",
+      "name": "Collections",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "screens/library/collections",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "c752170c-ee72-51a6-9ff5-3f82fa9b47a5",
+      "name": "Game details",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "screens/details",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "787332fb-4393-5f57-b832-dfacf66315f1",
+      "name": "Settings - General",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "screens/settings/general",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "d7c1b088-2e32-5a8c-95b3-a067df20e537",
+      "name": "Settings - Appearance",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "screens/settings/appearance",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "3dc44967-db29-5b9e-9151-1105b36055fe",
+      "name": "Settings - AI",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "screens/settings/ai",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "f893ce15-442a-5669-a395-21687f4a4e18",
+      "name": "Device sync",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "screens/settings/sync",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "ed076887-6799-536b-a429-4c4d7ac5a557",
+      "name": "Key sync",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "screens/settings/keys",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "295b01d0-497b-5dd3-b8cb-771ab50a7bc1",
+      "name": "Conflict review",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "screens/review",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "6aaa2b8a-457c-5eca-a6d3-6053775fcf7b",
+      "name": "Dark appearance",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "screens/appearance",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "77ec2fb8-87b2-50dc-8a99-45864aacb0bb",
+      "name": "Controls",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "controls",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "ef445426-cf67-50df-808f-9576a9879d65",
+      "name": "Library components",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "blocks/library",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "ebbb3640-bab1-5257-ad01-2bba7006eed2",
+      "name": "Window shells",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "blocks/shell",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "7c732d64-842e-533e-8ad2-9dc2c373705d",
+      "name": "Navigation",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "blocks/navigation",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "aeab8a1e-31b6-557f-b8c2-1a14db26acaf",
+      "name": "Icons",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "resources/icons",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".svg"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -191,8 +191,13 @@ desktop/target/GameSync.app/Contents/MacOS/gamesync-desktop --demo --small-windo
 
 Run `python3 desktop/scripts/package_macos.py` on macOS (Python 3.11 or newer).
 It builds the locked release profile for the host architecture, copies the
-executable and icon into a standalone bundle, applies an ad-hoc signature, and
-creates a ZIP under `desktop/target/macos/`. The app does not depend on the
+executable and icon into a standalone bundle, signs it, and creates a ZIP under
+`desktop/target/macos/`. It signs with the first Developer ID Application or
+Apple Development certificate in the keychain, or with the identity in
+`GAMESYNC_SIGN_IDENTITY`. Without a certificate it uses an ad-hoc signature.
+Keychain then asks for its password again after each rebuild, because an
+ad-hoc signature identifies only one exact build. With a certificate, choose
+**Always Allow** once for each GameSync keychain entry. The app does not depend on the
 checkout or development executable. Its minimum macOS version comes from the
 linked binary. This is a local test build, not a universal or notarized release.
 Developer ID signing and notarization remain required for public distribution.

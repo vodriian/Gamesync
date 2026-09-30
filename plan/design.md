@@ -11,6 +11,15 @@ feel physical. Avoid motion that delays work.
 
 ## Current direction
 
+The editable [Elyx workspace](../Design/GameSync/README.md) reconstructs the
+current app for UI experiments. [Desktop](../Design/GameSync/screens/Desktop.elyx)
+is the main window; feature folders hold individual states, and `flows/` holds
+Settings, views, details, components, and full-atlas overview canvases. See its
+[state index](../Design/GameSync/screens/Desktop-states.md) for coverage and
+verification limits. Use Elyx as the design source for the next UI work:
+replace all UI icons, polish cards, and polish Settings. Keep accepted product
+decisions in this plan.
+
 The September 21 card references replace the inspector with a focused card.
 Keep the useful left navigation sidebar while browsing. Treat games as physical cards: artwork and title on the front, personal
 and provider details on the back. Use Cards, Grid, Table, and Board presentations.
