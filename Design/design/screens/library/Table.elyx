@@ -1,0 +1,950 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "resources/images/646570.jpg" as cover646570
+import "resources/images/1145360.jpg" as cover1145360
+import "resources/images/367520.jpg" as cover367520
+import "resources/images/2379780.jpg" as cover2379780
+import "resources/images/620.jpg" as cover620
+import "resources/images/632360.jpg" as cover632360
+import "resources/images/1055540.jpg" as cover1055540
+import "resources/images/1091500.jpg" as cover1091500
+import "design/blocks/shell/LibraryShell.elyx" as librarySource
+import "tokens/typography.elyx" as typography
+import "tokens/spacing.elyx" as spacing
+import "tokens/radius.elyx" as radius
+import "resources/icons-new/star-stroke-rounded.svg" as ratingOutline
+import "resources/icons-new/chevron-down-stroke-rounded.svg" as glyph_6
+import "design/blocks/library/TableRow.elyx" as tableRowSource
+import "design/controls/Checkbox.elyx" as checkboxes
+import "design/controls/Button.elyx" as buttons
+import "design/blocks/menus/Menu.elyx" as menuSource
+import "design/controls/Rating.elyx" as ratingControl
+import "resources/icons-new/solid/star-stroke-rounded-solid.svg" as ratingSolid
+import "design/controls/MenuItem.elyx" as menuItems
+
+export Table = frame : librarySource.Library {
+  left: 0px,
+  top: 0px,
+
+  panel {
+    body {
+      overrides: [insert(content, after = .nil)]
+    }
+
+    toolbar {
+      views {
+        table {
+          fill[0].color: c.ui.selected
+        }
+
+        grid {
+          fill[0].color: c.ui.surface
+        }
+      }
+    }
+  }
+
+  content = frame {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    layout: {direction: .column},
+    children: [header, row0, row1, row2, row3, row4, row5, row6, row7, row8],
+
+    header = frame {
+      width: 100%,
+      height: 32px,
+      layout: {align-items: .center, item-gap: spacing.gap.large},
+      padding: [0px, 12px],
+      children: [check, title, status, rating, hours],
+
+      check = frame : checkboxes.Checkbox {
+        width: 61px,
+
+        label {
+          display: .none
+        }
+      }
+
+      title = text {
+        width: 100%,
+        fill: c.ui.muted,
+        contents: "Title",
+        font-size: typography.size.caption,
+        font-family: typography.family.interface
+      }
+
+      status = text {
+        width: 130px,
+        fill: c.ui.muted,
+        contents: "Status",
+        font-size: typography.size.caption,
+        font-family: typography.family.interface
+      }
+
+      rating = text {
+        width: 110px,
+        fill: c.ui.muted,
+        contents: "Rating",
+        font-size: typography.size.caption,
+        font-family: typography.family.interface
+      }
+
+      hours = text {
+        width: 85px,
+        fill: c.ui.muted,
+        contents: "Playtime",
+        font-size: typography.size.caption,
+        font-family: typography.family.interface
+      }
+    }
+
+    row0 = frame : tableRowSource.TableRow {
+      rating {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "4.5 / 5"
+        }
+      }
+    }
+
+    row1 = frame : tableRowSource.TableRow {
+      cover {
+        fill[0].image.ref: cover646570
+      }
+
+      rating {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "4.5 / 5"
+        }
+      }
+
+      hours {
+        contents: "47.8 h"
+      }
+
+      title {
+        contents: "Slay the Spire"
+      }
+    }
+
+    row2 = frame : tableRowSource.TableRow {
+      cover {
+        fill[0].image.ref: cover1145360
+      }
+
+      rating {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "5.0 / 5"
+        }
+      }
+
+      hours {
+        contents: "30.5 h"
+      }
+
+      status {
+        contents: "Want to play"
+      }
+
+      title {
+        contents: "Hades"
+      }
+    }
+
+    row3 = frame : tableRowSource.TableRow {
+      cover {
+        fill[0].image.ref: cover367520
+      }
+
+      rating {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "4.5 / 5"
+        }
+      }
+
+      hours {
+        contents: "20.7 h"
+      }
+
+      status {
+        contents: "Paused"
+      }
+
+      title {
+        contents: "Hollow Knight"
+      }
+    }
+
+    row4 = frame : tableRowSource.TableRow {
+      cover {
+        fill[0].image.ref: cover2379780
+      }
+
+      rating {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "4.5 / 5"
+        }
+      }
+
+      hours {
+        contents: "16.3 h"
+      }
+
+      title {
+        contents: "Balatro"
+      }
+    }
+
+    row5 = frame : tableRowSource.TableRow {
+      cover {
+        fill[0].image.ref: cover620
+      }
+
+      rating {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "5.0 / 5"
+        }
+      }
+
+      hours {
+        contents: "12.0 h"
+      }
+
+      status {
+        contents: "Completed"
+      }
+
+      title {
+        contents: "Portal 2"
+      }
+    }
+
+    row6 = frame : tableRowSource.TableRow {
+      cover {
+        fill[0].image.ref: cover632360
+      }
+
+      rating {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "3.0 / 5"
+        }
+      }
+
+      hours {
+        contents: "4.0 h"
+      }
+
+      status {
+        contents: "Dropped"
+      }
+
+      title {
+        contents: "Risk of Rain 2"
+      }
+    }
+
+    row7 = frame : tableRowSource.TableRow {
+      cover {
+        fill[0].image.ref: cover1055540
+      }
+
+      rating {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "4.5 / 5"
+        }
+      }
+
+      hours {
+        contents: "3.0 h"
+      }
+
+      status {
+        contents: "Completed"
+      }
+
+      title {
+        contents: "A Short Hike"
+      }
+    }
+
+    row8 = frame : tableRowSource.TableRow {
+      cover {
+        fill[0].image.ref: cover1091500
+      }
+
+      rating {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "— / 5"
+        }
+      }
+
+      hours {
+        contents: "0.0 h"
+      }
+
+      status {
+        contents: "Backlog"
+      }
+
+      title {
+        contents: "Cyberpunk 2077"
+      }
+    }
+  }
+}
+
+@variant
+export TableSelection = frame : Table {
+  left: 1360px,
+  top: 0px,
+
+  panel {
+    body {
+      content {
+        overrides: [
+          insert(bulk, after = .nil),
+          move(Table.content.header, after = bulk)
+        ],
+
+        row0 {
+          fill[0].color: c.ui.selected,
+
+          checkbox {
+            box {
+              fill[0].color: c.ui.accent,
+
+              glyph {
+                fill[0].color: .white,
+                display: .visible
+              }
+            }
+          }
+        }
+
+        row1 {
+          fill[0].color: c.ui.selected,
+
+          checkbox {
+            box {
+              fill[0].color: c.ui.accent,
+
+              glyph {
+                fill[0].color: .white,
+                display: .visible
+              }
+            }
+          }
+        }
+
+        row2 {
+          fill[0].color: c.ui.selected,
+
+          checkbox {
+            box {
+              fill[0].color: c.ui.accent,
+
+              glyph {
+                fill[0].color: .white,
+                display: .visible
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  bulk = frame {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    layout: {item-gap: spacing.gap.regular},
+    children: [count, favorite, status, collections, hide, clear],
+
+    count = text {
+      fill: c.ui.text,
+      contents: "3 selected",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    favorite = frame : buttons.Button {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Favorite"
+        }
+      }
+    }
+
+    status = frame : buttons.Button {
+      label {
+        leading {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        trailing {
+          contents: glyph_6,
+          display: .visible
+        }
+
+        label {
+          contents: "Status"
+        }
+      }
+    }
+
+    collections = frame : buttons.Button {
+      label {
+        leading {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        trailing {
+          contents: glyph_6,
+          display: .visible
+        }
+
+        label {
+          contents: "Collections"
+        }
+      }
+    }
+
+    hide = frame : buttons.Button {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Hide"
+        }
+      }
+    }
+
+    clear = frame : buttons.Button {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Clear"
+        }
+      }
+    }
+  }
+}
+
+@variant
+export BulkPartialFailure = frame : TableSelection {
+  left: 2720px,
+  top: 0px,
+
+  panel {
+    body {
+      overrides: [insert(warning, after = .nil)],
+      layout.item-gap: spacing.gap.large
+    }
+  }
+
+  warning = frame {
+    width: 100%,
+    height: .auto,
+    layout: {align-items: .center},
+    fill: c.ui.chrome,
+    border: c.ui.border,
+    corner-radius: radius.corner.control,
+    padding: 10px,
+    children: message,
+
+    message = text {
+      fill: c.ui.muted,
+      contents: "Some games could not be saved. Failed games remain selected.",
+      font-size: 13,
+      font-family: typography.family.interface
+    }
+  }
+}
+
+@variant
+export TableInlineStatus = frame : Table {
+  left: 0px,
+  top: 980px,
+
+  overlay {
+    overrides: [insert(popover, after = .nil)]
+  }
+
+  popover = frame : menuSource.Menu {
+    doc: "Intentional popup overlay; excluded from the content stack.",
+    top: 140px,
+    right: 24px,
+    width: 218px,
+    ignore-stack: .true,
+    overrides: [
+      insert(item0, after = .nil),
+      insert(item1, after = item0),
+      insert(item2, after = item1),
+      insert(item3, after = item2),
+      insert(item4, after = item3),
+      insert(item5, after = item4)
+    ],
+
+    item0 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Backlog"
+        }
+      }
+    }
+
+    item1 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Want to play"
+        }
+      }
+    }
+
+    item2 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Playing"
+        }
+
+        leading {
+          display: .visible
+        }
+      }
+    }
+
+    item3 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Paused"
+        }
+      }
+    }
+
+    item4 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Completed"
+        }
+      }
+    }
+
+    item5 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Dropped"
+        }
+      }
+    }
+  }
+}
+
+@variant
+export TableInlineRating = frame : Table {
+  left: 1360px,
+  top: 980px,
+
+  overlay {
+    overrides: [insert(popover, after = .nil)]
+  }
+
+  popover = frame : menuSource.Menu {
+    doc: "Intentional popup overlay; excluded from the content stack.",
+    top: 140px,
+    right: 24px,
+    width: 218px,
+    ignore-stack: .true,
+    overrides: [
+      insert(item0, after = .nil),
+      insert(item1, after = item0),
+      insert(item2, after = item1),
+      insert(item3, after = item2),
+      insert(item4, after = item3),
+      insert(item5, after = item4)
+    ],
+
+    item0 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Unrated"
+        }
+      }
+    }
+
+    item1 = frame : menuItems.MenuItem {
+      overrides: [
+        insert(rating, after = .nil),
+        remove(menuItems.MenuItem.label)
+      ],
+
+      rating = frame : ratingControl.Rating {
+        star2 {
+          display: .none,
+          contents: ratingOutline
+        }
+
+        star3 {
+          display: .none,
+          contents: ratingOutline
+        }
+
+        star4 {
+          display: .none,
+          contents: ratingOutline
+        }
+
+        star5 {
+          display: .none,
+          contents: ratingOutline
+        }
+
+        star1 {
+          contents: ratingSolid,
+          sizing: .fill
+        }
+      }
+    }
+
+    item2 = frame : menuItems.MenuItem {
+      overrides: [
+        insert(rating, after = .nil),
+        remove(menuItems.MenuItem.label)
+      ],
+
+      rating = frame : ratingControl.Rating {
+        star3 {
+          display: .none,
+          contents: ratingOutline
+        }
+
+        star4 {
+          display: .none,
+          contents: ratingOutline
+        }
+
+        star5 {
+          display: .none,
+          contents: ratingOutline
+        }
+
+        star1 {
+          contents: ratingSolid,
+          sizing: .fill
+        }
+
+        star2 {
+          contents: ratingSolid,
+          sizing: .fill
+        }
+      }
+    }
+
+    item3 = frame : menuItems.MenuItem {
+      overrides: [
+        insert(rating, after = .nil),
+        remove(menuItems.MenuItem.label)
+      ],
+
+      rating = frame : ratingControl.Rating {
+        star4 {
+          display: .none,
+          contents: ratingOutline
+        }
+
+        star5 {
+          display: .none,
+          contents: ratingOutline
+        }
+
+        star1 {
+          contents: ratingSolid,
+          sizing: .fill
+        }
+
+        star2 {
+          contents: ratingSolid,
+          sizing: .fill
+        }
+
+        star3 {
+          contents: ratingSolid,
+          sizing: .fill
+        }
+      }
+    }
+
+    item4 = frame : menuItems.MenuItem {
+      overrides: [
+        insert(rating, after = .nil),
+        remove(menuItems.MenuItem.label)
+      ],
+
+      rating = frame : ratingControl.Rating {
+        star5 {
+          display: .none,
+          contents: ratingOutline
+        }
+
+        star1 {
+          contents: ratingSolid,
+          sizing: .fill
+        }
+
+        star2 {
+          contents: ratingSolid,
+          sizing: .fill
+        }
+
+        star3 {
+          contents: ratingSolid,
+          sizing: .fill
+        }
+
+        star4 {
+          contents: ratingSolid,
+          sizing: .fill
+        }
+      }
+    }
+
+    item5 = frame : menuItems.MenuItem {
+      overrides: [
+        insert(rating, after = .nil),
+        remove(menuItems.MenuItem.label)
+      ],
+
+      rating = frame : ratingControl.Rating {
+        star1 {
+          contents: ratingSolid,
+          sizing: .fill
+        }
+
+        star2 {
+          contents: ratingSolid,
+          sizing: .fill
+        }
+
+        star3 {
+          contents: ratingSolid,
+          sizing: .fill
+        }
+
+        star4 {
+          contents: ratingSolid,
+          sizing: .fill
+        }
+
+        star5 {
+          contents: ratingSolid,
+          sizing: .fill
+        }
+      }
+    }
+  }
+}

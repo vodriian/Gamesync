@@ -1,0 +1,58 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "resources/icons-new/solid/star-stroke-rounded-solid.svg" as solid
+import "resources/icons-new/star-stroke-rounded.svg" as outline
+import "tokens/spacing.elyx" as spacing
+import "tokens/typography.elyx" as typography
+
+export Rating = frame {
+  layout: {item-gap: spacing.gap.small},
+  children: [star1, star2, star3, star4, star5, value],
+
+  star1 = icon {
+    width: spacing.size.icon,
+    height: spacing.size.icon,
+    fill: c.ui.text,
+    contents: solid,
+    sizing: .fill
+  }
+
+  star2 = icon {
+    width: spacing.size.icon,
+    height: spacing.size.icon,
+    fill: c.ui.text,
+    contents: solid,
+    sizing: .fill
+  }
+
+  star3 = icon {
+    width: spacing.size.icon,
+    height: spacing.size.icon,
+    fill: c.ui.text,
+    contents: solid,
+    sizing: .fill
+  }
+
+  star4 = icon {
+    width: spacing.size.icon,
+    height: spacing.size.icon,
+    fill: c.ui.text,
+    contents: solid,
+    sizing: .fill
+  }
+
+  star5 = icon {
+    width: spacing.size.icon,
+    height: spacing.size.icon,
+    fill: c.ui.text,
+    contents: outline
+  }
+
+  value = text {
+    display: .none,
+    fill: c.ui.text,
+    contents: "4.5",
+    font-size: typography.size.caption,
+    font-family: typography.family.interface
+  }
+}

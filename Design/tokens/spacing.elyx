@@ -1,0 +1,24 @@
+// Shared native interface spacing, in logical pixels.
+export gap = tokens {
+  tight: 2,
+  small: 4,
+  medium: 8,
+  icon: 10,
+  regular: 12,
+  large: 16,
+  section: 24
+}
+
+export inset = tokens {
+  small: 8,
+  regular: 12,
+  large: 20,
+  section: 24
+}
+
+export size = tokens {
+  icon: 18,
+  row: 32,
+  thumbnail: 80,
+  sidebar: 255
+}

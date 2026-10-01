@@ -1,0 +1,399 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "resources/icons-new/eye-off-stroke-rounded.svg" as hiddenIcon
+import "tokens/colors.elyx" as c
+import "tokens/typography.elyx" as typography
+import "tokens/spacing.elyx" as spacing
+import "design/controls/NavigationRow.elyx" as rows
+import "design/controls/IconButton.elyx" as iconButtons
+import "resources/icons-new/heart-stroke-rounded.svg" as favoritesIcon
+import "resources/icons-new/star-stroke-rounded.svg" as wishlistIcon
+import "resources/icons-new/folder-01-stroke-rounded.svg" as collectionIcon
+import "resources/icons-new/settings-04-stroke-rounded.svg" as settingsIcon
+import "resources/icons-new/bookshelf-03-stroke-rounded.svg" as genresIcon
+import "resources/icons-new/tags-stroke-rounded.svg" as tagsIcon
+import "resources/icons-new/star-square-stroke-rounded.svg" as ratingIcon
+import "resources/icons-new/time-04-stroke-rounded.svg" as hoursIcon
+import "resources/icons-new/chevron-right-stroke-rounded.svg" as chevronIcon
+import "resources/icons-new/chevron-down-stroke-rounded.svg" as downIcon
+import "resources/icons-new/solid/game-controller-03-stroke-rounded-solid.svg" as allSolid
+
+export Sidebar = frame {
+  width: 255px,
+  height: 900px,
+  layout: {direction: .column, justify-content: .space-between},
+  fill: c.ui.chrome,
+  children: [navigation, footer],
+
+  navigation = frame {
+    width: 100%,
+    height: 100%,
+    layout: {direction: .column, item-gap: spacing.gap.tight},
+    overflow: .scroll,
+    padding: [42px, 8px, 12px],
+    children: [
+      home,
+      all,
+      favorites,
+      wishlist,
+      hidden,
+      spacer,
+      collectionsTitle,
+      collection,
+      space2,
+      smart,
+      genres,
+      tags,
+      rating,
+      hours
+    ],
+
+    home = frame : rows.NavigationRow {
+      labelArea {
+        label {
+          contents: "Home"
+        }
+      }
+    }
+
+    all = frame : rows.NavigationRow {
+      fill[0].color: c.ui.selected,
+
+      glyph {
+        contents: allSolid,
+        sizing: .fill
+      }
+
+      count {
+        contents: "9"
+      }
+
+      labelArea {
+        label {
+          contents: "All games"
+        }
+      }
+    }
+
+    favorites = frame : rows.NavigationRow {
+      glyph {
+        contents: favoritesIcon
+      }
+
+      count {
+        contents: "5"
+      }
+
+      labelArea {
+        label {
+          contents: "Favorites"
+        }
+      }
+    }
+
+    wishlist = frame : rows.NavigationRow {
+      glyph {
+        contents: wishlistIcon
+      }
+
+      count {
+        contents: "3"
+      }
+
+      labelArea {
+        label {
+          contents: "Wishlist"
+        }
+      }
+    }
+
+    spacer = frame {
+      height: 16px
+    }
+
+    collectionsTitle = frame {
+      width: 100%,
+      height: 32px,
+      layout: {align-items: .center, item-gap: spacing.gap.medium},
+      padding: [0px, 10px],
+      children: [disclosure, label, add],
+
+      disclosure = icon {
+        width: 12px,
+        height: 12px,
+        fill: c.ui.muted,
+        contents: downIcon
+      }
+
+      label = text {
+        width: 100%,
+        fill: c.ui.text,
+        contents: "Collections",
+        font-size: typography.size.body,
+        font-family: typography.family.interface
+      }
+
+      add = frame : iconButtons.IconButton {
+        width: 20px,
+        height: 20px
+      }
+    }
+
+    collection = frame : rows.NavigationRow {
+      glyph {
+        contents: collectionIcon
+      }
+
+      count {
+        contents: "2"
+      }
+
+      labelArea {
+        label {
+          contents: "Cozy evenings"
+        }
+      }
+    }
+
+    space2 = frame {
+      height: 16px
+    }
+
+    smart = frame {
+      width: 100%,
+      height: 32px,
+      layout: {align-items: .center, item-gap: spacing.gap.medium},
+      padding: [0px, 10px],
+      children: [disclosure, label],
+
+      disclosure = icon {
+        width: 12px,
+        height: 12px,
+        fill: c.ui.muted,
+        contents: downIcon
+      }
+
+      label = text {
+        width: 100%,
+        fill: c.ui.text,
+        contents: "Smart collections",
+        font-size: typography.size.body,
+        font-family: typography.family.interface
+      }
+    }
+
+    genres = frame {
+      width: 100%,
+      layout: {direction: .column, item-gap: spacing.gap.tight},
+      children: header,
+
+      header = frame {
+        width: 100%,
+        height: 36px,
+        layout: {align-items: .center, item-gap: spacing.gap.icon},
+        padding: [0px, 10px],
+        children: [disclosure, glyph, label],
+
+        disclosure = icon {
+          width: 12px,
+          height: 12px,
+          fill: c.ui.muted,
+          contents: chevronIcon
+        }
+
+        glyph = icon {
+          width: spacing.size.icon,
+          height: spacing.size.icon,
+          fill: c.ui.muted,
+          contents: genresIcon
+        }
+
+        label = text {
+          width: 100%,
+          fill: c.ui.text,
+          contents: "Genres",
+          font-size: typography.size.body,
+          font-family: typography.family.interface
+        }
+      }
+    }
+
+    tags = frame {
+      width: 100%,
+      layout: {direction: .column, item-gap: spacing.gap.tight},
+      children: [header, subitems],
+
+      header = frame {
+        width: 100%,
+        height: 36px,
+        layout: {align-items: .center, item-gap: spacing.gap.icon},
+        padding: [0px, 10px],
+        children: [disclosure, glyph, label],
+
+        disclosure = icon {
+          width: 12px,
+          height: 12px,
+          fill: c.ui.muted,
+          contents: chevronIcon
+        }
+
+        glyph = icon {
+          width: spacing.size.icon,
+          height: spacing.size.icon,
+          fill: c.ui.muted,
+          contents: tagsIcon
+        }
+
+        label = text {
+          width: 100%,
+          fill: c.ui.text,
+          contents: "Tags",
+          font-size: typography.size.body,
+          font-family: typography.family.interface
+        }
+      }
+
+      subitems = frame {
+        width: 100%,
+        display: .none,
+        layout: {direction: .column, item-gap: spacing.gap.tight},
+        padding-left: 22px,
+        children: [steamTags, myTags],
+
+        steamTags = frame : rows.NavigationRow {
+          glyph {
+            contents: tagsIcon
+          }
+
+          labelArea {
+            label {
+              contents: "Steam tags"
+            }
+          }
+        }
+
+        myTags = frame : rows.NavigationRow {
+          glyph {
+            contents: tagsIcon
+          }
+
+          labelArea {
+            label {
+              contents: "My tags"
+            }
+          }
+        }
+      }
+    }
+
+    rating = frame {
+      width: 100%,
+      layout: {direction: .column, item-gap: spacing.gap.tight},
+      children: header,
+
+      header = frame {
+        width: 100%,
+        height: 36px,
+        layout: {align-items: .center, item-gap: spacing.gap.icon},
+        padding: [0px, 10px],
+        children: [disclosure, glyph, label],
+
+        disclosure = icon {
+          width: 12px,
+          height: 12px,
+          fill: c.ui.muted,
+          contents: chevronIcon
+        }
+
+        glyph = icon {
+          width: spacing.size.icon,
+          height: spacing.size.icon,
+          fill: c.ui.muted,
+          contents: ratingIcon
+        }
+
+        label = text {
+          width: 100%,
+          fill: c.ui.text,
+          contents: "Rating",
+          font-size: typography.size.body,
+          font-family: typography.family.interface
+        }
+      }
+    }
+
+    hours = frame {
+      width: 100%,
+      layout: {direction: .column, item-gap: spacing.gap.tight},
+      children: header,
+
+      header = frame {
+        width: 100%,
+        height: 36px,
+        layout: {align-items: .center, item-gap: spacing.gap.icon},
+        padding: [0px, 10px],
+        children: [disclosure, glyph, label],
+
+        disclosure = icon {
+          width: 12px,
+          height: 12px,
+          fill: c.ui.muted,
+          contents: chevronIcon
+        }
+
+        glyph = icon {
+          width: spacing.size.icon,
+          height: spacing.size.icon,
+          fill: c.ui.muted,
+          contents: hoursIcon
+        }
+
+        label = text {
+          width: 100%,
+          fill: c.ui.text,
+          contents: "Time played",
+          font-size: typography.size.body,
+          font-family: typography.family.interface
+        }
+      }
+    }
+
+    hidden = frame : rows.NavigationRow {
+      display: .none,
+
+      glyph {
+        contents: hiddenIcon
+      }
+
+      count {
+        contents: "1"
+      }
+
+      labelArea {
+        label {
+          contents: "Hidden games"
+        }
+      }
+    }
+  }
+
+  footer = frame {
+    width: 100%,
+    layout: {justify-content: .space-between, align-items: .center},
+    padding: [12px, 16px],
+    children: [brand, settings],
+
+    brand = text {
+      fill: c.ui.muted,
+      contents: "GameSync",
+      font-size: 14,
+      font-family: typography.family.interface,
+      font-style: "Medium"
+    }
+
+    settings = frame : iconButtons.IconButton {
+      glyph {
+        contents: settingsIcon
+      }
+    }
+  }
+}

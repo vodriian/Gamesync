@@ -1,0 +1,82 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "resources/images/413150.jpg" as cover413150
+import "resources/images/646570.jpg" as cover646570
+import "resources/images/1145360.jpg" as cover1145360
+import "resources/images/367520.jpg" as cover367520
+import "resources/images/2379780.jpg" as cover2379780
+import "resources/images/620.jpg" as cover620
+import "resources/images/632360.jpg" as cover632360
+import "resources/images/1055540.jpg" as cover1055540
+import "resources/images/1091500.jpg" as cover1091500
+
+export Filmstrip = frame {
+  width: 100%,
+  height: 96px,
+  layout: {item-gap: 6px},
+  overflow: .scroll,
+  padding: 8px,
+  children: [game0, game1, game2, game3, game4, game5, game6, game7, game8],
+
+  game0 = frame {
+    width: 80px,
+    height: 80px,
+    fill: {image: {ref: cover413150}},
+    corner-radius: 4px
+  }
+
+  game1 = frame {
+    width: 80px,
+    height: 80px,
+    fill: {image: {ref: cover646570}},
+    corner-radius: 4px
+  }
+
+  game2 = frame {
+    width: 80px,
+    height: 80px,
+    fill: {image: {ref: cover1145360}},
+    corner-radius: 4px
+  }
+
+  game3 = frame {
+    width: 80px,
+    height: 80px,
+    fill: {image: {ref: cover367520}},
+    corner-radius: 4px
+  }
+
+  game4 = frame {
+    width: 80px,
+    height: 80px,
+    fill: {image: {ref: cover2379780}},
+    corner-radius: 4px
+  }
+
+  game5 = frame {
+    width: 80px,
+    height: 80px,
+    fill: {image: {ref: cover620}},
+    corner-radius: 4px
+  }
+
+  game6 = frame {
+    width: 80px,
+    height: 80px,
+    fill: {image: {ref: cover632360}},
+    corner-radius: 4px
+  }
+
+  game7 = frame {
+    width: 80px,
+    height: 80px,
+    fill: {image: {ref: cover1055540}},
+    corner-radius: 4px
+  }
+
+  game8 = frame {
+    width: 80px,
+    height: 80px,
+    fill: {image: {ref: cover1091500}},
+    corner-radius: 4px
+  }
+}

@@ -1,0 +1,535 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "tokens/typography.elyx" as typography
+import "resources/images/646570.jpg" as cover646570
+import "resources/images/2379780.jpg" as cover2379780
+import "resources/images/620.jpg" as cover620
+import "resources/images/1055540.jpg" as cover1055540
+import "design/blocks/shell/LibraryShell.elyx" as librarySource
+import "design/blocks/library/GridTile.elyx" as gridTileSource
+import "resources/icons-new/solid/star-stroke-rounded-solid.svg" as glyph_0
+import "design/blocks/library/GridContent.elyx" as gridContent
+import "resources/icons-new/info-stroke-rounded.svg" as glyph_4
+
+export Grid = frame : librarySource.Library {
+  doc: "02 · Library views / Grid",
+  left: 0px,
+  top: 0px,
+
+  panel {
+    body {
+      overrides: [insert(content, after = .nil)]
+    }
+  }
+
+  content = frame : gridContent.GridContent {
+    width: 100%
+  }
+}
+
+@variant
+export GridCoversOnly = frame : Grid {
+  left: 1360px,
+  top: 0px,
+
+  panel {
+    body {
+      content {
+        game0 {
+          height: 262px,
+
+          meta {
+            display: .none
+          }
+
+          title {
+            display: .none
+          }
+        }
+
+        game1 {
+          height: 262px,
+
+          meta {
+            display: .none
+          }
+
+          title {
+            display: .none
+          }
+        }
+
+        game2 {
+          height: 262px,
+
+          meta {
+            display: .none
+          }
+
+          title {
+            display: .none
+          }
+        }
+
+        game3 {
+          height: 262px,
+
+          meta {
+            display: .none
+          }
+
+          title {
+            display: .none
+          }
+        }
+
+        game4 {
+          height: 262px,
+
+          meta {
+            display: .none
+          }
+
+          title {
+            display: .none
+          }
+        }
+
+        game5 {
+          height: 262px,
+
+          meta {
+            display: .none
+          }
+
+          title {
+            display: .none
+          }
+        }
+
+        game6 {
+          height: 262px,
+
+          meta {
+            display: .none
+          }
+
+          title {
+            display: .none
+          }
+        }
+
+        game7 {
+          height: 262px,
+
+          meta {
+            display: .none
+          }
+
+          title {
+            display: .none
+          }
+        }
+
+        game8 {
+          height: 262px,
+
+          meta {
+            display: .none
+          }
+
+          title {
+            display: .none
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export SearchResults = frame : Grid {
+  left: 2720px,
+  top: 0px,
+
+  panel {
+    count {
+      trailing {
+        contents: glyph_4,
+        display: .visible
+      }
+
+      label {
+        contents: "1 game ·"
+      }
+    }
+
+    body {
+      content {
+        overrides: [
+          remove(gridContent.GridContent.game8),
+          remove(gridContent.GridContent.game7),
+          remove(gridContent.GridContent.game5),
+          remove(gridContent.GridContent.game4),
+          remove(gridContent.GridContent.game6),
+          remove(gridContent.GridContent.game2),
+          remove(gridContent.GridContent.game3),
+          remove(gridContent.GridContent.game1)
+        ]
+      }
+    }
+
+    toolbar {
+      search {
+        value {
+          label {
+            contents: "stardew"
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export GridKeyboardFocus = frame : Grid {
+  left: 0px,
+  top: 980px,
+
+  panel {
+    body {
+      content {
+        game0 {
+          border[0].color: c.ui.accent,
+          border[0].width: 2px
+        }
+      }
+    }
+  }
+}
+
+@variant
+export FilteredLibrary = frame : Grid {
+  left: 1360px,
+  top: 980px,
+
+  panel {
+    count {
+      label {
+        contents: "3 games"
+      }
+    }
+
+    body {
+      content {
+        overrides: [
+          remove(gridContent.GridContent.game8),
+          remove(gridContent.GridContent.game7),
+          remove(gridContent.GridContent.game5),
+          remove(gridContent.GridContent.game4),
+          remove(gridContent.GridContent.game6),
+          remove(gridContent.GridContent.game3)
+        ],
+
+        game2 {
+          cover {
+            fill[0].image.ref: cover2379780
+          }
+
+          meta {
+            detail {
+              contents: "4.5"
+            }
+
+            label {
+              contents: "Playing"
+            }
+          }
+
+          title {
+            contents: "Balatro"
+          }
+        }
+      }
+    }
+
+    toolbar {
+      display {
+        fill[0].color: c.ui.selected
+      }
+    }
+  }
+}
+
+@variant
+export GroupedLibrary = frame : Grid {
+  left: 2720px,
+  top: 980px,
+
+  panel {
+    body {
+      content {
+        overrides: [
+          insert(playing, after = .nil),
+          insert(playingGames, after = playing),
+          insert(completed, after = playingGames),
+          insert(completedGames, after = completed),
+          remove(gridContent.GridContent.game8),
+          remove(gridContent.GridContent.game7),
+          remove(gridContent.GridContent.game5),
+          remove(gridContent.GridContent.game0),
+          remove(gridContent.GridContent.game4),
+          remove(gridContent.GridContent.game6),
+          remove(gridContent.GridContent.game2),
+          remove(gridContent.GridContent.game3),
+          remove(gridContent.GridContent.game1)
+        ],
+        layout.direction: .column,
+        layout.item-gap: 20px,
+        layout.wrap: .false,
+        layout.line-gap: 0
+      }
+    }
+  }
+
+  playing = text {
+    left: 0px,
+    top: 0px,
+    fill: c.ui.text,
+    contents: "Playing",
+    font-size: typography.size.title,
+    font-family: typography.family.interface
+  }
+
+  playingGames = frame {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    layout: {item-gap: 23px, wrap: .true, line-gap: 22px},
+    children: [game0, game1, game2],
+
+    game0 = frame : gridTileSource.GridTile {
+      meta {
+        leading {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        trailing {
+          contents: glyph_0,
+          sizing: .fill,
+          display: .visible
+        }
+
+        detail {
+          contents: "4.5",
+          display: .visible
+        }
+
+        label {
+          contents: "Playing"
+        }
+      }
+    }
+
+    game1 = frame : gridTileSource.GridTile {
+      cover {
+        fill[0].image.ref: cover646570
+      }
+
+      meta {
+        leading {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        trailing {
+          contents: glyph_0,
+          sizing: .fill,
+          display: .visible
+        }
+
+        detail {
+          contents: "4.5",
+          display: .visible
+        }
+
+        label {
+          contents: "Playing"
+        }
+      }
+
+      title {
+        contents: "Slay the Spire"
+      }
+    }
+
+    game2 = frame : gridTileSource.GridTile {
+      cover {
+        fill[0].image.ref: cover2379780
+      }
+
+      meta {
+        leading {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        trailing {
+          contents: glyph_0,
+          sizing: .fill,
+          display: .visible
+        }
+
+        detail {
+          contents: "4.5",
+          display: .visible
+        }
+
+        label {
+          contents: "Playing"
+        }
+      }
+
+      title {
+        contents: "Balatro"
+      }
+    }
+  }
+
+  completed = text {
+    left: 0px,
+    top: 0px,
+    fill: c.ui.text,
+    contents: "Completed",
+    font-size: typography.size.title,
+    font-family: typography.family.interface
+  }
+
+  completedGames = frame {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    layout: {item-gap: 23px, wrap: .true, line-gap: 22px},
+    children: [game0, game1],
+
+    game0 = frame : gridTileSource.GridTile {
+      cover {
+        fill[0].image.ref: cover620
+      }
+
+      meta {
+        leading {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        trailing {
+          contents: glyph_0,
+          sizing: .fill,
+          display: .visible
+        }
+
+        detail {
+          contents: "5.0",
+          display: .visible
+        }
+
+        label {
+          contents: "Completed"
+        }
+      }
+
+      title {
+        contents: "Portal 2"
+      }
+    }
+
+    game1 = frame : gridTileSource.GridTile {
+      cover {
+        fill[0].image.ref: cover1055540
+      }
+
+      meta {
+        leading {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        trailing {
+          contents: glyph_0,
+          sizing: .fill,
+          display: .visible
+        }
+
+        detail {
+          contents: "4.5",
+          display: .visible
+        }
+
+        label {
+          contents: "Completed"
+        }
+      }
+
+      title {
+        contents: "A Short Hike"
+      }
+    }
+  }
+}
+
+@variant
+export MissingCover = frame : Grid {
+  left: 0px,
+  top: 1960px,
+
+  panel {
+    body {
+      content {
+        overrides: [
+          remove(gridContent.GridContent.game8),
+          remove(gridContent.GridContent.game7),
+          remove(gridContent.GridContent.game5),
+          remove(gridContent.GridContent.game6)
+        ],
+
+        game0 {
+          cover {
+            fill[0].color: c.ui.subtle
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export SidebarCollapsed = frame : Grid {
+  left: 1360px,
+  top: 1960px,
+
+  panel {
+    width: 1264px,
+    height: 850px
+  }
+
+  sidebar {
+    display: .none
+  }
+}

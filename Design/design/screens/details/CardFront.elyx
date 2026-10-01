@@ -1,0 +1,156 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "design/controls/WindowButtons.elyx" as trafficSource
+import "tokens/radius.elyx" as radius
+import "tokens/spacing.elyx" as spacing
+import "design/blocks/library/PhysicalCard.elyx" as physicalCardSource
+import "tokens/typography.elyx" as typography
+import "design/controls/IconLabel.elyx" as iconLabel
+import "design/blocks/shell/FocusedShell.elyx" as focusedSource
+import "design/blocks/details/Filmstrip.elyx" as filmstripSource
+import "resources/icons-new/arrow-left-02-stroke-rounded.svg" as glyph_16
+import "resources/icons-new/chevron-left-stroke-rounded.svg" as glyph_9
+import "resources/icons-new/chevron-right-stroke-rounded.svg" as glyph_8
+
+export CardFront = frame : focusedSource.Focused {
+  doc: "08 · Focused card / CardFront",
+  left: 0px,
+  top: 0px,
+
+  body {
+    overrides: [insert(content, after = .nil)]
+  }
+
+  content = frame {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    height: 100%,
+    layout: {direction: .column},
+    padding: [42px, 8px, 8px],
+    children: [chrome, panel, stage, filmstrip],
+
+    filmstrip = frame : filmstripSource.Filmstrip {}
+
+    chrome = frame {
+      doc: "Native traffic controls use fixed titlebar positions.",
+      left: 0px,
+      top: 0px,
+      width: 100%,
+      height: 100%,
+      ignore-stack: .true,
+      fill: c.ui.chrome,
+      children: traffic,
+
+      traffic = frame : trafficSource.Traffic {
+        left: 16px,
+        top: 16px
+      }
+    }
+
+    panel = frame {
+      width: 100%,
+      height: 44px,
+      layout: {justify-content: .space-between, align-items: .center},
+      fill: c.ui.surface,
+      border: c.ui.border,
+      corner-radius: radius.corner.panel,
+      padding: [0px, 16px],
+      children: [back, navigation],
+
+      back = frame : iconLabel.IconLabel {
+        leading {
+          contents: glyph_16,
+          display: .visible
+        }
+
+        label {
+          contents: "Back to library",
+          font-size: typography.size.title
+        }
+      }
+
+      navigation = frame : iconLabel.IconLabel {
+        trailing {
+          contents: glyph_8,
+          display: .visible
+        }
+
+        leading {
+          contents: glyph_9,
+          display: .visible
+        }
+
+        label {
+          contents: "",
+          font-size: 19
+        }
+      }
+    }
+
+    stage = frame {
+      width: 100%,
+      height: 100%,
+      layout: {
+        direction: .column,
+        align-items: .center,
+        item-gap: spacing.gap.large
+      },
+      overflow: .scroll,
+      padding: 16px,
+      children: [card, flip]
+    }
+
+    card = frame : physicalCardSource.PhysicalCard {
+      width: 380px,
+      height: 572px,
+
+      shade {
+        top: 330px,
+        width: 360px,
+        height: 200px
+      }
+
+      title {
+        top: 475px,
+        font-size: 30
+      }
+
+      cover {
+        width: 360px,
+        height: 520px
+      }
+    }
+
+    flip = frame {
+      layout: {align-items: .center, item-gap: 16px},
+      children: [label0, label1],
+
+      label0 = text {
+        fill: c.ui.text,
+        contents: "Front",
+        font-size: typography.size.body,
+        font-family: typography.family.interface
+      }
+
+      label1 = text {
+        fill: c.ui.text,
+        contents: "Details",
+        font-size: typography.size.body,
+        font-family: typography.family.interface
+      }
+    }
+  }
+}
+
+@variant
+export CardFrontNoFilmstrip = frame : CardFront {
+  left: 1360px,
+  top: 0px,
+
+  body {
+    content {
+      overrides: [remove(CardFront.content.filmstrip)]
+    }
+  }
+}

@@ -1,4 +1,4 @@
-//! Library navigation follows Elyx Sidebar_v2. Statuses stay on the board;
+//! Library navigation follows the shared Elyx Sidebar. Statuses stay on the board;
 //! the sidebar keeps scopes, collections, and computed smart collections.
 
 use crate::assets::SidebarIcon;

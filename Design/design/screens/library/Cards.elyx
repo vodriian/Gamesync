@@ -1,0 +1,224 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "resources/images/646570.jpg" as cover646570
+import "resources/images/1145360.jpg" as cover1145360
+import "resources/images/367520.jpg" as cover367520
+import "resources/images/2379780.jpg" as cover2379780
+import "resources/images/620.jpg" as cover620
+import "design/blocks/shell/LibraryShell.elyx" as librarySource
+import "design/blocks/library/PhysicalCard.elyx" as physicalCardSource
+import "resources/icons-new/solid/star-stroke-rounded-solid.svg" as glyph_0
+import "resources/icons-new/solid/heart-stroke-rounded-solid.svg" as glyph_2
+
+export Cards = frame : librarySource.Library {
+  left: 0px,
+  top: 0px,
+
+  panel {
+    body {
+      overrides: [insert(content, after = .nil)]
+    }
+
+    toolbar {
+      views {
+        cards {
+          fill[0].color: c.ui.selected
+        }
+
+        grid {
+          fill[0].color: c.ui.surface
+        }
+      }
+    }
+  }
+
+  content = frame {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    layout: {item-gap: 48px, wrap: .true, line-gap: 58px},
+    children: [game0, game1, game2, game3, game4, game5],
+
+    game0 = frame : physicalCardSource.PhysicalCard {}
+
+    game1 = frame : physicalCardSource.PhysicalCard {
+      cover {
+        fill[0].image.ref: cover646570
+      }
+
+      title {
+        contents: "Slay the Spire"
+      }
+    }
+
+    game2 = frame : physicalCardSource.PhysicalCard {
+      cover {
+        fill[0].image.ref: cover1145360
+      }
+
+      footer {
+        rating {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            contents: glyph_0,
+            sizing: .fill,
+            display: .visible
+          }
+
+          favorite {
+            contents: glyph_2,
+            sizing: .fill,
+            display: .visible
+          }
+
+          detail {
+            contents: "5.0",
+            display: .visible
+          }
+
+          label {
+            contents: ""
+          }
+        }
+
+        status {
+          label {
+            contents: "Want to play"
+          }
+        }
+      }
+
+      title {
+        contents: "Hades"
+      }
+    }
+
+    game3 = frame : physicalCardSource.PhysicalCard {
+      cover {
+        fill[0].image.ref: cover367520
+      }
+
+      footer {
+        rating {
+          leading {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          trailing {
+            contents: glyph_0,
+            sizing: .fill,
+            display: .visible
+          }
+
+          detail {
+            contents: "4.5",
+            display: .visible
+          }
+
+          label {
+            contents: ""
+          }
+        }
+
+        status {
+          label {
+            contents: "Paused"
+          }
+        }
+      }
+
+      title {
+        contents: "Hollow Knight"
+      }
+    }
+
+    game4 = frame : physicalCardSource.PhysicalCard {
+      cover {
+        fill[0].image.ref: cover2379780
+      }
+
+      footer {
+        rating {
+          leading {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          trailing {
+            contents: glyph_0,
+            sizing: .fill,
+            display: .visible
+          }
+
+          detail {
+            contents: "4.5",
+            display: .visible
+          }
+
+          label {
+            contents: ""
+          }
+        }
+      }
+
+      title {
+        contents: "Balatro"
+      }
+    }
+
+    game5 = frame : physicalCardSource.PhysicalCard {
+      cover {
+        fill[0].image.ref: cover620
+      }
+
+      footer {
+        rating {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            contents: glyph_0,
+            sizing: .fill,
+            display: .visible
+          }
+
+          favorite {
+            contents: glyph_2,
+            sizing: .fill,
+            display: .visible
+          }
+
+          detail {
+            contents: "5.0",
+            display: .visible
+          }
+
+          label {
+            contents: ""
+          }
+        }
+
+        status {
+          label {
+            contents: "Completed"
+          }
+        }
+      }
+
+      title {
+        contents: "Portal 2"
+      }
+    }
+  }
+}

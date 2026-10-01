@@ -1,0 +1,59 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "resources/images/413150.jpg" as cover413150
+import "tokens/typography.elyx" as typography
+import "tokens/spacing.elyx" as spacing
+import "design/controls/IconLabel.elyx" as iconLabel
+import "resources/icons-new/solid/star-stroke-rounded-solid.svg" as glyph_0
+
+export BoardTile = frame {
+  width: 100%,
+  height: 82px,
+  layout: {item-gap: spacing.gap.regular},
+  fill: c.ui.surface,
+  border: c.ui.border,
+  corner-radius: 9px,
+  padding: 8px,
+  children: [cover, details],
+
+  cover = frame {
+    width: 44px,
+    height: 66px,
+    fill: {image: {ref: cover413150}},
+    corner-radius: 7px
+  }
+
+  details = frame {
+    width: 100%,
+    layout: {direction: .column, item-gap: spacing.gap.regular},
+    padding-top: 12px,
+    children: [title, meta],
+
+    title = text {
+      width: 100%,
+      fill: c.ui.text,
+      contents: "Stardew Valley",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    meta = frame : iconLabel.IconLabel {
+      label {
+        fill[0].color: c.ui.muted,
+        contents: "70.0 h",
+        font-size: typography.size.caption
+      }
+
+      trailing {
+        contents: glyph_0,
+        sizing: .fill,
+        display: .visible
+      }
+
+      detail {
+        contents: "4.5",
+        display: .visible
+      }
+    }
+  }
+}

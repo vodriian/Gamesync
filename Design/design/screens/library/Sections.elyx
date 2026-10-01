@@ -1,0 +1,506 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "resources/images/620.jpg" as cover620
+import "resources/images/1055540.jpg" as cover1055540
+import "resources/icons-new/chevron-right-stroke-rounded.svg" as glyph_8
+import "design/blocks/shell/LibraryShell.elyx" as librarySource
+import "design/blocks/navigation/Sidebar.elyx" as sidebarSource
+import "design/controls/NavigationRow.elyx" as rows
+import "resources/icons-new/heart-stroke-rounded.svg" as favoritesOutline
+import "resources/icons-new/chevron-down-stroke-rounded.svg" as downIcon
+import "design/blocks/library/GridTile.elyx" as gridTileSource
+import "resources/icons-new/solid/star-stroke-rounded-solid.svg" as glyph_0
+import "resources/icons-new/solid/heart-stroke-rounded-solid.svg" as navfavoritesSolid
+import "resources/images/2379780.jpg" as cover2379780
+import "resources/images/367520.jpg" as cover367520
+import "resources/images/1091500.jpg" as cover1091500
+import "design/blocks/menus/Menu.elyx" as menuSource
+import "design/blocks/library/GridContent.elyx" as gridContent
+import "resources/icons-new/info-stroke-rounded.svg" as glyph_4
+import "design/controls/MenuItem.elyx" as menuItems
+import "resources/icons-new/game-controller-03-stroke-rounded.svg" as navallOutline
+import "resources/icons-new/folder-03-stroke-rounded.svg" as collectionSolid
+
+export Favorites = frame : librarySource.Library {
+  left: 0px,
+  top: 0px,
+
+  panel {
+    count {
+      leading {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      trailing {
+        contents: glyph_4,
+        display: .visible
+      }
+
+      label {
+        contents: "5 games ·"
+      }
+    }
+
+    body {
+      overrides: [insert(content, after = .nil)]
+    }
+
+    toolbar {
+      title {
+        contents: "Favorites"
+      }
+    }
+  }
+
+  sidebar {
+    navigation {
+      favorites {
+        fill[0].color: c.ui.selected,
+
+        glyph {
+          contents: navfavoritesSolid,
+          sizing: .fill
+        }
+      }
+
+      all {
+        fill[0]: .nil,
+
+        glyph {
+          contents: navallOutline,
+          sizing: .fit
+        }
+      }
+    }
+  }
+
+  content = frame : gridContent.GridContent {
+    overrides: [
+      remove(gridContent.GridContent.game6),
+      remove(gridContent.GridContent.game8),
+      remove(gridContent.GridContent.game7),
+      remove(gridContent.GridContent.game5)
+    ],
+
+    game4 {
+      cover {
+        fill[0].image.ref: cover1055540
+      }
+
+      meta {
+        label {
+          contents: "Completed"
+        }
+      }
+
+      title {
+        contents: "A Short Hike"
+      }
+    }
+
+    game3 {
+      cover {
+        fill[0].image.ref: cover620
+      }
+
+      meta {
+        detail {
+          contents: "5.0"
+        }
+
+        label {
+          contents: "Completed"
+        }
+      }
+
+      title {
+        contents: "Portal 2"
+      }
+    }
+  }
+}
+
+@variant
+export Collection = frame : Favorites {
+  left: 1360px,
+  top: 0px,
+
+  panel {
+    count {
+      label {
+        contents: "2 games ·"
+      }
+    }
+
+    body {
+      content {
+        overrides: [
+          remove(gridContent.GridContent.game4),
+          remove(gridContent.GridContent.game3),
+          remove(gridContent.GridContent.game2)
+        ],
+
+        game1 {
+          cover {
+            fill[0].image.ref: cover2379780
+          }
+
+          title {
+            contents: "Balatro"
+          }
+        }
+      }
+    }
+
+    toolbar {
+      title {
+        contents: "Cozy evenings"
+      }
+    }
+  }
+
+  sidebar {
+    navigation {
+      collection {
+        fill[0].color: c.ui.selected,
+
+        glyph {
+          contents: collectionSolid,
+          sizing: .fit
+        }
+      }
+
+      favorites {
+        fill[0]: .nil,
+
+        glyph {
+          contents: favoritesOutline,
+          sizing: .fit
+        }
+      }
+    }
+  }
+}
+
+@variant
+export SmartCollection = frame : Favorites {
+  left: 2720px,
+  top: 0px,
+
+  panel {
+    count {
+      leading {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      trailing {
+        contents: glyph_4,
+        display: .visible
+      }
+
+      label {
+        contents: "6 games ·"
+      }
+    }
+
+    toolbar {
+      title {
+        contents: "Indie"
+      }
+    }
+
+    body {
+      content {
+        overrides: [insert(game5, after = gridContent.GridContent.game4)],
+
+        game3 {
+          cover {
+            fill[0].image.ref: cover367520
+          }
+
+          meta {
+            leading {
+              display: .none
+            }
+
+            favorite {
+              display: .none
+            }
+
+            trailing {
+              contents: glyph_0,
+              sizing: .fill,
+              display: .visible
+            }
+
+            detail {
+              contents: "4.5",
+              display: .visible
+            }
+
+            label {
+              contents: "Paused"
+            }
+          }
+
+          title {
+            contents: "Hollow Knight"
+          }
+        }
+
+        game4 {
+          cover {
+            fill[0].image.ref: cover2379780
+          }
+
+          meta {
+            leading {
+              display: .none
+            }
+
+            favorite {
+              display: .none
+            }
+
+            trailing {
+              contents: glyph_0,
+              sizing: .fill,
+              display: .visible
+            }
+
+            detail {
+              contents: "4.5",
+              display: .visible
+            }
+
+            label {
+              contents: "Playing"
+            }
+          }
+
+          title {
+            contents: "Balatro"
+          }
+        }
+      }
+    }
+  }
+
+  sidebar {
+    navigation {
+      favorites {
+        fill[0]: .nil,
+
+        glyph {
+          contents: favoritesOutline,
+          sizing: .fit
+        }
+      }
+
+      genres {
+        overrides: [
+          insert(indie, after = sidebarSource.Sidebar.navigation.genres.header)
+        ],
+
+        header {
+          disclosure {
+            contents: downIcon
+          }
+        }
+      }
+    }
+  }
+
+  game5 = frame : gridTileSource.GridTile {
+    left: 0px,
+    top: 0px,
+
+    cover {
+      fill[0].image.ref: cover620
+    }
+
+    meta {
+      leading {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      trailing {
+        contents: glyph_0,
+        sizing: .fill,
+        display: .visible
+      }
+
+      detail {
+        contents: "5.0",
+        display: .visible
+      }
+
+      label {
+        contents: "Completed"
+      }
+    }
+
+    title {
+      contents: "Portal 2"
+    }
+  }
+
+  indie = frame : rows.NavigationRow {
+    padding-left: 40px,
+    fill[0].color: c.ui.selected,
+
+    glyph {
+      display: .none
+    }
+
+    count {
+      contents: "6"
+    }
+
+    labelArea {
+      label {
+        contents: "Indie"
+      }
+    }
+  }
+}
+
+@variant
+export HiddenGames = frame : Favorites {
+  left: 0px,
+  top: 980px,
+
+  overlay {
+    overrides: [insert(popover, after = .nil)]
+  }
+
+  panel {
+    count {
+      label {
+        contents: "1 game ·"
+      }
+    }
+
+    body {
+      content {
+        overrides: [
+          remove(gridContent.GridContent.game4),
+          remove(gridContent.GridContent.game1),
+          remove(gridContent.GridContent.game3),
+          remove(gridContent.GridContent.game2)
+        ],
+
+        game0 {
+          cover {
+            fill[0].image.ref: cover1091500
+          }
+
+          meta {
+            detail {
+              contents: "—"
+            }
+
+            label {
+              contents: "Backlog"
+            }
+          }
+
+          title {
+            contents: "Cyberpunk 2077"
+          }
+        }
+      }
+    }
+
+    toolbar {
+      title {
+        contents: "Hidden games"
+      }
+    }
+  }
+
+  sidebar {
+    navigation {
+      hidden {
+        fill[0].color: c.ui.selected,
+        display: .visible
+      }
+
+      favorites {
+        fill[0]: .nil,
+
+        glyph {
+          contents: favoritesOutline,
+          sizing: .fit
+        }
+      }
+    }
+  }
+
+  popover = frame : menuSource.Menu {
+    doc: "Intentional popup overlay; excluded from the content stack.",
+    left: 490px,
+    top: 270px,
+    width: 218px,
+    ignore-stack: .true,
+    overrides: [
+      insert(item0, after = .nil),
+      insert(item1, after = item0),
+      insert(item2, after = item1)
+    ],
+
+    item0 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Unhide"
+        }
+      }
+    }
+
+    item1 = frame : menuItems.MenuItem {
+      label {
+        trailing {
+          contents: glyph_8,
+          display: .visible
+        }
+
+        label {
+          contents: "Status"
+        }
+      }
+    }
+
+    item2 = frame : menuItems.MenuItem {
+      label {
+        trailing {
+          contents: glyph_8,
+          display: .visible
+        }
+
+        label {
+          contents: "Collections"
+        }
+      }
+    }
+  }
+}

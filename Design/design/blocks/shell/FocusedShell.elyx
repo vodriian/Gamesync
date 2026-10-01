@@ -1,0 +1,26 @@
+import "tokens/colors.dark.elyx" as darkTheme
+export Focused = frame {
+  left: 0px,
+  top: 0px,
+  width: 1280px,
+  height: 900px,
+  layout: {direction: .column},
+  children: [body, overlay],
+
+  body = frame {
+    width: 100%,
+    height: 100%,
+    layout: {direction: .column},
+    slot: .true
+  }
+
+  overlay = frame {
+    doc: "Intentional overlay plane; independent of scrollable content.",
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    height: 100%,
+    ignore-stack: .true,
+    slot: .true
+  }
+}

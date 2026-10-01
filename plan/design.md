@@ -11,20 +11,20 @@ feel physical. Avoid motion that delays work.
 
 ## Current direction
 
-The editable [Elyx workspace](../Design/GameSync/README.md) reconstructs the
-current app for UI experiments. [Desktop](../Design/GameSync/screens/Desktop.elyx)
-is the main window; feature folders hold individual states, and `flows/` holds
-Settings, views, details, components, and full-atlas overview canvases. See its
-[state index](../Design/GameSync/screens/Desktop-states.md) for coverage and
-verification limits. Use Elyx as the design source for the next UI work:
-replace all UI icons, polish cards, and polish Settings. Keep accepted product
-decisions in this plan.
+The editable [Elyx workspace](../Design/README.md) is organized around
+shared stack-based components and nineteen screen families. Open its
+[index](../Design/index.elyx) or folder galleries. The
+[state index](../Design/state-index.md) maps the 90 reference states
+and records native verification limits. Related states are variants, and dark
+appearance uses contexts. All design icons come from `resources/icons-new/`.
+Use the current native app as the reference when reconciling stale designs.
+Keep accepted product decisions in this plan.
 
-The `hugeicons-ui` branch implements the sidebar from Elyx `Sidebar_v2`:
+The merged Hugeicons update defines the sidebar baseline:
 18 px navigation and Settings icons, 10 px icon-to-label spacing, and a
 14 px medium footer wordmark. Main navigation rows have a 2 px gap.
-Use a 1.75 stroke width for stroked Hugeicons, including the plus and shared
-chevrons. Filled-path outlines and solid variants keep their supplied shapes.
+Use the supplied SVG artwork unchanged from `Design/resources/icons-new/`.
+The native app embeds that same source. Do not keep separate stroke-adjusted copies.
 Selected collections use the open `folder-03` icon.
 
 The September 21 card references replace the inspector with a focused card.
@@ -57,7 +57,7 @@ when the port starts. Keep upstream attribution where code is reused.
 ## Skill sources
 
 - [Apple Design](/Users/vova/.agents/skills/apple-design/SKILL.md)
-- [Product Design index](/Users/vova/.codex/plugins/cache/openai-curated-remote/product-design/0.1.54/skills/index/SKILL.md)
+- [Product Design index](/Users/vova/.codex/plugins/cache/openai-curated-remote/product-design/0.1.56/skills/index/SKILL.md)
 - [Emil Design Engineering](/Users/vova/.agents/skills/emil-design-eng/SKILL.md)
 
 These paths describe this workstation. If a path moves, locate the same skill
@@ -139,4 +139,4 @@ For icon iterations, launch a temporary build with `--demo` and a separate
 profile. Do not open the personal library or require repeated Keychain prompts.
 
 Sidebar Home uses `home-07`. Home, All games, Favorites, and Wishlist use
-the supplied solid variants when selected and outlined 1.75-stroke icons otherwise.
+the supplied solid variants when selected and supplied outline icons otherwise.

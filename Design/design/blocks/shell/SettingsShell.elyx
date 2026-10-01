@@ -1,0 +1,148 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "resources/icons-new/cloud-sync-stroke-rounded.svg" as icon_folder
+import "resources/icons-new/palette-stroke-rounded.svg" as icon_palette
+import "resources/icons-new/bot-message-square-stroke-rounded.svg" as icon_bot
+import "design/controls/WindowButtons.elyx" as trafficSource
+import "tokens/radius.elyx" as radius
+import "tokens/spacing.elyx" as spacing
+import "tokens/typography.elyx" as typography
+import "design/controls/SettingsNavigationRow.elyx" as settingsRows
+
+export Settings = frame {
+  left: 0px,
+  top: 0px,
+  width: 820px,
+  height: 780px,
+  layout: {direction: .column},
+  fill: c.ui.surface,
+  corner-radius: radius.corner.panel,
+  children: [titlebar, header, sections, overlay],
+
+  titlebar = frame {
+    doc: "Native traffic controls use fixed titlebar positions.",
+    width: 100%,
+    height: 34px,
+    fill: c.ui.chrome,
+    children: traffic,
+
+    traffic = frame : trafficSource.Traffic {
+      left: 10px,
+      top: 10px
+    }
+  }
+
+  sections = frame {
+    width: 100%,
+    height: 100%,
+    layout: {item-gap: spacing.gap.section},
+    children: [navigation, main],
+
+    navigation = frame {
+      width: 170px,
+      height: 100%,
+      layout: {direction: .column, item-gap: 6px},
+      border: {color: c.ui.border, sides: .right},
+      padding: 8px,
+      children: [general, sync, appearance, ai],
+
+      general = frame : settingsRows.SettingsNavigationRow {
+        fill[0].color: c.ui.selected
+      }
+
+      sync = frame : settingsRows.SettingsNavigationRow {
+        label {
+          glyphIcon {
+            contents: icon_folder
+          }
+
+          label {
+            contents: "Sync"
+          }
+        }
+      }
+
+      appearance = frame : settingsRows.SettingsNavigationRow {
+        label {
+          glyphIcon {
+            contents: icon_palette
+          }
+
+          label {
+            contents: "Look and feel"
+          }
+        }
+      }
+
+      ai = frame : settingsRows.SettingsNavigationRow {
+        label {
+          glyphIcon {
+            contents: icon_bot
+          }
+
+          label {
+            contents: "AI"
+          }
+        }
+      }
+    }
+
+    main = frame {
+      width: 100%,
+      height: 100%,
+      layout: {direction: .column, item-gap: spacing.gap.section},
+      padding: [8px, 24px, 16px, 0px],
+      children: [section, body],
+
+      section = text {
+        width: 100%,
+        fill: c.ui.text,
+        contents: "General",
+        font-size: typography.size.heading,
+        font-family: typography.family.interface,
+        font-style: "Bold"
+      }
+
+      body = frame {
+        width: 100%,
+        height: 100%,
+        layout: {direction: .column},
+        overflow: .scroll,
+        slot: .true
+      }
+    }
+  }
+
+  header = frame {
+    width: 100%,
+    layout: {direction: .column, item-gap: spacing.gap.medium},
+    padding: [20px, 24px],
+    children: [heading, feedback],
+
+    heading = text {
+      width: 100%,
+      fill: c.ui.text,
+      contents: "Settings",
+      font-size: 21,
+      font-family: typography.family.interface,
+      font-style: "Bold"
+    }
+
+    feedback = text {
+      fill: c.ui.muted,
+      contents: "",
+      font-size: 13,
+      font-family: typography.family.interface
+    }
+  }
+
+  overlay = frame {
+    doc: "Intentional overlay plane; independent of scrollable content.",
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    height: 100%,
+    ignore-stack: .true,
+    slot: .true
+  }
+}

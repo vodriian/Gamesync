@@ -1,0 +1,536 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "design/blocks/shell/SettingsShell.elyx" as settingsSource
+import "tokens/spacing.elyx" as spacing
+import "tokens/typography.elyx" as typography
+import "design/controls/Button.elyx" as buttons
+import "design/controls/LabeledField.elyx" as labeledFields
+import "design/blocks/settings/SettingsGroup.elyx" as settingsGroups
+
+export SettingsGeneral = frame : settingsSource.Settings {
+  left: 0px,
+  top: 0px,
+
+  sections {
+    main {
+      body {
+        overrides: [insert(content, after = .nil)]
+      }
+    }
+  }
+
+  content = frame : settingsGroups.SettingsGroup {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    overrides: [
+      insert(profile, after = .nil),
+      insert(key, after = profile),
+      insert(keyActions, after = key),
+      insert(storage, after = keyActions),
+      insert(syncActions, after = storage),
+      insert(time, after = syncActions),
+      insert(country, after = time),
+      insert(saveCountry, after = country)
+    ],
+
+    profile = frame : labeledFields.LabeledField {
+      input {
+        value {
+          label {
+            contents: "Steam profile link or SteamID64"
+          }
+        }
+      }
+
+      label {
+        contents: "Steam profile or ID"
+      }
+    }
+
+    key = frame : labeledFields.LabeledField {
+      input {
+        value {
+          label {
+            contents: "Enter a key to save or replace"
+          }
+        }
+      }
+
+      label {
+        contents: "Steam API key"
+      }
+    }
+
+    keyActions = frame {
+      width: 100%,
+      layout: {item-gap: spacing.gap.regular},
+      children: [test, save],
+
+      test = frame : buttons.Button {
+        label {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          label {
+            contents: "Test key"
+          }
+        }
+      }
+
+      save = frame : buttons.Primary {
+        label {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          label {
+            contents: "Save key"
+          }
+        }
+      }
+    }
+
+    storage = text {
+      width: 100%,
+      fill: c.ui.muted,
+      contents: "Saved keys stay in this device’s secure storage, separate from game data.",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    syncActions = frame {
+      width: 100%,
+      layout: {item-gap: spacing.gap.regular},
+      children: [sync, cancel],
+
+      sync = frame : buttons.Primary {
+        label {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          label {
+            contents: "Sync now"
+          }
+        }
+      }
+
+      cancel = frame : buttons.Button {
+        label {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          label {
+            contents: "Cancel sync"
+          }
+        }
+      }
+    }
+
+    time = text {
+      width: 100%,
+      fill: c.ui.muted,
+      contents: "No Steam sync time recorded",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    country = frame : labeledFields.LabeledField {
+      input {
+        value {
+          label {
+            contents: "Default"
+          }
+        }
+      }
+
+      label {
+        contents: "Store country for wishlist prices"
+      }
+    }
+
+    saveCountry = frame : buttons.Button {
+      width: 107px,
+
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Save country"
+        }
+      }
+    }
+  }
+}
+
+@variant
+export SteamConnected = frame : SettingsGeneral {
+  left: 1360px,
+  top: 0px,
+
+  sections {
+    main {
+      body {
+        content {
+          key {
+            input {
+              value {
+                leading {
+                  display: .none
+                }
+
+                trailing {
+                  display: .none
+                }
+
+                detail {
+                  display: .none
+                }
+
+                favorite {
+                  display: .none
+                }
+
+                label {
+                  contents: "Saved securely · enter a replacement"
+                }
+              }
+            }
+
+            label {
+              contents: "Steam API key saved"
+            }
+          }
+
+          keyActions {
+            overrides: [
+              insert(remove, after = SettingsGeneral.content.keyActions.save)
+            ]
+          }
+
+          time {
+            contents: "Last Steam sync: a few minutes ago"
+          }
+
+          country {
+            height: .nil
+          }
+
+          saveCountry {
+            width: .nil
+          }
+        }
+      }
+    }
+  }
+
+  remove = frame : buttons.Button {
+    left: 0px,
+    top: 0px,
+
+    label {
+      leading {
+        display: .none
+      }
+
+      trailing {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      label {
+        contents: "Remove key"
+      }
+    }
+  }
+}
+
+@variant
+export SteamSyncing = frame : SettingsGeneral {
+  left: 2720px,
+  top: 0px,
+
+  sections {
+    main {
+      body {
+        content {
+          key {
+            input {
+              value {
+                leading {
+                  display: .none
+                }
+
+                trailing {
+                  display: .none
+                }
+
+                detail {
+                  display: .none
+                }
+
+                favorite {
+                  display: .none
+                }
+
+                label {
+                  contents: "Saved securely · enter a replacement"
+                }
+              }
+            }
+
+            label {
+              contents: "Steam API key saved"
+            }
+          }
+
+          keyActions {
+            overrides: [
+              insert(remove, after = SettingsGeneral.content.keyActions.save)
+            ]
+          }
+
+          time {
+            contents: "Syncing Steam games…"
+          }
+
+          country {
+            height: .nil
+          }
+
+          saveCountry {
+            width: .nil
+          }
+        }
+      }
+    }
+  }
+
+  header {
+    feedback {
+      contents: "Syncing Steam games…"
+    }
+  }
+
+  remove = frame : buttons.Button {
+    left: 0px,
+    top: 0px,
+
+    label {
+      leading {
+        display: .none
+      }
+
+      trailing {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      label {
+        contents: "Remove key"
+      }
+    }
+  }
+}
+
+@variant
+export SteamSyncFailed = frame : SettingsGeneral {
+  left: 0px,
+  top: 980px,
+
+  sections {
+    main {
+      body {
+        content {
+          key {
+            input {
+              value {
+                leading {
+                  display: .none
+                }
+
+                trailing {
+                  display: .none
+                }
+
+                detail {
+                  display: .none
+                }
+
+                favorite {
+                  display: .none
+                }
+
+                label {
+                  contents: "Saved securely · enter a replacement"
+                }
+              }
+            }
+
+            label {
+              contents: "Steam API key saved"
+            }
+          }
+
+          keyActions {
+            overrides: [
+              insert(remove, after = SettingsGeneral.content.keyActions.save)
+            ]
+          }
+
+          time {
+            contents: "Last Steam sync: a few minutes ago"
+          }
+
+          country {
+            height: .nil
+          }
+
+          saveCountry {
+            width: .nil
+          }
+        }
+      }
+    }
+  }
+
+  header {
+    feedback {
+      contents: "Steam sync failed. Check the connection and retry."
+    }
+  }
+
+  remove = frame : buttons.Button {
+    left: 0px,
+    top: 0px,
+
+    label {
+      leading {
+        display: .none
+      }
+
+      trailing {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      label {
+        contents: "Remove key"
+      }
+    }
+  }
+}
+
+@variant
+export SteamKeyTestFailed = frame : SettingsGeneral {
+  left: 1360px,
+  top: 980px,
+
+  header {
+    feedback {
+      contents: "Key test failed. Check the key and profile."
+    }
+  }
+
+  sections {
+    main {
+      body {
+        content {
+          country {
+            height: .nil
+          }
+
+          saveCountry {
+            width: .nil
+          }
+        }
+      }
+    }
+  }
+}

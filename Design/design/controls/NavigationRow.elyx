@@ -1,0 +1,49 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "tokens/typography.elyx" as typography
+import "tokens/radius.elyx" as radius
+import "resources/icons-new/home-07-stroke-rounded.svg" as home
+import "tokens/spacing.elyx" as spacing
+
+export NavigationRow = frame {
+  width: 100%,
+  min-height: 32px,
+  layout: {align-items: .center, item-gap: spacing.gap.icon},
+  corner-radius: radius.corner.control,
+  padding: [4px, 10px],
+  children: [glyph, labelArea, count],
+
+  glyph = icon {
+    width: spacing.size.icon,
+    height: spacing.size.icon,
+    fill: c.ui.text,
+    contents: home
+  }
+
+  labelArea = frame {
+    width: 100%,
+    layout: {direction: .column},
+    children: label,
+
+    label = text {
+      width: 100%,
+      fill: c.ui.text,
+      contents: "Navigation",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+  }
+
+  count = text {
+    fill: c.ui.muted,
+    contents: "",
+    font-size: typography.size.caption,
+    font-family: typography.family.interface
+  }
+}
+
+@variant
+export Selected = frame : NavigationRow {
+  top: 48px,
+  fill[0].color: c.ui.selected
+}

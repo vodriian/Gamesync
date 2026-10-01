@@ -1,0 +1,40 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "design/controls/WindowButtons.elyx" as trafficSource
+import "tokens/radius.elyx" as radius
+
+export Review = frame {
+  left: 0px,
+  top: 0px,
+  width: 820px,
+  height: 780px,
+  layout: {direction: .column},
+  fill: c.ui.surface,
+  corner-radius: radius.corner.panel,
+  padding: [60px, 24px, 24px],
+  children: [traffic, body, overlay],
+
+  traffic = frame : trafficSource.Traffic {
+    left: 12px,
+    top: 12px,
+    ignore-stack: .true
+  }
+
+  body = frame {
+    width: 100%,
+    height: 100%,
+    layout: {direction: .column},
+    overflow: .scroll,
+    slot: .true
+  }
+
+  overlay = frame {
+    doc: "Intentional overlay plane; independent of scrollable content.",
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    height: 100%,
+    ignore-stack: .true,
+    slot: .true
+  }
+}

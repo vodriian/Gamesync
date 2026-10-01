@@ -1,0 +1,414 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "resources/images/2379780.jpg" as cover2379780
+import "design/blocks/shell/LibraryShell.elyx" as librarySource
+import "design/blocks/navigation/Sidebar.elyx" as sidebarSource
+import "tokens/typography.elyx" as typography
+import "tokens/spacing.elyx" as spacing
+import "tokens/radius.elyx" as radius
+import "design/controls/Button.elyx" as buttons
+import "design/controls/TextField.elyx" as fields
+import "design/blocks/menus/Menu.elyx" as menuSource
+import "design/blocks/library/GridContent.elyx" as gridContent
+import "design/controls/MenuItem.elyx" as menuItems
+import "design/screens/library/Grid.elyx" as gridSource
+
+export CollectionNew = frame : librarySource.Library {
+  doc: "07 · Collections / CollectionNew",
+  left: 0px,
+  top: 0px,
+
+  panel {
+    body {
+      overrides: [insert(content, after = .nil)]
+    }
+
+    count {
+      label {
+        contents: "2 games"
+      }
+    }
+
+    toolbar {
+      title {
+        contents: "Cozy evenings"
+      }
+    }
+  }
+
+  sidebar {
+    navigation {
+      overrides: [
+        insert(
+          popover,
+          after = sidebarSource.Sidebar.navigation.collectionsTitle
+        )
+      ],
+
+      collection {
+        display: .none
+      }
+    }
+  }
+
+  content = frame : gridContent.GridContent {
+    overrides: [
+      remove(gridContent.GridContent.game8),
+      remove(gridContent.GridContent.game7),
+      remove(gridContent.GridContent.game6),
+      remove(gridContent.GridContent.game4),
+      remove(gridContent.GridContent.game3),
+      remove(gridContent.GridContent.game5),
+      remove(gridContent.GridContent.game2)
+    ],
+
+    game1 {
+      cover {
+        fill[0].image.ref: cover2379780
+      }
+
+      title {
+        contents: "Balatro"
+      }
+    }
+  }
+
+  popover = frame {
+    width: 238px,
+    height: .auto,
+    layout: {direction: .column, item-gap: spacing.gap.regular},
+    fill: c.ui.chrome,
+    border: c.ui.border,
+    corner-radius: radius.corner.control,
+    padding: 8px,
+    children: form,
+
+    form = frame {
+      width: 220px,
+      layout: {direction: .column, item-gap: spacing.gap.medium},
+      children: [name, actions],
+
+      name = frame {
+        width: 220px,
+        layout: {direction: .column, item-gap: spacing.gap.icon},
+        children: [label, input],
+
+        label = text {
+          fill: c.ui.text,
+          contents: "Collection",
+          font-size: typography.size.body,
+          font-family: typography.family.interface
+        }
+
+        input = frame : fields.TextField {
+          width: 220px,
+
+          value {
+            leading {
+              display: .none
+            }
+
+            trailing {
+              display: .none
+            }
+
+            detail {
+              display: .none
+            }
+
+            favorite {
+              display: .none
+            }
+
+            label {
+              contents: "Collection name"
+            }
+          }
+        }
+      }
+
+      actions = frame {
+        width: 220px,
+        layout: {item-gap: 6px},
+        children: [save, cancel],
+
+        save = frame : buttons.Primary {
+          label {
+            leading {
+              display: .none
+            }
+
+            trailing {
+              display: .none
+            }
+
+            detail {
+              display: .none
+            }
+
+            favorite {
+              display: .none
+            }
+
+            label {
+              contents: "Save"
+            }
+          }
+        }
+
+        cancel = frame : buttons.Button {
+          label {
+            leading {
+              display: .none
+            }
+
+            trailing {
+              display: .none
+            }
+
+            detail {
+              display: .none
+            }
+
+            favorite {
+              display: .none
+            }
+
+            label {
+              contents: "Cancel"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export CollectionRename = frame : CollectionNew {
+  left: 1360px,
+  top: 0px,
+
+  sidebar {
+    navigation {
+      popover {
+        form {
+          name {
+            input {
+              value {
+                leading {
+                  display: .none
+                }
+
+                trailing {
+                  display: .none
+                }
+
+                detail {
+                  display: .none
+                }
+
+                favorite {
+                  display: .none
+                }
+
+                label {
+                  contents: "Cozy evenings"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export CollectionContextMenu = frame : CollectionNew {
+  left: 2720px,
+  top: 0px,
+
+  overlay {
+    overrides: [insert(popoverReplacement, after = .nil)]
+  }
+
+  sidebar {
+    navigation {
+      overrides: [remove(CollectionNew.popover)],
+
+      collection {
+        display: .visible
+      }
+    }
+  }
+
+  popoverReplacement = frame : menuSource.Menu {
+    doc: "Intentional overlay, anchored within the window rather than normal content flow.",
+    left: 48px,
+    top: 262px,
+    width: 218px,
+    overrides: [insert(item0, after = .nil), insert(item1, after = item0)],
+
+    item0 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Rename"
+        }
+      }
+    }
+
+    item1 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Remove collection"
+        }
+      }
+    }
+  }
+}
+
+@variant
+export CollectionSaveFailed = frame : gridSource.Grid {
+  left: 0px,
+  top: 980px,
+
+  panel {
+    body {
+      overrides: [insert(warning, after = .nil)],
+      layout.item-gap: spacing.gap.large
+    }
+  }
+
+  warning = frame {
+    width: 100%,
+    layout: {direction: .column},
+    fill: c.ui.chrome,
+    padding: 12px,
+    children: message,
+
+    message = text {
+      left: 0px,
+      top: 0px,
+      width: 100%,
+      fill: c.ui.muted,
+      contents: "Not saved. Cancel and try again after refresh.",
+      font-size: 13,
+      font-family: typography.family.interface
+    }
+  }
+}
+
+@variant
+export EditNote = frame : gridSource.Grid {
+  left: 1360px,
+  top: 980px,
+
+  overlay {
+    overrides: [insert(dialog, after = .nil)],
+    layout.justify-content: .center,
+    layout.align-items: .center
+  }
+
+  dialog = frame {
+    width: 440px,
+    layout: {direction: .column, item-gap: 14px},
+    fill: c.ui.surface,
+    border: c.ui.border,
+    shadow: {
+      drop-shadow: {
+        color: rgb(0%, 0%, 0%, 19%),
+        offset: point(0px, 12px),
+        blur-radius: 30px
+      }
+    },
+    corner-radius: radius.corner.panel,
+    padding: 20px,
+    children: [title, label, input, actions],
+
+    title = text {
+      fill: c.ui.text,
+      contents: "Stardew Valley",
+      font-size: typography.size.heading,
+      font-family: typography.family.interface
+    }
+
+    label = text {
+      fill: c.ui.text,
+      contents: "Notes",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    input = frame {
+      width: 100%,
+      height: 130px,
+      layout: {direction: .column, item-gap: spacing.gap.regular},
+      border: c.ui.border,
+      corner-radius: radius.corner.control,
+      padding: 10px,
+      children: value,
+
+      value = text {
+        fill: c.ui.text,
+        contents: "Finish the community center.",
+        font-size: typography.size.body,
+        font-family: typography.family.interface
+      }
+    }
+
+    actions = frame {
+      width: 100%,
+      layout: {item-gap: 6px},
+      children: [cancel, save],
+
+      save = frame : buttons.Primary {
+        label {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          label {
+            contents: "Save"
+          }
+        }
+      }
+
+      cancel = frame : buttons.Button {
+        label {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          label {
+            contents: "Cancel"
+          }
+        }
+      }
+    }
+  }
+}

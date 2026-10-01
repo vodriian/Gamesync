@@ -7,7 +7,7 @@ Build a cozy desktop game library. Keep the app simple, clear, and fast.
 - Read [plan/README.md](plan/README.md) and [plan/guardrails.md](plan/guardrails.md).
 - Read [plan/app-plan.md](plan/app-plan.md) for scope and data rules.
 - Before GUI work, read [plan/design.md](plan/design.md) and its relevant skill sources.
-- Keep experimental Elyx designs in [Design/GameSync](Design/GameSync/). Read its [project instructions](Design/GameSync/AGENTS.md) before design work there.
+- Keep experimental Elyx designs in [Design](Design/). Read its [project instructions](Design/AGENTS.md) before design work there.
 - Read only the latest relevant log. Do not load the full project history.
 
 ## Work rules

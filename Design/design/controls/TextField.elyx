@@ -1,0 +1,24 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "tokens/radius.elyx" as radius
+import "design/controls/IconLabel.elyx" as iconLabel
+
+export TextField = frame {
+  left: 0px,
+  top: 0px,
+  width: 540px,
+  height: 32px,
+  layout: {align-items: .center},
+  fill: c.ui.chrome,
+  border: c.ui.border,
+  corner-radius: radius.corner.control,
+  padding: [7px, 12px],
+  children: value,
+
+  value = frame : iconLabel.IconLabel {
+    label {
+      fill[0].color: c.ui.muted,
+      contents: "Enter text"
+    }
+  }
+}

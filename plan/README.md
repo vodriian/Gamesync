@@ -11,7 +11,7 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 | [App plan](app-plan.md) | Scope, architecture, data rules, milestones, and acceptance checks |
 | [Guardrails](guardrails.md) | Code quality, tests, writing, and efficient agent work |
 | [Design](design.md) | Eagle GUI reference and design rules |
-| [Latest log](logs/2026-09-30.md) | Elyx design workspace, validation, and session handoff |
+| [Latest log](logs/2026-10-01.md) | macOS release build and Elyx workspace cleanup |
 | [Sync log](logs/2026-09-29.md) | Sync implementation, initial live check, and library UI fixes |
 | [UI log](logs/2026-09-28.md) | Omarchy theme, 3D card POC, Kanban board, and macOS UI fixes |
 | [Foundation log](logs/2026-09-11.md) | Initial decisions, changes, checks, and next task |
@@ -32,8 +32,8 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 - Cross-platform view, board, settings, and wishlist fixes merged in PR #3.
 - Prior branch: `data-sync-mode` (merged into `main` in PR #4) includes [data sync](data-sync.md) steps 1–5, library UI fixes, and the Elyx design workspace.
 - Initial macOS/Omarchy Dropbox check is logged; full cross-device acceptance remains pending.
-- Working branch: `hugeicons-ui`, created from `data-sync-mode` at `109b367`, starts the sidebar icon update.
-- Use the [Elyx workspace](../Design/GameSync/README.md) as the design source for the next UI improvements.
+- Hugeicons UI merged in PR #5. Working branch: `vova/elyx-workspace-cleanup` consolidates the design workspace and shared icon source.
+- Use the [Elyx workspace](../Design/README.md) as the design source for the next UI improvements.
 - Runtime targets: macOS and Linux. Windows follows after sync works between them.
 - Existing React/Express app: retained as a reference.
 

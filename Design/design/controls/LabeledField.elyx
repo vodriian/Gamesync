@@ -1,0 +1,22 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "tokens/typography.elyx" as typography
+import "design/controls/TextField.elyx" as fields
+import "tokens/spacing.elyx" as spacing
+
+export LabeledField = frame {
+  width: 100%,
+  layout: {direction: .column, item-gap: spacing.gap.icon},
+  children: [label, input],
+
+  label = text {
+    fill: c.ui.text,
+    contents: "Label",
+    font-size: typography.size.body,
+    font-family: typography.family.interface
+  }
+
+  input = frame : fields.TextField {
+    width: 100%
+  }
+}

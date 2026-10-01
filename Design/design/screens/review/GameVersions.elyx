@@ -1,0 +1,146 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "design/blocks/shell/ReviewShell.elyx" as reviewSource
+import "tokens/spacing.elyx" as spacing
+import "design/controls/Button.elyx" as buttons
+import "tokens/typography.elyx" as typography
+
+export ReviewGameVersions = frame : reviewSource.Review {
+  left: 0px,
+  top: 0px,
+
+  body {
+    overrides: [insert(content, after = .nil)]
+  }
+
+  content = frame {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    layout: {direction: .column, item-gap: spacing.gap.section},
+    children: [heading, hint, v1, v1text, v2, v2text, actions],
+
+    heading = text {
+      fill: c.ui.text,
+      contents: "Review versions",
+      font-size: typography.size.heading,
+      font-family: typography.family.interface
+    }
+
+    hint = text {
+      width: 100%,
+      fill: c.ui.muted,
+      contents: "Choose a saved version. Other versions stay in history.",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    v1 = text {
+      fill: c.ui.text,
+      contents: "Version 1",
+      font-size: typography.size.title,
+      font-family: typography.family.interface
+    }
+
+    v1text = text {
+      width: 100%,
+      fill: c.ui.muted,
+      contents: "Status: Playing\nRating: 4.5\nCollections: Cozy evenings",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    v2 = text {
+      fill: c.ui.text,
+      contents: "Version 2",
+      font-size: typography.size.title,
+      font-family: typography.family.interface
+    }
+
+    v2text = text {
+      width: 100%,
+      fill: c.ui.muted,
+      contents: "Status: Completed\nRating: 5.0\nCollections: Cozy evenings",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    actions = frame {
+      width: 540px,
+      layout: {item-gap: spacing.gap.regular},
+      children: [keep, read, close],
+
+      keep = frame : buttons.Primary {
+        label {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          label {
+            contents: "Keep selected version"
+          }
+        }
+      }
+
+      read = frame : buttons.Button {
+        label {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          label {
+            contents: "Read again"
+          }
+        }
+      }
+
+      close = frame : buttons.Button {
+        label {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          label {
+            contents: "Close"
+          }
+        }
+      }
+    }
+  }
+}

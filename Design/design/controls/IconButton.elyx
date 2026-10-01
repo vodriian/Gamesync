@@ -1,0 +1,26 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "tokens/radius.elyx" as radius
+import "resources/icons-new/plus-stroke-rounded.svg" as plus
+import "tokens/spacing.elyx" as spacing
+
+export IconButton = frame {
+  width: 32px,
+  height: 32px,
+  layout: {justify-content: .center, align-items: .center},
+  corner-radius: radius.corner.control,
+  children: glyph,
+
+  glyph = icon {
+    width: spacing.size.icon,
+    height: spacing.size.icon,
+    fill: c.ui.text,
+    contents: plus
+  }
+}
+
+@variant
+export Selected = frame : IconButton {
+  left: 48px,
+  fill[0].color: c.ui.selected
+}

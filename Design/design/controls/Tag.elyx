@@ -1,0 +1,26 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "tokens/typography.elyx" as typography
+import "resources/icons-new/cancel-01-stroke-rounded.svg" as close
+
+export Tag = frame {
+  layout: {align-items: .center, item-gap: 6px},
+  fill: c.ui.subtle,
+  corner-radius: 6px,
+  padding: [4px, 8px],
+  children: [label, remove],
+
+  label = text {
+    fill: c.ui.text,
+    contents: "Tag",
+    font-size: typography.size.caption,
+    font-family: typography.family.interface
+  }
+
+  remove = icon {
+    width: 12px,
+    height: 12px,
+    fill: c.ui.muted,
+    contents: close
+  }
+}
