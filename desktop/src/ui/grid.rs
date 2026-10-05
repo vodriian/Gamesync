@@ -344,6 +344,7 @@ impl GameGrid {
                     back: false,
                     material: true,
                     frosted_top: 0.,
+                    hinge: 0.,
                 },
                 crate::theme::interface_radius(cx, px(17.)),
                 face,

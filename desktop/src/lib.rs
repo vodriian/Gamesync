@@ -10,6 +10,7 @@ pub mod records;
 mod revision_store;
 pub mod smart;
 pub mod storage;
+pub mod suitability;
 pub mod sync;
 
 pub mod credentials;

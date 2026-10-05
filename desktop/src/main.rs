@@ -40,7 +40,16 @@ fn main() -> anyhow::Result<()> {
         .filter_module("hyper", log::LevelFilter::Off)
         .filter_module("hyper_util", log::LevelFilter::Off)
         .init();
-    let args: Vec<String> = std::env::args().skip(1).collect();
+    let mut args: Vec<String> = std::env::args().skip(1).collect();
+    // Opening the dedicated prototype bundle from Finder must stay in demo
+    // mode, even when Launch Services supplies no command-line flags.
+    let prototype_bundle = std::env::current_exe().is_ok_and(|path| {
+        path.ancestors()
+            .any(|part| part.file_name() == Some(std::ffi::OsStr::new("BestOnDemo.app")))
+    });
+    if prototype_bundle && !args.iter().any(|arg| arg == "--best-on-demo") {
+        args.push("--best-on-demo".into());
+    }
     if args.iter().any(|arg| arg == "--card-proof") {
         return ui::card_proof::run();
     }
@@ -51,17 +60,25 @@ fn main() -> anyhow::Result<()> {
     let preview = args
         .iter()
         .any(|arg| matches!(arg.as_str(), "--stress" | "--missing-covers" | "--empty"));
+    let best_on_demo = args.iter().any(|arg| arg == "--best-on-demo");
     let sample = args.iter().any(|arg| arg == "--demo");
-    let initial_path = if preview {
+    let initial_path = if best_on_demo {
+        Some(managed_storage::best_on_demo_path()?)
+    } else if preview {
         None
     } else {
         Some(managed_storage::path(sample)?)
     };
     // Demo data is opt-in. A normal first launch must not look like a real library.
-    let demo_requested = args
-        .iter()
-        .any(|arg| matches!(arg.as_str(), "--demo" | "--stress" | "--missing-covers"));
-    let mut games = if demo_requested {
+    let demo_requested = args.iter().any(|arg| {
+        matches!(
+            arg.as_str(),
+            "--demo" | "--stress" | "--missing-covers" | "--best-on-demo"
+        )
+    });
+    let mut games = if best_on_demo {
+        fixtures::best_on_games()?
+    } else if demo_requested {
         fixtures::games()?
     } else {
         Vec::new()
@@ -89,6 +106,15 @@ fn main() -> anyhow::Result<()> {
     }
     let small_window = args.iter().any(|arg| arg == "--small-window");
     let mut library = model::Library::new(games);
+    library.best_on_demo = best_on_demo;
+    if best_on_demo {
+        library.name = "Best on · Demo".into();
+        library.set_scope(model::Scope::Smart(
+            gamesync_desktop::smart::SmartRule::BestOn(
+                gamesync_desktop::suitability::BestOn::SteamDeck,
+            ),
+        ));
+    }
     if !demo_requested {
         library.name = "My games".into();
         library.demo = false;

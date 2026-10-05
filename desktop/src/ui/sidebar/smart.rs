@@ -17,9 +17,11 @@ pub(super) struct SmartState {
 
 impl SmartState {
     pub fn new() -> Self {
-        let groups_open = crate::settings::load()
+        let mut groups_open: BTreeSet<_> = crate::settings::load()
             .map(|settings| settings.smart_groups_open.into_iter().collect())
             .unwrap_or_default();
+        // Best on is not saved in settings yet, so it starts open everywhere.
+        groups_open.insert(SmartKind::BestOn);
         Self {
             open: true,
             tags_open: false,
@@ -140,6 +142,7 @@ impl LibrarySidebar {
         let kind = group.kind;
         let open = self.smart.groups_open.contains(&kind);
         let icon = match kind {
+            SmartKind::BestOn => Some(SidebarIcon::BestOn),
             SmartKind::Genre => Some(SidebarIcon::Genres),
             SmartKind::Rating => Some(SidebarIcon::Rating),
             SmartKind::Playtime => Some(SidebarIcon::Playtime),
@@ -156,7 +159,10 @@ impl LibrarySidebar {
         if !open {
             return section.into_any_element();
         }
-        let banded = matches!(kind, SmartKind::Rating | SmartKind::Playtime);
+        let banded = matches!(
+            kind,
+            SmartKind::BestOn | SmartKind::Rating | SmartKind::Playtime
+        );
         let all = banded || self.smart.show_all.contains(&kind);
         let total = group.values.len();
         let shown = if all { total } else { total.min(SHORT_LIST) };
@@ -207,7 +213,18 @@ impl LibrarySidebar {
         if !self.smart.groups_open.remove(&kind) {
             self.smart.groups_open.insert(kind);
         }
-        let open: Vec<_> = self.smart.groups_open.iter().copied().collect();
+        // The new prototype enum must not make older app settings unreadable.
+        if kind == SmartKind::BestOn {
+            cx.notify();
+            return;
+        }
+        let open: Vec<_> = self
+            .smart
+            .groups_open
+            .iter()
+            .copied()
+            .filter(|kind| *kind != SmartKind::BestOn)
+            .collect();
         let previous = self.smart.save.take();
         self.smart.save = Some(cx.spawn(async move |this, cx| {
             if let Some(previous) = previous {

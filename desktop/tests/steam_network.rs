@@ -74,4 +74,33 @@ fn resync_fills_details_reviews_and_tags_for_one_game() {
     assert!(steam.description.is_some());
     assert!(metadata.details_complete && metadata.reviews_complete && metadata.tags_complete);
     assert!(!metadata.tags.is_empty());
+    // Portal 2 is Steam Deck Verified with full controller support.
+    let setup = metadata.setup.unwrap();
+    assert_eq!(
+        setup.deck,
+        gamesync_desktop::suitability::DeckRating::Verified
+    );
+    assert_eq!(
+        setup.controller,
+        gamesync_desktop::suitability::ControllerSupport::Full
+    );
+}
+
+#[test]
+#[ignore = "Reads public Steam Deck reports; no account or API key is used"]
+fn deck_report_names_an_anti_cheat_blocker() {
+    use gamesync_desktop::suitability::{DeckNoteKind, DeckRating};
+    let client = SteamClient::new().unwrap();
+    // Destiny 2 is Unsupported because of its anti-cheat.
+    let evidence = gamesync_desktop::steam::client::parse_setup(
+        &client.deck_report(1085660).unwrap(),
+        &client.store_categories(1085660).unwrap(),
+        0,
+    )
+    .unwrap();
+    assert_eq!(evidence.deck, DeckRating::Unsupported);
+    assert!(evidence
+        .deck_notes
+        .iter()
+        .any(|note| note.kind == DeckNoteKind::Blocker && note.text.contains("anti cheat")));
 }

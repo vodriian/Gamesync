@@ -27,13 +27,27 @@ pub fn path(sample: bool) -> Result<PathBuf> {
             );
         }
     }
-    let dirs = directories::ProjectDirs::from("app", "GameSync", "GameSync")
-        .context("App storage is unavailable")?;
-    Ok(dirs.data_dir().join(if sample {
+    Ok(data_dir()?.join(if sample {
         "Sample.library"
     } else {
         "Steam.library"
     }))
+}
+
+/// The Best on demo gets a fresh store at each launch, so the full editor works
+/// and every change resets on restart. Only this dedicated folder is removed.
+pub fn best_on_demo_path() -> Result<PathBuf> {
+    let root = data_dir()?.join("BestOnDemo.library");
+    if root.exists() {
+        std::fs::remove_dir_all(&root).context("Could not reset the Best on demo")?;
+    }
+    Ok(root)
+}
+
+fn data_dir() -> Result<PathBuf> {
+    let dirs = directories::ProjectDirs::from("app", "GameSync", "GameSync")
+        .context("App storage is unavailable")?;
+    Ok(dirs.data_dir().to_owned())
 }
 
 pub fn prepare(root: &Path, samples: &[Game]) -> Result<()> {
@@ -72,7 +86,14 @@ pub fn prepare(root: &Path, samples: &[Game]) -> Result<()> {
         game.personal.rating = sample.rating;
         game.personal.favorite = sample.favorite;
         game.personal.tags = sample.tags.clone();
-        if let Some(bytes) = crate::assets::Assets.load(&sample.cover)? {
+        // Best on demo samples carry a fixture assessment; other samples have none.
+        game.suitability = sample
+            .record
+            .as_ref()
+            .and_then(|record| record.game.suitability.clone());
+        // A sample without bundled artwork, such as the fictional Best on
+        // blocker example, keeps the missing-cover fallback.
+        if let Some(bytes) = crate::assets::Assets.load(&sample.cover).ok().flatten() {
             let cover = format!("media/{}.jpg", sample.id);
             std::fs::write(staged.join(&cover), bytes)?;
             game.personal.cover = Some(cover);
@@ -266,6 +287,44 @@ mod tests {
             .refresh()?
             .games
             .is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn best_on_demo_store_keeps_assessments_and_saves_preferences() -> Result<()> {
+        use gamesync_desktop::suitability::SetupPreference;
+        let temporary = tempfile::tempdir()?;
+        let root = temporary.path().join("BestOnDemo.library");
+        let cache = temporary.path().join("cache");
+        std::fs::create_dir(&cache)?;
+        let samples = crate::fixtures::best_on_games()?;
+        // Includes the fictional blocker example, which has no bundled cover.
+        prepare(&root, &samples)?;
+        let mut reader = LibraryReader::open(&root, &cache)?;
+        let loaded = reader.refresh()?;
+        assert_eq!(loaded.games.len(), samples.len());
+        assert!(loaded.games.iter().all(|g| g.game.suitability.is_some()));
+        let blocked = loaded
+            .games
+            .iter()
+            .find(|g| g.game.title.starts_with("Arena Lab"))
+            .unwrap();
+        assert!(blocked.game.personal.cover.is_none());
+
+        let mut personal = blocked.game.personal.clone();
+        personal.setup_preference = Some(SetupPreference::Pc);
+        RecordStore::open(&root)?.edit_personal(blocked.game_id, blocked.revision_id, personal)?;
+        let saved = reader.refresh()?;
+        let blocked = saved
+            .games
+            .iter()
+            .find(|g| g.game_id == blocked.game_id)
+            .unwrap();
+        assert_eq!(
+            blocked.game.personal.setup_preference,
+            Some(SetupPreference::Pc)
+        );
+        assert!(blocked.game.suitability.is_some());
         Ok(())
     }
 }

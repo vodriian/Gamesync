@@ -319,6 +319,16 @@ impl GameSyncApp {
 
     fn toolbar(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let home = self.library.read(cx).home;
+        let mut title = if home {
+            "Home".into()
+        } else {
+            self.library
+                .read(cx)
+                .scope_label(&self.library.read(cx).scope)
+        };
+        if self.library.read(cx).best_on_demo {
+            title.push_str(" · Demo");
+        }
         h_flex()
             .h(px(68.))
             .px_5()
@@ -342,13 +352,7 @@ impl GameSyncApp {
                     .min_w_0()
                     .truncate()
                     .font_medium()
-                    .child(if home {
-                        "Home".into()
-                    } else {
-                        self.library
-                            .read(cx)
-                            .scope_label(&self.library.read(cx).scope)
-                    }),
+                    .child(title),
             )
             // Home is not a list of games, so views, filters, and search do not apply.
             .when(!home, |toolbar| toolbar.child(self.library_controls(cx)))

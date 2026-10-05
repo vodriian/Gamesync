@@ -51,23 +51,19 @@ pub fn front(
                 .overflow_hidden()
                 .bg(cx.theme().secondary)
                 .child(
-                    img(game
-                        .cover_path
-                        .clone()
-                        .map(gpui::ImageSource::from)
-                        .unwrap_or_else(|| game.cover.clone().into()))
-                    .size_full()
-                    .object_fit(ObjectFit::Cover)
-                    .with_fallback(|| {
-                        v_flex()
-                            .size_full()
-                            .justify_center()
-                            .items_center()
-                            .gap_3()
-                            .child(div().text_3xl().child("✦"))
-                            .child(div().text_sm().child("Cover unavailable"))
-                            .into_any_element()
-                    }),
+                    img(cover_image(game))
+                        .size_full()
+                        .object_fit(ObjectFit::Cover)
+                        .with_fallback(|| {
+                            v_flex()
+                                .size_full()
+                                .justify_center()
+                                .items_center()
+                                .gap_3()
+                                .child(div().text_3xl().child("✦"))
+                                .child(div().text_sm().child("Cover unavailable"))
+                                .into_any_element()
+                        }),
                 )
                 .child(div().absolute().inset_0().bg(linear_gradient(
                     180.,
@@ -156,6 +152,14 @@ pub fn front(
                     )
                 }),
         )
+}
+
+/// The downloaded cover when present, otherwise the record's cover location.
+pub fn cover_image(game: &Game) -> gpui::ImageSource {
+    game.cover_path
+        .clone()
+        .map(gpui::ImageSource::from)
+        .unwrap_or_else(|| game.cover.clone().into())
 }
 
 /// Face roles keep the artwork, front and editor textures independent.

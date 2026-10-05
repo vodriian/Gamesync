@@ -100,6 +100,20 @@ Sample games and their collections persist separately in app storage. The
 `demo_library` and `card_geometry_library` examples remain storage fixtures for
 service-level checks, not user-facing folder import features.
 
+## Best on prototype
+
+```sh
+python3 desktop/scripts/dev.py --best-on-demo
+```
+
+Opens a separate in-memory demo with thirteen games and four Best on groups:
+Steam Deck, PC, Both, and Needs review. Open a card and turn to Details to
+review reasons, expand **Why this fit?**, or change **Your preference**.
+Choices update collection counts and reset on restart. All scores and reasons
+are mock examples. The normal Steam library and persistent sample store are
+not opened. On macOS, the prototype has its own `BestOnDemo.app` bundle ID.
+See [the phased plan](../plan/best-on.md). Automated tests follow prototype review.
+
 ## Checks
 
 ```sh

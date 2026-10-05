@@ -242,6 +242,10 @@ impl CardRenderer {
             b.size.height.0 / face.texture.height() as f32,
             card.pose.frosted_top,
             card.scale_factor,
+            card.pose.hinge,
+            0.,
+            0.,
+            0.,
         ];
         encoder.set_render_pipeline_state(&self.pipeline);
         encoder.set_fragment_texture(0, Some(&face.texture));

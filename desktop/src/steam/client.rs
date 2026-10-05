@@ -163,6 +163,32 @@ impl SteamClient {
         );
         Ok(data["query_summary"].clone())
     }
+    /// Valve's Steam Deck compatibility report. This store endpoint is not a
+    /// documented API; `parse_setup` rejects any shape it does not expect.
+    pub fn deck_report(&self, id: u32) -> Result<Value> {
+        self.json(
+            "https://store.steampowered.com/saleaction/ajaxgetdeckappcompatibilityreport",
+            &[("nAppID", &id.to_string()), ("l", "english")],
+        )
+    }
+    /// Store categories only, for controller support.
+    pub fn store_categories(&self, id: u32) -> Result<Value> {
+        let data = self.json(
+            "https://store.steampowered.com/api/appdetails",
+            &[
+                ("appids", &id.to_string()),
+                ("l", "english"),
+                ("filters", "categories"),
+            ],
+        )?;
+        let result = &data[id.to_string()];
+        ensure!(
+            result["success"] == true,
+            "Store categories are unavailable"
+        );
+        // A game with no categories returns an empty list instead of an object.
+        Ok(result["data"].clone())
+    }
     /// Tag IDs per app, highest weight first. The call takes at most
     /// `TAG_BATCH` apps. An app that is missing from the result must be retried.
     pub fn store_tags(&self, ids: &[u32]) -> Result<BTreeMap<u32, Vec<u32>>> {
@@ -355,6 +381,88 @@ pub fn parse_store_tags(data: &Value) -> Result<BTreeMap<u32, Vec<u32>>> {
 }
 
 /// ISO 3166-1 alpha-2 in upper case, as Steam expects.
+/// Steam Deck report plus store categories. `now` is Unix seconds.
+pub fn parse_setup(
+    report: &Value,
+    categories: &Value,
+    now: i64,
+) -> Result<crate::suitability::SetupEvidence> {
+    use crate::suitability::{
+        ControllerSupport, DeckNote, DeckNoteKind, DeckRating, SetupEvidence,
+    };
+    ensure!(report["success"] == 1, "Steam Deck report is unavailable");
+    let results = &report["results"];
+    let deck = match results["resolved_category"].as_u64() {
+        Some(3) => DeckRating::Verified,
+        Some(2) => DeckRating::Playable,
+        Some(1) => DeckRating::Unsupported,
+        _ => DeckRating::Unknown,
+    };
+    let deck_notes = results["resolved_items"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|item| {
+            let kind = match item["display_type"].as_u64()? {
+                4 => DeckNoteKind::Pass,
+                3 => DeckNoteKind::Warning,
+                2 => DeckNoteKind::Blocker,
+                1 => DeckNoteKind::Info,
+                _ => return None,
+            };
+            let token = item["loc_token"].as_str()?;
+            let token = token.rsplit("_TestResult_").next()?;
+            let valid = !token.is_empty()
+                && token.len() <= 120
+                && token
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b == b'_');
+            valid.then(|| DeckNote {
+                kind,
+                text: sentence(token),
+            })
+        })
+        .take(12)
+        .collect();
+    let ids: Vec<u64> = categories["categories"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|category| category["id"].as_u64())
+        .collect();
+    let controller = if ids.contains(&28) {
+        ControllerSupport::Full
+    } else if ids.contains(&18) {
+        ControllerSupport::Partial
+    } else {
+        ControllerSupport::None
+    };
+    Ok(SetupEvidence {
+        deck,
+        deck_notes,
+        controller,
+        checked_at: now,
+    })
+}
+
+/// "InterfaceTextIsNotLegible" becomes "Interface text is not legible".
+fn sentence(token: &str) -> String {
+    let mut text = String::new();
+    for (index, c) in token.chars().enumerate() {
+        if c == '_' {
+            text.push(' ');
+        } else if c.is_ascii_uppercase() && index > 0 && !text.ends_with(' ') {
+            text.push(' ');
+            text.push(c.to_ascii_lowercase());
+        } else if index > 0 {
+            text.push(c.to_ascii_lowercase());
+        } else {
+            text.push(c);
+        }
+    }
+    text
+}
+
 pub fn valid_country(code: &str) -> bool {
     code.len() == 2 && code.bytes().all(|b| b.is_ascii_uppercase())
 }
@@ -482,6 +590,42 @@ fn trusted_header(id: u32, value: &str) -> bool {
 #[cfg(test)]
 mod cover_tests {
     use super::*;
+
+    #[test]
+    fn setup_evidence_parses_deck_report_and_controller_categories() {
+        use crate::suitability::{ControllerSupport, DeckNoteKind, DeckRating};
+        let report = serde_json::json!({"success": 1, "results": {"resolved_category": 1,
+            "resolved_items": [
+                {"display_type": 2, "loc_token": "#SteamDeckVerified_TestResult_UnsupportedAntiCheat_Other"},
+                {"display_type": 3, "loc_token": "#SteamDeckVerified_TestResult_InterfaceTextIsNotLegible"},
+                {"display_type": 9, "loc_token": "#SteamDeckVerified_TestResult_Ignored"},
+                {"display_type": 1, "loc_token": "<script>"}]}});
+        let categories = serde_json::json!({"categories": [{"id": 2}, {"id": 18}]});
+        let evidence = super::parse_setup(&report, &categories, 7).unwrap();
+        assert_eq!(evidence.deck, DeckRating::Unsupported);
+        assert_eq!(evidence.controller, ControllerSupport::Partial);
+        assert_eq!(evidence.checked_at, 7);
+        let notes: Vec<_> = evidence
+            .deck_notes
+            .iter()
+            .map(|note| (note.kind, note.text.as_str()))
+            .collect();
+        assert_eq!(
+            notes,
+            [
+                (DeckNoteKind::Blocker, "Unsupported anti cheat other"),
+                (DeckNoteKind::Warning, "Interface text is not legible"),
+            ]
+        );
+        // An unrated game is Unknown; a failed report is an error to retry.
+        let unrated = serde_json::json!({"success": 1, "results": {"resolved_category": null}});
+        let none = serde_json::json!([]);
+        assert_eq!(
+            super::parse_setup(&unrated, &none, 0).unwrap().deck,
+            DeckRating::Unknown
+        );
+        assert!(super::parse_setup(&serde_json::json!({"success": 2}), &none, 0).is_err());
+    }
 
     #[test]
     fn gray_placeholder_is_rejected_but_artwork_is_accepted() {

@@ -30,6 +30,9 @@ pub struct GameData {
     pub title: String,
     pub steam: Option<SteamData>,
     pub personal: PersonalData,
+    /// Saved demo assessment. Real games calculate theirs from Steam evidence.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub suitability: Option<crate::suitability::Assessment>,
     #[serde(flatten)]
     pub extra: ExtraFields,
 }
@@ -100,12 +103,18 @@ pub struct SteamMetadata {
     pub cover_complete: bool,
     #[serde(default)]
     pub tags_complete: bool,
+    /// Steam Deck and controller evidence. None means not fetched yet, so a
+    /// later sync retries it. See `crate::suitability::assessment`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub setup: Option<crate::suitability::SetupEvidence>,
     #[serde(flatten)]
     pub extra: ExtraFields,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PersonalData {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub setup_preference: Option<crate::suitability::SetupPreference>,
     /// Stable status key; a label can change without changing this value.
     pub status: String,
     /// Half-star units, 1 through 10. None means unrated.
@@ -132,6 +141,7 @@ pub struct PersonalData {
 impl Default for PersonalData {
     fn default() -> Self {
         Self {
+            setup_preference: None,
             status: "backlog".into(),
             rating: None,
             favorite: false,
@@ -161,6 +171,7 @@ impl GameData {
     pub fn new(title: impl Into<String>) -> Self {
         Self {
             title: title.into(),
+            suitability: None,
             steam: None,
             personal: PersonalData::default(),
             extra: ExtraFields::new(),
@@ -203,10 +214,14 @@ impl GameRevision {
                 "game",
             ],
         )?;
-        check_extra(&self.game.extra, &["title", "steam", "personal"])?;
+        check_extra(
+            &self.game.extra,
+            &["title", "steam", "personal", "suitability"],
+        )?;
         check_extra(
             &self.game.personal.extra,
             &[
+                "setup_preference",
                 "status",
                 "rating",
                 "favorite",
@@ -232,6 +247,7 @@ impl GameRevision {
                         "details_complete",
                         "reviews_complete",
                         "cover_complete",
+                        "setup",
                     ],
                 )?;
                 ensure!(

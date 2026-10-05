@@ -54,6 +54,14 @@ const COVERS: &[(&str, &[u8])] = &[
 /// Embed the shared design artwork; virtual keys keep component icon overrides stable.
 const ICONS: &[(&str, &[u8])] = &[
     (
+        "icons/hugeicons/gameboy-stroke-rounded.svg",
+        include_bytes!("../../Design/resources/icons-new/gameboy-stroke-rounded.svg"),
+    ),
+    (
+        "icons/hugeicons/computer-stroke-rounded.svg",
+        include_bytes!("../../Design/resources/icons-new/computer-stroke-rounded.svg"),
+    ),
+    (
         "icons/eye-off.svg",
         include_bytes!("../../Design/resources/icons-new/eye-off-stroke-rounded.svg"),
     ),
@@ -239,9 +247,26 @@ impl gpui_component::IconNamed for FavoriteIcon {
     }
 }
 
+/// Setups in the Best on details: a handheld for Steam Deck, a monitor for PC.
+#[derive(Clone, Copy)]
+pub enum SetupIcon {
+    SteamDeck,
+    Pc,
+}
+impl gpui_component::IconNamed for SetupIcon {
+    fn path(self) -> SharedString {
+        match self {
+            Self::SteamDeck => "icons/hugeicons/gameboy-stroke-rounded.svg",
+            Self::Pc => "icons/hugeicons/computer-stroke-rounded.svg",
+        }
+        .into()
+    }
+}
+
 /// Sidebar icon roles share the same artwork as the Elyx workspace.
 #[derive(Clone, Copy)]
 pub enum SidebarIcon {
+    BestOn,
     Genres,
     Tags,
     Rating,
@@ -281,6 +306,7 @@ impl gpui_component::IconNamed for SidebarIcon {
     fn path(self) -> SharedString {
         match self {
             Self::Genres => "icons/hugeicons/bookshelf-03-stroke-rounded.svg",
+            Self::BestOn => "icons/hugeicons/computer-stroke-rounded.svg",
             Self::Tags => "icons/hugeicons/tags-stroke-rounded.svg",
             Self::Rating => "icons/hugeicons/star-square-stroke-rounded.svg",
             Self::Playtime => "icons/hugeicons/time-04-stroke-rounded.svg",

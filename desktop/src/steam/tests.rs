@@ -9,6 +9,7 @@ struct Source {
     review_calls: Cell<usize>,
     cover_calls: Cell<usize>,
     tag_calls: Cell<usize>,
+    setup_calls: Cell<usize>,
     /// The store omits game 43 from tag results, like a removed app.
     omit_tags_for_43: bool,
     last_played: i64,
@@ -90,6 +91,16 @@ impl SteamSource for Source {
         self.cover_calls.set(self.cover_calls.get() + 1);
         Ok(include_bytes!("../../fixtures/covers/620.jpg").to_vec())
     }
+    fn deck_report(&self, _: u32) -> Result<serde_json::Value> {
+        self.setup_calls.set(self.setup_calls.get() + 1);
+        Ok(
+            json!({"success": 1, "results": {"resolved_category": 2, "resolved_items": [
+            {"display_type": 3, "loc_token": "#SteamDeckVerified_TestResult_InterfaceTextIsNotLegible"}]}}),
+        )
+    }
+    fn store_categories(&self, _: u32) -> Result<serde_json::Value> {
+        Ok(json!({"categories": [{"id": 28}]}))
+    }
 }
 fn library() -> (tempfile::TempDir, LibraryStore) {
     let temp = tempfile::tempdir().unwrap();
@@ -106,6 +117,7 @@ fn source(fail_details: bool) -> Source {
         review_calls: Cell::new(0),
         cover_calls: Cell::new(0),
         tag_calls: Cell::new(0),
+        setup_calls: Cell::new(0),
         omit_tags_for_43: false,
         last_played: 1_700_000_000,
         wishlist: RefCell::new(Some(Vec::new())),
@@ -504,4 +516,32 @@ fn wishlist_parser_rejects_empty_private_and_duplicate_lists() {
             date_added: 1_700_000_000
         }]
     );
+}
+
+#[test]
+fn sync_saves_steam_deck_evidence_once_and_assesses_it() {
+    use crate::suitability::{BestOn, ControllerSupport, DeckRating};
+    let (_temp, library) = library();
+    let source = source(false);
+    assert_eq!(run(&library, &source).failures, 0);
+    assert_eq!(run(&library, &source).failures, 0);
+    assert_eq!(source.setup_calls.get(), 1);
+    let record = current(&library, 42);
+    let evidence = record
+        .game
+        .steam
+        .as_ref()
+        .and_then(|steam| steam.metadata.as_ref()?.setup.clone())
+        .unwrap();
+    assert_eq!(evidence.deck, DeckRating::Playable);
+    assert_eq!(evidence.controller, ControllerSupport::Full);
+    // Personal data is untouched, and the result is calculated, not saved.
+    assert!(record.game.suitability.is_none());
+    assert_eq!(record.game.personal.setup_preference, None);
+    let assessment = crate::suitability::assessment(&record.game).unwrap();
+    assert_eq!(assessment.recommendation(), BestOn::Both);
+    assert!(assessment
+        .steam_deck
+        .reason
+        .contains("Interface text is not legible"));
 }

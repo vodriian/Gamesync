@@ -80,8 +80,16 @@ trait SteamSource {
     fn tag_names(&self) -> Result<BTreeMap<u32, String>>;
     fn wishlist(&self, account: &str) -> Result<Vec<WishlistItem>>;
     fn store_names(&self, ids: &[u32]) -> Result<BTreeMap<u32, String>>;
+    fn deck_report(&self, id: u32) -> Result<serde_json::Value>;
+    fn store_categories(&self, id: u32) -> Result<serde_json::Value>;
 }
 impl SteamSource for SteamClient {
+    fn deck_report(&self, id: u32) -> Result<serde_json::Value> {
+        self.deck_report(id)
+    }
+    fn store_categories(&self, id: u32) -> Result<serde_json::Value> {
+        self.store_categories(id)
+    }
     fn wishlist(&self, account: &str) -> Result<Vec<WishlistItem>> {
         self.wishlist(account)
     }
@@ -173,7 +181,7 @@ fn run_sync(
         };
         let id = steam.app_id;
         let metadata = steam.metadata.clone().unwrap_or_default();
-        for stage in 0..3 {
+        for stage in 0..4 {
             if cancelled(&cancel) {
                 break;
             }
@@ -181,6 +189,7 @@ fn run_sync(
                 metadata.details_complete,
                 metadata.reviews_complete,
                 metadata.cover_complete,
+                metadata.setup.is_some(),
             ][stage]
             {
                 continue;
@@ -196,9 +205,15 @@ fn run_sync(
                 1 => client
                     .reviews(id)
                     .and_then(|data| apply_reviews(&store, record.game_id, id, &data)),
-                _ => client
+                2 => client
                     .cover(id)
                     .and_then(|bytes| covers::save(root, record.game_id, id, &bytes).map(|_| ())),
+                // Two store requests; the pause keeps the usual request spacing.
+                _ => client.deck_report(id).and_then(|report| {
+                    pause(&cancel, delay);
+                    let categories = client.store_categories(id)?;
+                    apply_setup(&store, record.game_id, id, &report, &categories)
+                }),
             };
             if let Err(error) = result {
                 state.failures += 1;
@@ -206,7 +221,7 @@ fn run_sync(
                     state.issues.push(format!(
                         "{} · {}: {error}",
                         record.game.title,
-                        ["description", "reviews", "cover"][stage]
+                        ["description", "reviews", "cover", "Steam Deck"][stage]
                     ));
                 }
             }
@@ -295,6 +310,26 @@ fn apply_reviews(
     Ok(())
 }
 
+fn apply_setup(
+    store: &RecordStore,
+    game_id: uuid::Uuid,
+    app_id: u32,
+    report: &serde_json::Value,
+    categories: &serde_json::Value,
+) -> Result<()> {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |elapsed| elapsed.as_secs() as i64);
+    let evidence = client::parse_setup(report, categories, now)?;
+    store.update_steam(game_id, app_id, |steam| {
+        steam
+            .metadata
+            .get_or_insert_with(SteamMetadata::default)
+            .setup = Some(evidence);
+    })?;
+    Ok(())
+}
+
 /// A tag added after the name list was built is skipped.
 fn apply_tags(
     store: &RecordStore,
@@ -314,8 +349,8 @@ fn apply_tags(
     })
 }
 
-/// Fetch store details, reviews, and Steam tags for one game again, even when
-/// its stages are complete. No key is needed. Returns one message for each
+/// Fetch store details, reviews, Steam tags, and Steam Deck evidence for one
+/// game again, even when its stages are complete. No key is needed. Returns one message for each
 /// part that failed; parts that succeed are kept.
 pub fn resync_game(root: &Path, game_id: uuid::Uuid) -> Result<Vec<String>> {
     let store = RecordStore::open(root)?;
@@ -351,6 +386,13 @@ pub fn resync_game(root: &Path, game_id: uuid::Uuid) -> Result<Vec<String>> {
     });
     if let Err(error) = tags {
         failures.push(format!("tags: {error}"));
+    }
+    let setup = client.deck_report(app_id).and_then(|report| {
+        let categories = client.store_categories(app_id)?;
+        apply_setup(&store, game_id, app_id, &report, &categories)
+    });
+    if let Err(error) = setup {
+        failures.push(format!("Steam Deck: {error}"));
     }
     Ok(failures)
 }
