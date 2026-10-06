@@ -1,7 +1,0 @@
-import "screens/library/views/Cards.elyx" as source
-
-@context(theme="dark")
-export CardsDark = frame : source.Cards {
-  left: 0px,
-  top: 0px
-}

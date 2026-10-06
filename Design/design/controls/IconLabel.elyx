@@ -1,0 +1,48 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "tokens/typography.elyx" as typography
+import "resources/icons-new/check-stroke-rounded.svg" as check
+
+export IconLabel = frame {
+  layout: {align-items: .center, item-gap: 6px},
+  children: [leading, label, trailing, detail, favorite],
+
+  leading = icon {
+    width: 14px,
+    height: 14px,
+    display: .none,
+    fill: c.ui.text,
+    contents: check
+  }
+
+  label = text {
+    fill: c.ui.text,
+    contents: "Label",
+    font-size: typography.size.body,
+    font-family: typography.family.interface
+  }
+
+  trailing = icon {
+    width: 14px,
+    height: 14px,
+    display: .none,
+    fill: c.ui.muted,
+    contents: check
+  }
+
+  detail = text {
+    display: .none,
+    fill: c.ui.muted,
+    contents: "",
+    font-size: typography.size.caption,
+    font-family: typography.family.interface
+  }
+
+  favorite = icon {
+    width: 14px,
+    height: 14px,
+    display: .none,
+    fill: c.ui.muted,
+    contents: check
+  }
+}

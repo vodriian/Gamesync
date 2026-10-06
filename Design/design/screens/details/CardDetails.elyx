@@ -1,0 +1,948 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "design/controls/WindowButtons.elyx" as trafficSource
+import "tokens/radius.elyx" as radius
+import "tokens/spacing.elyx" as spacing
+import "design/blocks/shell/FocusedShell.elyx" as focusedSource
+import "design/controls/Button.elyx" as buttons
+import "design/controls/IconLabel.elyx" as iconLabel
+import "tokens/typography.elyx" as typography
+import "design/blocks/menus/Menu.elyx" as menuSource
+import "design/blocks/details/Filmstrip.elyx" as filmstripSource
+import "resources/images/413150.jpg" as cover413150
+import "resources/icons-new/arrow-left-02-stroke-rounded.svg" as glyph_16
+import "resources/icons-new/chevron-left-stroke-rounded.svg" as glyph_9
+import "resources/icons-new/chevron-right-stroke-rounded.svg" as glyph_8
+import "design/controls/Rating.elyx" as ratingControl
+import "resources/icons-new/star-stroke-rounded.svg" as ratingOutline
+import "resources/icons-new/solid/heart-stroke-rounded-solid.svg" as heartSolid
+import "design/controls/MenuItem.elyx" as menuItems
+import "design/controls/Tag.elyx" as tagSource
+import "resources/icons-new/plus-stroke-rounded.svg" as plusIcon
+import "resources/icons-new/more-horizontal-square-01-stroke-rounded.svg" as moreIcon
+import "design/controls/IconButton.elyx" as iconButtons
+import "design/blocks/details/BestOn.elyx" as bestOnSource
+
+export CardDetails = frame : focusedSource.Focused {
+  doc: "08 · Focused card / CardDetails",
+  left: 0px,
+  top: 0px,
+
+  body {
+    overrides: [insert(content, after = .nil)]
+  }
+
+  content = frame {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    height: 100%,
+    layout: {direction: .column},
+    padding: [42px, 8px, 8px],
+    children: [chrome, panel, stage, filmstrip],
+
+    chrome = frame {
+      doc: "Native traffic controls use fixed titlebar positions.",
+      left: 0px,
+      top: 0px,
+      width: 100%,
+      height: 100%,
+      ignore-stack: .true,
+      fill: c.ui.chrome,
+      children: traffic,
+
+      traffic = frame : trafficSource.Traffic {
+        left: 16px,
+        top: 16px
+      }
+    }
+
+    panel = frame {
+      width: 100%,
+      height: 44px,
+      layout: {justify-content: .space-between, align-items: .center},
+      fill: c.ui.surface,
+      border: c.ui.border,
+      corner-radius: radius.corner.panel,
+      padding: [0px, 16px],
+      children: [back, navigation],
+
+      back = frame : iconLabel.IconLabel {
+        leading {
+          contents: glyph_16,
+          display: .visible
+        }
+
+        label {
+          contents: "Back to library",
+          font-size: typography.size.title
+        }
+      }
+
+      navigation = frame : iconLabel.IconLabel {
+        trailing {
+          contents: glyph_8,
+          display: .visible
+        }
+
+        leading {
+          contents: glyph_9,
+          display: .visible
+        }
+
+        label {
+          contents: "",
+          font-size: 19
+        }
+      }
+    }
+
+    stage = frame {
+      width: 100%,
+      height: 100%,
+      layout: {
+        direction: .column,
+        align-items: .center,
+        item-gap: spacing.gap.large
+      },
+      overflow: .scroll,
+      padding: 16px,
+      children: [book, flip]
+    }
+
+    book = frame {
+      doc: "Open book: Steam summary on the left page, personal fields on the right.",
+      width: 800px,
+      height: 584px,
+      layout: {direction: .row},
+      fill: c.ui.surface,
+      border: c.ui.border,
+      shadow: {
+        drop-shadow: {
+          color: rgb(0%, 0%, 0%, 12.549%),
+          offset: point(0px, 14px),
+          blur-radius: 22px
+        }
+      },
+      corner-radius: 16px,
+      children: [left, spine, right],
+
+      left = frame {
+        width: 50%,
+        height: 100%,
+        layout: {direction: .column},
+        children: [cover, summary],
+
+        cover = frame {
+          width: 100%,
+          height: 162px,
+          layout: {direction: .row},
+          padding: [12px, 12px, 0px],
+          children: art,
+
+          art = frame {
+            width: 100%,
+            height: 100%,
+            fill: {image: {ref: cover413150}},
+            corner-radius: 10px
+          }
+        }
+
+        summary = frame {
+          width: 100%,
+          height: 100%,
+          layout: {direction: .column, item-gap: spacing.gap.regular},
+          overflow: .scroll,
+          padding: [12px, 16px, 16px],
+          children: [
+            titleRow,
+            description,
+            facts,
+            genres,
+            hours,
+            collectionsLabel,
+            collections,
+            tagsLabel,
+            tags
+          ],
+
+          titleRow = frame {
+            width: 100%,
+            layout: {item-gap: spacing.gap.medium},
+            children: [title, favorite],
+
+            title = text {
+              width: 100%,
+              fill: c.ui.text,
+              contents: "Stardew Valley",
+              font-size: 20,
+              font-family: "Georgia"
+            }
+
+            favorite = frame : iconButtons.IconButton {
+              glyph {
+                width: 22px,
+                height: 22px,
+                contents: heartSolid,
+                sizing: .fill
+              }
+            }
+          }
+
+          description = text {
+            width: 100%,
+            fill: c.ui.text,
+            contents: "Build a farm, meet your neighbors, and take each day at your own pace.",
+            font-size: typography.size.body,
+            font-family: typography.family.interface
+          }
+
+          facts = text {
+            width: 100%,
+            fill: c.ui.muted,
+            contents: "2016 · Overwhelmingly Positive, 98%",
+            font-size: typography.size.body,
+            font-family: typography.family.interface
+          }
+
+          genres = frame {
+            width: 100%,
+            layout: {
+              item-gap: spacing.gap.small,
+              wrap: .true,
+              line-gap: spacing.gap.small
+            },
+            children: [indie, rpg, simulation],
+
+            indie = frame : buttons.Button {
+              height: 22px,
+              corner-radius: 12px,
+              padding-top: 2px,
+              padding-left: 8px,
+              padding-bottom: 2px,
+              padding-right: 8px,
+
+              label {
+                label {
+                  contents: "Indie",
+                  font-size: typography.size.caption
+                }
+              }
+            }
+
+            rpg = frame : buttons.Button {
+              height: 22px,
+              corner-radius: 12px,
+              padding-top: 2px,
+              padding-left: 8px,
+              padding-bottom: 2px,
+              padding-right: 8px,
+
+              label {
+                label {
+                  contents: "RPG",
+                  font-size: typography.size.caption
+                }
+              }
+            }
+
+            simulation = frame : buttons.Button {
+              height: 22px,
+              corner-radius: 12px,
+              padding-top: 2px,
+              padding-left: 8px,
+              padding-bottom: 2px,
+              padding-right: 8px,
+
+              label {
+                label {
+                  contents: "Simulation",
+                  font-size: typography.size.caption
+                }
+              }
+            }
+          }
+
+          hours = text {
+            fill: c.ui.text,
+            contents: "70.0 hours played",
+            font-size: typography.size.body,
+            font-family: typography.family.interface
+          }
+
+          collectionsLabel = text {
+            fill: c.ui.muted,
+            contents: "Collections",
+            font-size: typography.size.caption,
+            font-family: typography.family.interface
+          }
+
+          collections = frame {
+            width: 100%,
+            layout: {
+              item-gap: spacing.gap.medium,
+              wrap: .true,
+              line-gap: spacing.gap.medium
+            },
+            children: [cozy, roguelike],
+
+            cozy = frame : buttons.Button {
+              border[0].color: c.ui.accent,
+              fill[0].color: c.ui.accent,
+
+              label {
+                label {
+                  fill[0].color: .white,
+                  contents: "Cozy evenings"
+                }
+
+                leading {
+                  fill[0].color: .white,
+                  display: .visible
+                }
+              }
+            }
+
+            roguelike = frame : buttons.Button {
+              label {
+                label {
+                  contents: "Roguelike runs"
+                }
+              }
+            }
+          }
+
+          tagsLabel = text {
+            fill: c.ui.muted,
+            contents: "Tags",
+            font-size: typography.size.caption,
+            font-family: typography.family.interface
+          }
+
+          tags = frame {
+            width: 100%,
+            layout: {
+              align-items: .center,
+              item-gap: spacing.gap.medium,
+              wrap: .true,
+              line-gap: spacing.gap.medium
+            },
+            children: [cozy, farming, add],
+
+            cozy = frame : tagSource.Tag {
+              label {
+                contents: "Cozy"
+              }
+            }
+
+            farming = frame : tagSource.Tag {
+              label {
+                contents: "Farming"
+              }
+            }
+
+            add = frame : iconLabel.IconLabel {
+              leading {
+                contents: plusIcon,
+                display: .visible
+              }
+
+              label {
+                contents: "Add tag",
+                font-size: typography.size.caption
+              }
+            }
+          }
+        }
+      }
+
+      spine = frame {
+        doc: "The fold between the pages.",
+        width: 1px,
+        height: 100%,
+        fill: c.ui.border
+      }
+
+      right = frame {
+        width: 100%,
+        height: 100%,
+        layout: {direction: .column, item-gap: spacing.gap.regular},
+        overflow: .scroll,
+        padding: 16px,
+        children: [feedback, top, bestOn, notes],
+
+        feedback = text {
+          width: 100%,
+          display: .none,
+          fill: c.ui.muted,
+          contents: "",
+          font-size: typography.size.caption,
+          font-family: typography.family.interface
+        }
+
+        top = frame {
+          width: 100%,
+          layout: {justify-content: .space-between},
+          children: [fields, more],
+
+          fields = frame {
+            layout: {item-gap: spacing.gap.section},
+            children: [status, rating],
+
+            status = frame {
+              layout: {direction: .column, item-gap: 6px},
+              children: [label, button],
+
+              label = text {
+                fill: c.ui.muted,
+                contents: "Status",
+                font-size: typography.size.caption,
+                font-family: typography.family.interface
+              }
+
+              button = frame : buttons.Button {
+                label {
+                  label {
+                    contents: "Playing"
+                  }
+                }
+              }
+            }
+
+            rating = frame {
+              layout: {direction: .column, item-gap: 6px},
+              children: [label, stars],
+
+              label = text {
+                fill: c.ui.muted,
+                contents: "Rating",
+                font-size: typography.size.caption,
+                font-family: typography.family.interface
+              }
+
+              stars = frame : ratingControl.Rating {
+                height: 30px,
+                layout.align-items: .center,
+                layout.direction: .row,
+                layout.item-gap: 0,
+
+                star5 {
+                  contents: ratingOutline
+                }
+              }
+            }
+          }
+
+          more = frame : iconButtons.IconButton {
+            width: 24px,
+            height: 24px,
+
+            glyph {
+              contents: moreIcon
+            }
+          }
+        }
+
+        bestOn = frame : bestOnSource.BestOn {
+          left: .auto,
+          top: .auto,
+          width: 100%,
+
+          heading {
+            source {
+              contents: "Demo"
+            }
+          }
+        }
+
+        notes = frame {
+          width: 100%,
+          height: 100%,
+          min-height: 120px,
+          layout: {direction: .column, item-gap: spacing.gap.icon},
+          children: [label, input],
+
+          label = text {
+            fill: c.ui.muted,
+            contents: "Notes",
+            font-size: typography.size.caption,
+            font-family: typography.family.interface
+          }
+
+          input = frame {
+            width: 100%,
+            height: 100%,
+            fill: c.ui.surface,
+            border: c.ui.border,
+            corner-radius: radius.corner.control
+          }
+        }
+      }
+    }
+
+    flip = frame {
+      layout: {align-items: .center, item-gap: 16px},
+      children: [label0, label1],
+
+      label0 = text {
+        fill: c.ui.text,
+        contents: "Front",
+        font-size: typography.size.body,
+        font-family: typography.family.interface
+      }
+
+      label1 = text {
+        fill: c.ui.text,
+        contents: "Details",
+        font-size: typography.size.body,
+        font-family: typography.family.interface
+      }
+    }
+
+    filmstrip = frame : filmstripSource.Filmstrip {}
+  }
+}
+
+@variant
+export DetailsUnsaved = frame : CardDetails {
+  left: 1360px,
+  top: 0px,
+
+  body {
+    content {
+      stage {
+        book {
+          right {
+            feedback {
+              display: .visible,
+              contents: "Unsaved changes…"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export DetailsSaving = frame : CardDetails {
+  left: 2720px,
+  top: 0px,
+
+  body {
+    content {
+      stage {
+        book {
+          right {
+            feedback {
+              display: .visible,
+              contents: "Saving…"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export DetailsSaved = frame : CardDetails {
+  left: 0px,
+  top: 980px,
+
+  body {
+    content {
+      stage {
+        book {
+          right {
+            feedback {
+              display: .visible,
+              contents: "Saved."
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export DetailsSaveFailed = frame : CardDetails {
+  left: 1360px,
+  top: 980px,
+
+  body {
+    content {
+      stage {
+        book {
+          right {
+            feedback {
+              display: .visible,
+              contents: "Save failed. Your draft is kept."
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export DetailsConflict = frame : CardDetails {
+  left: 2720px,
+  top: 980px,
+
+  body {
+    content {
+      stage {
+        book {
+          right {
+            feedback {
+              display: .visible,
+              contents: "Saved versions changed. Review conflicts."
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export DetailsReadOnly = frame : CardDetails {
+  left: 0px,
+  top: 1960px,
+
+  body {
+    content {
+      stage {
+        book {
+          right {
+            feedback {
+              display: .visible,
+              contents: "Preview card. Changes are unavailable in this preview."
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export DetailsStatusMenu = frame : CardDetails {
+  left: 1360px,
+  top: 1960px,
+
+  overlay {
+    overrides: [insert(popover, after = .nil)]
+  }
+
+  popover = frame : menuSource.Menu {
+    doc: "Intentional popup overlay; excluded from the content stack.",
+    left: 641px,
+    top: 172px,
+    width: 218px,
+    ignore-stack: .true,
+    overrides: [
+      insert(item0, after = .nil),
+      insert(item1, after = item0),
+      insert(item2, after = item1),
+      insert(item3, after = item2),
+      insert(item4, after = item3),
+      insert(item5, after = item4)
+    ],
+
+    item0 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Backlog"
+        }
+      }
+    }
+
+    item1 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Want to play"
+        }
+      }
+    }
+
+    item2 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Playing"
+        }
+
+        leading {
+          display: .visible
+        }
+      }
+    }
+
+    item3 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Paused"
+        }
+      }
+    }
+
+    item4 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Completed"
+        }
+      }
+    }
+
+    item5 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Dropped"
+        }
+      }
+    }
+  }
+}
+
+@variant
+export DetailsActionsMenu = frame : CardDetails {
+  left: 2720px,
+  top: 1960px,
+
+  overlay {
+    overrides: [insert(popover, after = .nil)]
+  }
+
+  popover = frame : menuSource.Menu {
+    doc: "Intentional popup overlay; excluded from the content stack.",
+    left: 806px,
+    top: 142px,
+    width: 218px,
+    ignore-stack: .true,
+    overrides: [
+      insert(item0, after = .nil),
+      insert(item1, after = item0),
+      insert(item2, after = item1)
+    ],
+
+    item0 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Open store page"
+        }
+      }
+    }
+
+    item1 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Refresh cover"
+        }
+      }
+    }
+
+    item2 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Resync details"
+        }
+      }
+    }
+  }
+}
+
+@variant
+export DetailsTagPicker = frame : CardDetails {
+  left: 0px,
+  top: 2940px,
+
+  overlay {
+    overrides: [insert(popover, after = .nil)]
+  }
+
+  popover = frame : menuSource.Menu {
+    doc: "Intentional popup overlay; excluded from the content stack.",
+    left: 412px,
+    top: 576px,
+    width: 218px,
+    ignore-stack: .true,
+    overrides: [
+      insert(item0, after = .nil),
+      insert(item1, after = item0),
+      insert(item2, after = item1),
+      insert(item3, after = item2),
+      insert(item4, after = item3)
+    ],
+
+    item0 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Search or create a tag"
+        }
+      }
+    }
+
+    item1 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Cozy"
+        }
+      }
+    }
+
+    item2 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Co-op"
+        }
+      }
+    }
+
+    item3 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Puzzle"
+        }
+      }
+    }
+
+    item4 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Create tag"
+        }
+      }
+    }
+  }
+}
+
+@variant
+export DetailsFitInfo = frame : CardDetails {
+  left: 1360px,
+  top: 2940px,
+
+  overlay {
+    overrides: [insert(modal, after = .nil)],
+    fill[0].color: rgb(0%, 0%, 0%, 25%),
+    layout.justify-content: .center,
+    layout.align-items: .center
+  }
+
+  modal = frame : bestOnSource.FitInfo {
+    left: .auto,
+    top: .auto,
+
+    deck {
+      rule {
+        display: .none
+      }
+
+      protonDb {
+        label {
+          contents: "ProtonDB: 66 Deck reports, few problems"
+        }
+
+        points {
+          contents: "0"
+        }
+      }
+
+      heading {
+        total {
+          contents: "90/100"
+        }
+      }
+    }
+
+    pc {
+      highEnd {
+        display: .none
+      }
+
+      habit {
+        display: .none
+      }
+
+      rule {
+        display: .none
+      }
+
+      heading {
+        total {
+          contents: "75/100"
+        }
+      }
+    }
+
+    title {
+      contents: "Fit for Stardew Valley"
+    }
+
+    rules {
+      contents: "Steam Deck is 15 points ahead, so this game is best on Steam Deck. Fits within 15 points show Both."
+    }
+  }
+}
+
+@variant
+export DetailsNoBestOn = frame : CardDetails {
+  doc: "Games without Steam Deck evidence show no Best on block.",
+  left: 2720px,
+  top: 2940px,
+
+  body {
+    content {
+      stage {
+        book {
+          right {
+            bestOn {
+              display: .none
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+pc = frame {
+  left: 2141.47px,
+  top: 4476.48px,
+  width: 100%,
+  height: 63px,
+  layout: {direction: .column, item-gap: 6px},
+  fill: c.ui.surface,
+  border: c.ui.border,
+  corner-radius: radius.corner.control,
+  padding: spacing.inset.small,
+  children: [bar, blocker],
+
+  bar = frame {
+    width: 100%,
+    height: 4px,
+    layout: {direction: .row},
+    fill: c.ui.border,
+    corner-radius: 2px,
+    children: value
+  }
+
+  value = frame {
+    width: 75%,
+    height: 100%,
+    opacity: 0.4,
+    fill: c.ui.text,
+    corner-radius: 2px
+  }
+
+  blocker = text {
+    width: 100%,
+    display: .none,
+    fill: c.ui.error,
+    contents: "Not supported: anti-cheat.",
+    font-size: typography.size.caption,
+    font-family: typography.family.interface
+  }
+}

@@ -1,0 +1,47 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "tokens/typography.elyx" as typography
+import "resources/icons-new/check-stroke-rounded.svg" as check
+import "tokens/spacing.elyx" as spacing
+
+export Checkbox = frame {
+  layout: {align-items: .center, item-gap: spacing.gap.medium},
+  children: [box, label],
+
+  box = frame {
+    width: 16px,
+    height: 16px,
+    layout: {justify-content: .center, align-items: .center},
+    border: c.ui.border,
+    corner-radius: 4px,
+    children: glyph,
+
+    glyph = icon {
+      width: 12px,
+      height: 12px,
+      display: .none,
+      fill: c.ui.text,
+      contents: check
+    }
+  }
+
+  label = text {
+    fill: c.ui.text,
+    contents: "Option",
+    font-size: typography.size.body,
+    font-family: typography.family.interface
+  }
+}
+
+@variant
+export Checked = frame : Checkbox {
+  top: 32px,
+
+  box {
+    fill[0].color: c.ui.selected,
+
+    glyph {
+      display: .visible
+    }
+  }
+}

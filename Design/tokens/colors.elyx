@@ -1,0 +1,15 @@
+// Sanctum light baseline from the native theme source.
+export ui = tokens {
+  chrome: rgb(97.25%, 96.86%, 96.0784%),
+  surface: .white,
+  text: rgb(18.82%, 18.82%, 18.43%),
+  muted: rgb(40%, 39.6078%, 38.82%),
+  border: rgb(90.1961%, 89.41%, 88.2353%),
+  subtle: rgb(96.0784%, 96.0784%, 95.6863%),
+  selected: rgb(84.31%, 91.37%, 94.1176%),
+  accent: rgb(28.2353%, 49.8%, 80.78%),
+  error: rgb(70.5882%, 27.0588%, 22.35%),
+  success: rgb(22.35%, 50.5882%, 37.25%),
+  deck: rgb(33.7%, 22%, 100%),
+  pc: rgb(7.4%, 66.6%, 28.12%)
+}

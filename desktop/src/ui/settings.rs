@@ -1,6 +1,7 @@
 //! Glaze's grouped settings layout, backed by native device services.
 mod ai;
 mod appearance;
+mod best_on;
 mod sync;
 mod view;
 use crate::model::Library;
@@ -30,6 +31,7 @@ enum Section {
     General,
     Sync,
     Appearance,
+    BestOn,
     Ai,
 }
 impl Section {
@@ -38,6 +40,7 @@ impl Section {
             Self::General => "General",
             Self::Sync => "Sync",
             Self::Appearance => "Look and feel",
+            Self::BestOn => "Best on",
             Self::Ai => "AI",
         }
     }
@@ -62,6 +65,7 @@ pub struct SettingsView {
     country: Entity<InputState>,
     library_id: Option<Uuid>,
     ai: Entity<ai::AiSettings>,
+    best_on: Entity<best_on::BestOnSettings>,
     key_saved: bool,
     theme: gamesync_desktop::appearance::Appearance,
     omarchy_mode: bool,
@@ -100,6 +104,17 @@ impl SettingsView {
     ) -> Self {
         cx.observe(&library, |_, _, cx| cx.notify()).detach();
         cx.observe(&sync, |_, _, cx| cx.notify()).detach();
+        let best_on_library = library.clone();
+        let best_on_state = cx.global::<super::best_on_state::BestOnGlobal>().0.clone();
+        let open_rules = best_on_state.update(cx, |state, _| std::mem::take(&mut state.show_rules));
+        cx.observe(&best_on_state, |this: &mut Self, state, cx| {
+            if state.read(cx).show_rules {
+                state.update(cx, |state, _| state.show_rules = false);
+                this.section = Section::BestOn;
+                cx.notify();
+            }
+        })
+        .detach();
         Self {
             device_name: Self::device_name_input(window, cx),
             sync,
@@ -129,12 +144,18 @@ impl SettingsView {
             },
             library_id: None,
             ai: cx.new(|cx| ai::AiSettings::new(window, cx)),
+            best_on: cx.new(|cx| best_on::BestOnSettings::new(best_on_library, window, cx)),
             key_saved: false,
             theme,
             omarchy_mode,
             omarchy_available: gamesync_desktop::omarchy::is_available(),
             omarchy_theme_name,
-            section: Section::General,
+            // "Edit rules in Settings" can open this window for the first time.
+            section: if open_rules {
+                Section::BestOn
+            } else {
+                Section::General
+            },
             tested: None,
             clear_key: false,
             reduce_motion: super::motion::reduced(cx),

@@ -1,0 +1,57 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "tokens/typography.elyx" as typography
+import "design/controls/Button.elyx" as buttons
+import "tokens/spacing.elyx" as spacing
+
+export Message = frame {
+  width: 100%,
+  height: 100%,
+  layout: {
+    direction: .column,
+    justify-content: .center,
+    align-items: .center,
+    item-gap: spacing.gap.large
+  },
+  children: [title, hint, connect],
+
+  title = text {
+    fill: c.ui.text,
+    contents: "No games yet",
+    font-size: typography.size.heading,
+    font-family: typography.family.interface
+  }
+
+  hint = text {
+    width: 100%,
+    fill: c.ui.muted,
+    contents: "Connect Steam to import your games.",
+    font-size: typography.size.body,
+    font-family: typography.family.interface,
+    align: .center
+  }
+
+  connect = frame : buttons.Primary {
+    label {
+      leading {
+        display: .none
+      }
+
+      trailing {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      label {
+        contents: "Connect Steam"
+      }
+    }
+  }
+}

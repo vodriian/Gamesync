@@ -1,0 +1,628 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "resources/images/646570.jpg" as cover646570
+import "resources/images/1145360.jpg" as cover1145360
+import "resources/images/367520.jpg" as cover367520
+import "resources/images/2379780.jpg" as cover2379780
+import "resources/images/620.jpg" as cover620
+import "resources/images/632360.jpg" as cover632360
+import "resources/images/1055540.jpg" as cover1055540
+import "resources/images/1091500.jpg" as cover1091500
+import "design/blocks/shell/LibraryShell.elyx" as librarySource
+import "tokens/typography.elyx" as typography
+import "tokens/spacing.elyx" as spacing
+import "design/controls/IconLabel.elyx" as iconLabel
+import "design/blocks/menus/Menu.elyx" as menuSource
+import "design/controls/Button.elyx" as buttons
+import "design/controls/TextField.elyx" as fields
+import "resources/icons-new/solid/star-stroke-rounded-solid.svg" as glyph_0
+import "design/controls/MenuItem.elyx" as menuItems
+import "design/blocks/library/BoardTile.elyx" as boardTiles
+import "design/blocks/library/BoardColumn.elyx" as boardColumns
+
+export Board = frame : librarySource.Library {
+  left: 0px,
+  top: 0px,
+
+  panel {
+    body {
+      overrides: [insert(content, after = .nil)]
+    }
+
+    toolbar {
+      views {
+        boardView {
+          fill[0].color: c.ui.selected
+        }
+
+        grid {
+          fill[0].color: c.ui.surface
+        }
+      }
+    }
+  }
+
+  content = frame {
+    left: 0px,
+    top: 0px,
+    width: 1800px,
+    layout: {item-gap: spacing.gap.large},
+    children: [column0, column1, column2, column3, column4, column5],
+
+    column0 = frame : boardColumns.BoardColumn {
+      overrides: [insert(game8, after = boardColumns.BoardColumn.title)],
+
+      game8 = frame : boardTiles.BoardTile {
+        cover {
+          fill[0].image.ref: cover1091500
+        }
+
+        details {
+          meta {
+            detail {
+              contents: "—"
+            }
+
+            label {
+              contents: "0.0 h"
+            }
+          }
+
+          title {
+            contents: "Cyberpunk 2077"
+          }
+        }
+      }
+    }
+
+    column1 = frame : boardColumns.BoardColumn {
+      overrides: [insert(game2, after = boardColumns.BoardColumn.title)],
+
+      title {
+        label {
+          contents: "Want to play 1"
+        }
+      }
+
+      game2 = frame : boardTiles.BoardTile {
+        cover {
+          fill[0].image.ref: cover1145360
+        }
+
+        details {
+          meta {
+            detail {
+              contents: "5.0"
+            }
+
+            label {
+              contents: "30.5 h"
+            }
+          }
+
+          title {
+            contents: "Hades"
+          }
+        }
+      }
+    }
+
+    column2 = frame : boardColumns.BoardColumn {
+      overrides: [
+        insert(game0, after = boardColumns.BoardColumn.title),
+        insert(game1, after = game0),
+        insert(game4, after = game1)
+      ],
+
+      title {
+        label {
+          contents: "Playing 3"
+        }
+      }
+
+      game0 = frame : boardTiles.BoardTile {}
+
+      game1 = frame : boardTiles.BoardTile {
+        cover {
+          fill[0].image.ref: cover646570
+        }
+
+        details {
+          meta {
+            label {
+              contents: "47.8 h"
+            }
+          }
+
+          title {
+            contents: "Slay the Spire"
+          }
+        }
+      }
+
+      game4 = frame : boardTiles.BoardTile {
+        cover {
+          fill[0].image.ref: cover2379780
+        }
+
+        details {
+          meta {
+            label {
+              contents: "16.3 h"
+            }
+          }
+
+          title {
+            contents: "Balatro"
+          }
+        }
+      }
+    }
+
+    column3 = frame : boardColumns.BoardColumn {
+      overrides: [insert(game3, after = boardColumns.BoardColumn.title)],
+
+      title {
+        label {
+          contents: "Paused 1"
+        }
+      }
+
+      game3 = frame : boardTiles.BoardTile {
+        cover {
+          fill[0].image.ref: cover367520
+        }
+
+        details {
+          meta {
+            label {
+              contents: "20.7 h"
+            }
+          }
+
+          title {
+            contents: "Hollow Knight"
+          }
+        }
+      }
+    }
+
+    column4 = frame : boardColumns.BoardColumn {
+      overrides: [
+        insert(game5, after = boardColumns.BoardColumn.title),
+        insert(game7, after = game5)
+      ],
+
+      title {
+        label {
+          contents: "Completed 2"
+        }
+      }
+
+      game5 = frame : boardTiles.BoardTile {
+        cover {
+          fill[0].image.ref: cover620
+        }
+
+        details {
+          meta {
+            detail {
+              contents: "5.0"
+            }
+
+            label {
+              contents: "12.0 h"
+            }
+          }
+
+          title {
+            contents: "Portal 2"
+          }
+        }
+      }
+
+      game7 = frame : boardTiles.BoardTile {
+        cover {
+          fill[0].image.ref: cover1055540
+        }
+
+        details {
+          meta {
+            label {
+              contents: "3.0 h"
+            }
+          }
+
+          title {
+            contents: "A Short Hike"
+          }
+        }
+      }
+    }
+
+    column5 = frame : boardColumns.BoardColumn {
+      overrides: [insert(game6, after = boardColumns.BoardColumn.title)],
+
+      title {
+        label {
+          contents: "Dropped 1"
+        }
+      }
+
+      game6 = frame : boardTiles.BoardTile {
+        cover {
+          fill[0].image.ref: cover632360
+        }
+
+        details {
+          meta {
+            detail {
+              contents: "3.0"
+            }
+
+            label {
+              contents: "4.0 h"
+            }
+          }
+
+          title {
+            contents: "Risk of Rain 2"
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export BoardDragging = frame : Board {
+  left: 1360px,
+  top: 0px,
+
+  overlay {
+    overrides: [insert(popover, after = .nil)]
+  }
+
+  popover = frame {
+    doc: "Intentional popup overlay; excluded from the content stack.",
+    top: 220px,
+    right: 24px,
+    width: 260px,
+    height: 86px,
+    ignore-stack: .true,
+    layout: {direction: .column, item-gap: spacing.gap.regular},
+    fill: c.ui.surface,
+    border: {color: c.ui.accent, width: 2px},
+    shadow: {
+      drop-shadow: {
+        color: rgb(0%, 0%, 0%, 18.82%),
+        offset: point(0px, 8px),
+        blur-radius: 16px
+      }
+    },
+    corner-radius: 8px,
+    padding: 12px,
+    children: [title, meta],
+
+    title = text {
+      fill: c.ui.text,
+      contents: "Hades",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    meta = frame : iconLabel.IconLabel {
+      label {
+        fill[0].color: c.ui.muted,
+        contents: "30.5 h",
+        font-size: typography.size.caption
+      }
+
+      trailing {
+        contents: glyph_0,
+        sizing: .fill,
+        display: .visible
+      }
+
+      detail {
+        contents: "5.0",
+        display: .visible
+      }
+    }
+  }
+}
+
+@variant
+export BoardColumnMenu = frame : Board {
+  left: 2720px,
+  top: 0px,
+
+  overlay {
+    overrides: [insert(popover, after = .nil)]
+  }
+
+  popover = frame : menuSource.Menu {
+    doc: "Intentional popup overlay; excluded from the content stack.",
+    left: 330px,
+    top: 116px,
+    width: 218px,
+    ignore-stack: .true,
+    overrides: [
+      insert(item0, after = .nil),
+      insert(item1, after = item0),
+      insert(item2, after = item1)
+    ],
+
+    item0 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Rename"
+        }
+      }
+    }
+
+    item1 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Move left"
+        }
+      }
+    }
+
+    item2 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Move right"
+        }
+      }
+    }
+  }
+}
+
+@variant
+export BoardNewStatus = frame : Board {
+  left: 0px,
+  top: 980px,
+
+  overlay {
+    overrides: [insert(popover, after = .nil)]
+  }
+
+  popover = frame {
+    doc: "Intentional popup overlay; excluded from the content stack.",
+    left: 288px,
+    top: 108px,
+    width: 270px,
+    height: 115px,
+    ignore-stack: .true,
+    layout: {direction: .column, item-gap: spacing.gap.regular},
+    fill: c.ui.surface,
+    border: c.ui.border,
+    corner-radius: 8px,
+    padding: 10px,
+    children: form,
+
+    form = frame {
+      width: 248px,
+      layout: {direction: .column, item-gap: spacing.gap.medium},
+      children: [name, actions],
+
+      name = frame {
+        width: 248px,
+        layout: {direction: .column, item-gap: spacing.gap.icon},
+        children: [label, input],
+
+        label = text {
+          fill: c.ui.text,
+          contents: "Status",
+          font-size: typography.size.body,
+          font-family: typography.family.interface
+        }
+
+        input = frame : fields.TextField {
+          width: 248px,
+
+          value {
+            leading {
+              display: .none
+            }
+
+            trailing {
+              display: .none
+            }
+
+            detail {
+              display: .none
+            }
+
+            favorite {
+              display: .none
+            }
+
+            label {
+              contents: "Status name"
+            }
+          }
+        }
+      }
+
+      actions = frame {
+        width: 248px,
+        layout: {item-gap: spacing.gap.medium},
+        children: [save, cancel],
+
+        save = frame : buttons.Primary {
+          label {
+            leading {
+              display: .none
+            }
+
+            trailing {
+              display: .none
+            }
+
+            detail {
+              display: .none
+            }
+
+            favorite {
+              display: .none
+            }
+
+            label {
+              contents: "Save"
+            }
+          }
+        }
+
+        cancel = frame : buttons.Button {
+          label {
+            leading {
+              display: .none
+            }
+
+            trailing {
+              display: .none
+            }
+
+            detail {
+              display: .none
+            }
+
+            favorite {
+              display: .none
+            }
+
+            label {
+              contents: "Cancel"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export BoardRenameStatus = frame : Board {
+  left: 1360px,
+  top: 980px,
+
+  overlay {
+    overrides: [insert(popover, after = .nil)]
+  }
+
+  popover = frame {
+    doc: "Intentional popup overlay; excluded from the content stack.",
+    left: 288px,
+    top: 108px,
+    width: 270px,
+    height: 115px,
+    ignore-stack: .true,
+    layout: {direction: .column, item-gap: spacing.gap.regular},
+    fill: c.ui.surface,
+    border: c.ui.border,
+    corner-radius: 8px,
+    padding: 10px,
+    children: form,
+
+    form = frame {
+      width: 248px,
+      layout: {direction: .column, item-gap: spacing.gap.medium},
+      children: [name, actions],
+
+      name = frame {
+        width: 248px,
+        layout: {direction: .column, item-gap: spacing.gap.icon},
+        children: [label, input],
+
+        label = text {
+          fill: c.ui.text,
+          contents: "Status",
+          font-size: typography.size.body,
+          font-family: typography.family.interface
+        }
+
+        input = frame : fields.TextField {
+          width: 248px,
+
+          value {
+            leading {
+              display: .none
+            }
+
+            trailing {
+              display: .none
+            }
+
+            detail {
+              display: .none
+            }
+
+            favorite {
+              display: .none
+            }
+
+            label {
+              contents: "Backlog"
+            }
+          }
+        }
+      }
+
+      actions = frame {
+        width: 248px,
+        layout: {item-gap: spacing.gap.medium},
+        children: [save, cancel],
+
+        save = frame : buttons.Primary {
+          label {
+            leading {
+              display: .none
+            }
+
+            trailing {
+              display: .none
+            }
+
+            detail {
+              display: .none
+            }
+
+            favorite {
+              display: .none
+            }
+
+            label {
+              contents: "Save"
+            }
+          }
+        }
+
+        cancel = frame : buttons.Button {
+          label {
+            leading {
+              display: .none
+            }
+
+            trailing {
+              display: .none
+            }
+
+            detail {
+              display: .none
+            }
+
+            favorite {
+              display: .none
+            }
+
+            label {
+              contents: "Cancel"
+            }
+          }
+        }
+      }
+    }
+  }
+}

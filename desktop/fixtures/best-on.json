@@ -1,0 +1,14 @@
+[
+  {"id":1145360,"steam_deck":{"score":88,"reason":"Controller play and repeatable runs suit handheld sessions.","blocker":null},"pc":{"score":65,"reason":"A larger display helps during busy encounters.","blocker":null},"confidence":88},
+  {"id":413150,"steam_deck":{"score":90,"reason":"Short daily routines suit portable play.","blocker":null},"pc":{"score":68,"reason":"Mouse input helps with inventory management.","blocker":null},"confidence":91},
+  {"id":367520,"steam_deck":{"score":80,"reason":"Controller movement suits handheld play.","blocker":null},"pc":{"score":77,"reason":"A larger screen helps with precise encounters.","blocker":null},"confidence":84},
+  {"id":620,"steam_deck":{"score":76,"reason":"Portable puzzle sessions are a good fit.","blocker":null},"pc":{"score":83,"reason":"Mouse input and a larger view help with spatial puzzles.","blocker":null},"confidence":86},
+  {"id":1091500,"steam_deck":{"score":57,"reason":"Portability comes with visual compromises in this example.","blocker":null},"pc":{"score":92,"reason":"This example favors image quality and a larger display.","blocker":null},"confidence":90},
+  {"id":990080,"steam_deck":{"score":null,"reason":"Handheld performance has not been assessed in this example.","blocker":null},"pc":{"score":85,"reason":"A larger display could suit exploration; Deck evidence is missing.","blocker":null},"confidence":null},
+  {"id":646570,"steam_deck":{"score":91,"reason":"Turn-based decisions suit flexible handheld sessions.","blocker":null},"pc":{"score":70,"reason":"Mouse input makes card selection direct.","blocker":null},"confidence":92},
+  {"id":753640,"steam_deck":{"score":78,"reason":"Handheld exploration works well in this example.","blocker":null},"pc":{"score":84,"reason":"A large display and audio setup add to the atmosphere.","blocker":null},"confidence":82},
+  {"id":2379780,"steam_deck":{"score":94,"reason":"Compact rounds suit handheld play.","blocker":null},"pc":{"score":71,"reason":"Mouse input offers an equally simple way to play.","blocker":null},"confidence":94},
+  {"id":1055540,"steam_deck":{"score":89,"reason":"A small, relaxed adventure suits portable sessions.","blocker":null},"pc":{"score":65,"reason":"A desktop offers little extra benefit in this example.","blocker":null},"confidence":87},
+  {"id":632360,"steam_deck":{"score":61,"reason":"Portable play is possible in this example.","blocker":null},"pc":{"score":86,"reason":"Mouse aiming and a larger view suit busy fights.","blocker":null},"confidence":89},
+  {"id":1245620,"steam_deck":{"score":null,"reason":"No handheld assessment is supplied for this example.","blocker":null},"pc":{"score":null,"reason":"No desktop assessment is supplied for this example.","blocker":null},"confidence":null}
+]

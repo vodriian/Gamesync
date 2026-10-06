@@ -391,6 +391,7 @@ fn apply_setting(settings: &mut Settings, field: &str, value: &Value) -> Result<
         "library_display" => settings.library_display = parse(value)?,
         "smart_groups_open" => settings.smart_groups_open = parse(value)?,
         "store_country" => settings.store_country = parse(value)?,
+        "best_on_rules" => settings.best_on_rules = parse(value)?,
         // A setting from a newer version. It is not stored: this version
         // cannot tell whether it is shared or device-local.
         _ => bail!("Unknown setting"),

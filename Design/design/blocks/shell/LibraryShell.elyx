@@ -1,0 +1,172 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "resources/icons-new/dashboard-square-01-stroke-rounded.svg" as icon_layout_dashboard
+import "resources/icons-new/cards-02-stroke-rounded.svg" as icon_folder
+import "resources/icons-new/sidebar-left-stroke-rounded.svg" as icon_panel_left
+import "resources/icons-new/layout-list-stroke-rounded.svg" as icon_menu
+import "resources/icons-new/kanban-stroke-rounded.svg" as icon_square_kanban
+import "resources/icons-new/filter-horizontal-stroke-rounded.svg" as icon_settings_2
+import "design/blocks/navigation/Sidebar.elyx" as sidebarSource
+import "tokens/typography.elyx" as typography
+import "tokens/spacing.elyx" as spacing
+import "tokens/radius.elyx" as radius
+import "design/controls/IconButton.elyx" as iconButtons
+import "design/controls/WindowButtons.elyx" as trafficSource
+import "design/controls/IconLabel.elyx" as iconLabel
+import "design/controls/SearchField.elyx" as searchField
+
+export Library = frame {
+  left: 0px,
+  top: 0px,
+  width: 1280px,
+  height: 900px,
+  layout: {item-gap: spacing.gap.medium},
+  fill: c.ui.chrome,
+  corner-radius: radius.corner.panel,
+  padding: [8px, 8px, 8px, 0px],
+  children: [sidebar, traffic, panel, overlay],
+
+  sidebar = frame : sidebarSource.Sidebar {
+    width: 255px,
+    height: 100%
+  }
+
+  traffic = frame : trafficSource.Traffic {
+    left: 16px,
+    top: 16px,
+    ignore-stack: .true
+  }
+
+  panel = frame {
+    width: 100%,
+    height: 100%,
+    layout: {direction: .column},
+    fill: c.ui.surface,
+    border: c.ui.border,
+    corner-radius: radius.corner.panel,
+    children: [toolbar, body, count],
+
+    toolbar = frame {
+      width: 100%,
+      height: 68px,
+      layout: {align-items: .center, item-gap: spacing.gap.regular},
+      border: {color: c.ui.subtle, sides: .bottom},
+      padding: [16px, 20px],
+      children: [toggle, title, views, display, search],
+
+      toggle = icon {
+        width: 19px,
+        height: 19px,
+        fill: c.ui.text,
+        contents: icon_panel_left
+      }
+
+      title = text {
+        width: 100%,
+        fill: c.ui.text,
+        contents: "All games",
+        font-size: typography.size.title,
+        font-family: typography.family.interface
+      }
+
+      views = frame {
+        width: 156px,
+        height: 36px,
+        layout: {item-gap: spacing.gap.small},
+        children: [grid, cards, table, boardView],
+
+        grid = frame : iconButtons.IconButton {
+          border[0].color: c.ui.border,
+          fill[0].color: c.ui.selected,
+
+          glyph {
+            width: 14px,
+            height: 14px,
+            contents: icon_layout_dashboard
+          }
+        }
+
+        cards = frame : iconButtons.IconButton {
+          border[0].color: c.ui.border,
+          fill[0].color: c.ui.surface,
+
+          glyph {
+            width: 14px,
+            height: 14px,
+            contents: icon_folder
+          }
+        }
+
+        table = frame : iconButtons.IconButton {
+          border[0].color: c.ui.border,
+          fill[0].color: c.ui.surface,
+
+          glyph {
+            width: 14px,
+            height: 14px,
+            contents: icon_menu
+          }
+        }
+
+        boardView = frame : iconButtons.IconButton {
+          border[0].color: c.ui.border,
+          fill[0].color: c.ui.surface,
+
+          glyph {
+            width: 14px,
+            height: 14px,
+            contents: icon_square_kanban
+          }
+        }
+      }
+
+      display = frame : iconButtons.IconButton {
+        border[0].color: c.ui.border,
+        fill[0].color: c.ui.surface,
+
+        glyph {
+          width: 14px,
+          height: 14px,
+          contents: icon_settings_2
+        }
+      }
+
+      search = frame : searchField.SearchField {
+        width: 220px
+      }
+    }
+
+    body = frame {
+      width: 100%,
+      height: 100%,
+      layout: {direction: .column},
+      overflow: .scroll,
+      slot: .true,
+      padding: 20px
+    }
+
+    count = frame : iconLabel.IconLabel {
+      width: 100%,
+      height: 20px,
+      padding-right: 20px,
+      layout.justify-content: .end,
+
+      label {
+        fill[0].color: c.ui.muted,
+        width: .auto,
+        contents: "9 games",
+        font-size: typography.size.caption
+      }
+    }
+  }
+
+  overlay = frame {
+    doc: "Intentional overlay plane for menus and dialogs.",
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    height: 100%,
+    ignore-stack: .true,
+    slot: .true
+  }
+}

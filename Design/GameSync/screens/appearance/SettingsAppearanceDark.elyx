@@ -1,7 +1,0 @@
-import "screens/settings/appearance/SettingsAppearance.elyx" as source
-
-@context(theme="dark")
-export SettingsAppearanceDark = frame : source.SettingsAppearance {
-  left: 0px,
-  top: 0px
-}

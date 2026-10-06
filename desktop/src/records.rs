@@ -30,6 +30,9 @@ pub struct GameData {
     pub title: String,
     pub steam: Option<SteamData>,
     pub personal: PersonalData,
+    /// Saved demo assessment. Real games calculate theirs from Steam evidence.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub suitability: Option<crate::suitability::Assessment>,
     #[serde(flatten)]
     pub extra: ExtraFields,
 }
@@ -100,12 +103,22 @@ pub struct SteamMetadata {
     pub cover_complete: bool,
     #[serde(default)]
     pub tags_complete: bool,
+    /// Steam Deck and controller evidence. None means not fetched yet, so a
+    /// later sync retries it. See `crate::suitability::assessment`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub setup: Option<crate::suitability::SetupEvidence>,
+    /// Landscape store header in media/, shown inside the open book. None
+    /// means not fetched yet, so a later sync retries it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub banner: Option<String>,
     #[serde(flatten)]
     pub extra: ExtraFields,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PersonalData {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub setup_preference: Option<crate::suitability::SetupPreference>,
     /// Stable status key; a label can change without changing this value.
     pub status: String,
     /// Half-star units, 1 through 10. None means unrated.
@@ -132,6 +145,7 @@ pub struct PersonalData {
 impl Default for PersonalData {
     fn default() -> Self {
         Self {
+            setup_preference: None,
             status: "backlog".into(),
             rating: None,
             favorite: false,
@@ -161,6 +175,7 @@ impl GameData {
     pub fn new(title: impl Into<String>) -> Self {
         Self {
             title: title.into(),
+            suitability: None,
             steam: None,
             personal: PersonalData::default(),
             extra: ExtraFields::new(),
@@ -175,6 +190,15 @@ impl GameData {
     }
 
     /// Wishlisted games live only in the Wishlist scope, apart from the library.
+    /// Steam's landscape art for the inside cover. A personal cover replaces
+    /// all Steam artwork, so it hides the banner too.
+    pub fn banner(&self) -> Option<&String> {
+        if self.personal.cover.is_some() {
+            return None;
+        }
+        self.steam.as_ref()?.metadata.as_ref()?.banner.as_ref()
+    }
+
     pub fn wishlisted(&self) -> bool {
         self.steam
             .as_ref()
@@ -203,10 +227,14 @@ impl GameRevision {
                 "game",
             ],
         )?;
-        check_extra(&self.game.extra, &["title", "steam", "personal"])?;
+        check_extra(
+            &self.game.extra,
+            &["title", "steam", "personal", "suitability"],
+        )?;
         check_extra(
             &self.game.personal.extra,
             &[
+                "setup_preference",
                 "status",
                 "rating",
                 "favorite",
@@ -232,6 +260,8 @@ impl GameRevision {
                         "details_complete",
                         "reviews_complete",
                         "cover_complete",
+                        "setup",
+                        "banner",
                     ],
                 )?;
                 ensure!(
@@ -304,13 +334,14 @@ impl GameRevision {
                 && collection_ids.iter().all(|id| !id.is_nil()),
             "Invalid collection membership"
         );
-        for cover in self.game.personal.cover.iter().chain(
-            self.game
-                .steam
-                .as_ref()
-                .and_then(|s| s.metadata.as_ref())
-                .and_then(|m| m.cover.as_ref()),
-        ) {
+        let steam_art = self
+            .game
+            .steam
+            .as_ref()
+            .and_then(|s| s.metadata.as_ref())
+            .into_iter()
+            .flat_map(|m| m.cover.iter().chain(&m.banner));
+        for cover in self.game.personal.cover.iter().chain(steam_art) {
             // Check portable separators, including Windows paths on a Mac.
             ensure!(
                 !cover.contains(['\\', ':'])

@@ -23,6 +23,8 @@ pub struct LoadedLibrary {
     pub games: Vec<GameRevision>,
     pub conflicts: BTreeMap<Uuid, String>,
     pub covers: BTreeMap<Uuid, PathBuf>,
+    /// Landscape inside covers. A missing file falls back to the portrait.
+    pub banners: BTreeMap<Uuid, PathBuf>,
     pub media_version: u64,
     pub issues: Vec<String>,
 }
@@ -224,6 +226,7 @@ impl LibraryReader {
             .with_context(|| format!("No valid library is available. {}", issues.join("; ")))?;
         let write_issue = issues.first().cloned();
         let mut covers = BTreeMap::new();
+        let mut banners = BTreeMap::new();
         let mut media = std::collections::hash_map::DefaultHasher::new();
         let games: Vec<_> = self
             .games
@@ -250,6 +253,20 @@ impl LibraryReader {
                     Err(_) => issues.push(format!("{}: cover is unavailable.", game.game.title)),
                 }
             }
+            // Optional artwork: an unusable path is skipped without an issue.
+            if let Some(resolved) = game
+                .game
+                .banner()
+                .and_then(|relative| self.root.join(relative).canonicalize().ok())
+                .filter(|resolved| resolved.starts_with(self.root.join("media")))
+            {
+                if let Ok(meta) = resolved.metadata() {
+                    resolved.hash(&mut media);
+                    meta.len().hash(&mut media);
+                    meta.modified().ok().hash(&mut media);
+                    banners.insert(game.game_id, resolved);
+                }
+            }
         }
         Ok(LoadedLibrary {
             root: self.root.clone(),
@@ -258,6 +275,7 @@ impl LibraryReader {
             manifest,
             games,
             covers,
+            banners,
             media_version: media.finish(),
             issues,
         })

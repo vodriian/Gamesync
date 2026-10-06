@@ -1,6 +1,6 @@
 #include <metal_stdlib>
 using namespace metal;
-struct CardUniforms { float4 rect; float4 viewport_pose; float4 shape; float4 clip; float4 texture_region; };
+struct CardUniforms { float4 rect; float4 viewport_pose; float4 shape; float4 clip; float4 texture_region; float4 hinge; };
 struct CardVertex { float4 position [[position]]; float2 uv; };
 vertex CardVertex card_vertex(uint vertex_id [[vertex_id]], constant CardUniforms &u [[buffer(0)]]) {
     const float2 vertices[] = {float2(0,0),float2(1,0),float2(0,1),float2(0,1),float2(1,0),float2(1,1)};
@@ -13,15 +13,20 @@ vertex CardVertex card_vertex(uint vertex_id [[vertex_id]], constant CardUniform
     if (u.shape.w == 2.) { local *= (dimensions + 120. * u.texture_region.w) / dimensions; uv = local / dimensions + .5; }
     if (u.shape.w == 1.) {
         // A thin physical edge remains visible when the face is edge-on.
-        local.x = (sin(yaw) >= 0. ? 1. : -1.) * (dimensions.x / 2. - .8);
+        // A hinged face shows its edge on the free side, opposite the spine.
+        float side = u.hinge.x != 0. ? -sign(u.hinge.x) : (sin(yaw) >= 0. ? 1. : -1.);
+        local.x = side * (dimensions.x / 2. - .8);
         local.y *= (dimensions.y - 2. * u.shape.x) / dimensions.y;
         z = (uv.x - .5) * 3.;
     }
+    // Rotate around the hinge axis, then place that axis back at its rest position.
+    float axis = u.hinge.x * dimensions.x * .5;
+    local.x -= axis;
     float3 p = float3(local.x * cos(yaw) + z * sin(yaw), local.y, -local.x * sin(yaw) + z * cos(yaw));
     p = float3(p.x, p.y * cos(pitch) - p.z * sin(pitch), p.y * sin(pitch) + p.z * cos(pitch));
     float distance = max(dimensions.x, dimensions.y) * 3.;
     float w = 1. - p.z / distance;
-    float2 center = u.rect.xy + dimensions * .5;
+    float2 center = u.rect.xy + dimensions * .5 + float2(axis, 0.);
     if (u.shape.w == 2.) { center += float2(0., 20. * u.texture_region.w); }
     float2 screen = center + p.xy / w;
     float2 ndc = screen / u.viewport_pose.xy * 2. - 1.;

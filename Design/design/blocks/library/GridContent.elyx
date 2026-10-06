@@ -1,0 +1,324 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "resources/images/646570.jpg" as cover646570
+import "resources/images/1145360.jpg" as cover1145360
+import "resources/images/367520.jpg" as cover367520
+import "resources/images/2379780.jpg" as cover2379780
+import "resources/images/620.jpg" as cover620
+import "resources/images/632360.jpg" as cover632360
+import "resources/images/1055540.jpg" as cover1055540
+import "resources/images/1091500.jpg" as cover1091500
+import "design/blocks/library/GridTile.elyx" as gridTileSource
+import "resources/icons-new/solid/star-stroke-rounded-solid.svg" as glyph_0
+
+export GridContent = frame {
+  width: 100%,
+  layout: {item-gap: 23px, wrap: .true, line-gap: 22px},
+  children: [game0, game1, game2, game3, game4, game5, game6, game7, game8],
+
+  game0 = frame : gridTileSource.GridTile {
+    meta {
+      leading {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      trailing {
+        contents: glyph_0,
+        sizing: .fill,
+        display: .visible
+      }
+
+      detail {
+        contents: "4.5",
+        display: .visible
+      }
+
+      label {
+        contents: "Playing"
+      }
+    }
+  }
+
+  game1 = frame : gridTileSource.GridTile {
+    cover {
+      fill[0].image.ref: cover646570
+    }
+
+    meta {
+      leading {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      trailing {
+        contents: glyph_0,
+        sizing: .fill,
+        display: .visible
+      }
+
+      detail {
+        contents: "4.5",
+        display: .visible
+      }
+
+      label {
+        contents: "Playing"
+      }
+    }
+
+    title {
+      contents: "Slay the Spire"
+    }
+  }
+
+  game2 = frame : gridTileSource.GridTile {
+    cover {
+      fill[0].image.ref: cover1145360
+    }
+
+    meta {
+      leading {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      trailing {
+        contents: glyph_0,
+        sizing: .fill,
+        display: .visible
+      }
+
+      detail {
+        contents: "5.0",
+        display: .visible
+      }
+
+      label {
+        contents: "Want to play"
+      }
+    }
+
+    title {
+      contents: "Hades"
+    }
+  }
+
+  game3 = frame : gridTileSource.GridTile {
+    cover {
+      fill[0].image.ref: cover367520
+    }
+
+    meta {
+      leading {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      trailing {
+        contents: glyph_0,
+        sizing: .fill,
+        display: .visible
+      }
+
+      detail {
+        contents: "4.5",
+        display: .visible
+      }
+
+      label {
+        contents: "Paused"
+      }
+    }
+
+    title {
+      contents: "Hollow Knight"
+    }
+  }
+
+  game4 = frame : gridTileSource.GridTile {
+    cover {
+      fill[0].image.ref: cover2379780
+    }
+
+    meta {
+      leading {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      trailing {
+        contents: glyph_0,
+        sizing: .fill,
+        display: .visible
+      }
+
+      detail {
+        contents: "4.5",
+        display: .visible
+      }
+
+      label {
+        contents: "Playing"
+      }
+    }
+
+    title {
+      contents: "Balatro"
+    }
+  }
+
+  game5 = frame : gridTileSource.GridTile {
+    cover {
+      fill[0].image.ref: cover620
+    }
+
+    meta {
+      leading {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      trailing {
+        contents: glyph_0,
+        sizing: .fill,
+        display: .visible
+      }
+
+      detail {
+        contents: "5.0",
+        display: .visible
+      }
+
+      label {
+        contents: "Completed"
+      }
+    }
+
+    title {
+      contents: "Portal 2"
+    }
+  }
+
+  game6 = frame : gridTileSource.GridTile {
+    cover {
+      fill[0].image.ref: cover632360
+    }
+
+    meta {
+      leading {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      trailing {
+        contents: glyph_0,
+        sizing: .fill,
+        display: .visible
+      }
+
+      detail {
+        contents: "3.0",
+        display: .visible
+      }
+
+      label {
+        contents: "Dropped"
+      }
+    }
+
+    title {
+      contents: "Risk of Rain 2"
+    }
+  }
+
+  game7 = frame : gridTileSource.GridTile {
+    cover {
+      fill[0].image.ref: cover1055540
+    }
+
+    meta {
+      leading {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      trailing {
+        contents: glyph_0,
+        sizing: .fill,
+        display: .visible
+      }
+
+      detail {
+        contents: "4.5",
+        display: .visible
+      }
+
+      label {
+        contents: "Completed"
+      }
+    }
+
+    title {
+      contents: "A Short Hike"
+    }
+  }
+
+  game8 = frame : gridTileSource.GridTile {
+    cover {
+      fill[0].image.ref: cover1091500
+    }
+
+    meta {
+      leading {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      trailing {
+        contents: glyph_0,
+        sizing: .fill,
+        display: .visible
+      }
+
+      detail {
+        contents: "—",
+        display: .visible
+      }
+
+      label {
+        contents: "Backlog"
+      }
+    }
+
+    title {
+      contents: "Cyberpunk 2077"
+    }
+  }
+}

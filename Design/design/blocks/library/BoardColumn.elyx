@@ -1,0 +1,29 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "tokens/spacing.elyx" as spacing
+import "tokens/radius.elyx" as radius
+import "design/controls/IconLabel.elyx" as iconLabel
+import "resources/icons-new/more-horizontal-square-01-stroke-rounded.svg" as glyph_15
+
+export BoardColumn = frame {
+  width: 280px,
+  height: 752px,
+  layout: {direction: .column, item-gap: spacing.gap.icon},
+  border: c.ui.border,
+  corner-radius: radius.corner.panel,
+  slot: .true,
+  padding: 10px,
+  children: title,
+
+  title = frame : iconLabel.IconLabel {
+    trailing {
+      contents: glyph_15,
+      display: .visible
+    }
+
+    label {
+      contents: "Backlog 1",
+      font-style: "Bold"
+    }
+  }
+}

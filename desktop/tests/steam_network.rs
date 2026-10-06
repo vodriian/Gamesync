@@ -74,4 +74,52 @@ fn resync_fills_details_reviews_and_tags_for_one_game() {
     assert!(steam.description.is_some());
     assert!(metadata.details_complete && metadata.reviews_complete && metadata.tags_complete);
     assert!(!metadata.tags.is_empty());
+    assert!(metadata.banner.is_some());
+    // Portal 2 is Steam Deck Verified with full controller support.
+    let setup = metadata.setup.unwrap();
+    assert_eq!(
+        setup.deck,
+        gamesync_desktop::suitability::DeckRating::Verified
+    );
+    assert_eq!(
+        setup.controller,
+        gamesync_desktop::suitability::ControllerSupport::Full
+    );
+}
+
+#[test]
+#[ignore = "Reads public Steam Deck reports; no account or API key is used"]
+fn deck_report_names_an_anti_cheat_blocker() {
+    use gamesync_desktop::suitability::{DeckNoteKind, DeckRating};
+    let client = SteamClient::new().unwrap();
+    // Destiny 2 is Unsupported because of its anti-cheat.
+    let evidence = gamesync_desktop::steam::client::parse_setup(
+        &client.deck_report(1085660).unwrap(),
+        &client.store_categories(1085660).unwrap(),
+        0,
+    )
+    .unwrap();
+    assert_eq!(evidence.deck, DeckRating::Unsupported);
+    assert!(evidence
+        .deck_notes
+        .iter()
+        .any(|note| note.kind == DeckNoteKind::Blocker && note.text.contains("anti-cheat")));
+}
+
+#[test]
+#[ignore = "Reads public Steam artwork; no account or API key is used"]
+fn landscape_header_is_available() {
+    use gamesync_desktop::steam::client::validate_banner;
+    // Le Mans Ultimate uses hashed asset paths; Portal 2 uses the legacy layout.
+    for id in [2399420, 620] {
+        let bytes = SteamClient::new().unwrap().banner(id).unwrap();
+        validate_banner(&bytes).unwrap();
+        if let Some(folder) = std::env::var_os("GAMESYNC_BANNER_PREVIEW") {
+            std::fs::write(
+                std::path::Path::new(&folder).join(format!("{id}.jpg")),
+                bytes,
+            )
+            .unwrap();
+        }
+    }
 }

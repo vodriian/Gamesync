@@ -1,0 +1,153 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "tokens/typography.elyx" as typography
+import "design/blocks/shell/LibraryShell.elyx" as librarySource
+import "tokens/spacing.elyx" as spacing
+import "tokens/radius.elyx" as radius
+import "resources/icons-new/info-stroke-rounded.svg" as glyph_4
+import "design/blocks/library/Message.elyx" as messages
+import "design/screens/library/Grid.elyx" as gridSource
+
+export LibraryEmpty = frame : librarySource.Library {
+  doc: "04 · Empty, loading and errors / LibraryEmpty",
+  left: 0px,
+  top: 0px,
+
+  panel {
+    count {
+      leading {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      trailing {
+        contents: glyph_4,
+        display: .visible
+      }
+
+      label {
+        contents: "0 games ·"
+      }
+    }
+
+    body {
+      overrides: [insert(content, after = .nil)]
+    }
+  }
+
+  content = frame : messages.Message {}
+}
+
+@variant
+export SearchEmpty = frame : LibraryEmpty {
+  left: 1360px,
+  top: 0px,
+
+  panel {
+    body {
+      content {
+        overrides: [remove(messages.Message.connect)],
+
+        hint {
+          contents: "Try a different search or filter."
+        }
+
+        title {
+          contents: "No games found"
+        }
+      }
+    }
+
+    toolbar {
+      search {
+        value {
+          label {
+            contents: "no matching title"
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export LibraryLoading = frame : LibraryEmpty {
+  left: 2720px,
+  top: 0px,
+
+  panel {
+    body {
+      content {
+        overrides: [remove(messages.Message.connect)],
+
+        hint {
+          contents: ""
+        }
+
+        title {
+          contents: "Opening library…"
+        }
+      }
+    }
+  }
+}
+
+@variant
+export LibraryError = frame : LibraryEmpty {
+  left: 0px,
+  top: 980px,
+
+  panel {
+    body {
+      content {
+        overrides: [remove(messages.Message.connect)],
+
+        hint {
+          contents: "Restart GameSync to retry."
+        }
+
+        title {
+          contents: "Could not open library"
+        }
+      }
+    }
+  }
+}
+
+@variant
+export LibraryWriteIssue = frame : gridSource.Grid {
+  left: 1360px,
+  top: 980px,
+
+  panel {
+    body {
+      overrides: [insert(warning, after = .nil)],
+      layout.item-gap: spacing.gap.large
+    }
+  }
+
+  warning = frame {
+    width: 100%,
+    height: 38px,
+    layout: {align-items: .center},
+    fill: c.ui.chrome,
+    border: c.ui.border,
+    corner-radius: radius.corner.control,
+    padding: 10px,
+    children: message,
+
+    message = text {
+      fill: c.ui.muted,
+      contents: "Game changes are unavailable. Review conflicts.",
+      font-size: 13,
+      font-family: typography.family.interface
+    }
+  }
+}

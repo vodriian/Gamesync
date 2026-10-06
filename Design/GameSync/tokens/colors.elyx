@@ -1,4 +1,0 @@
-export primary = tokens {
-  white: .white,
-  black: .black
-}

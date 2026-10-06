@@ -88,19 +88,16 @@ The bundled set has no home icon.
 `icons/badge-percent.svg` is Lucide's `badge-percent` icon (ISC license), from
 the same family. The bundled set has no discount-badge icon.
 
-## Favorite icon
+## Shared Hugeicons artwork
 
-`icons/heart-filled.svg` is Lucide's `heart` icon (ISC license) with a filled
-shape. The bundled set has only the outline heart.
-
-
-## Hugeicons sidebar — 2026-09-30
-
-The user supplied the SVGs in `Design/GameSync/resources/icons-new/`.
-`Sidebar_v2` in `blocks/navigation/Sidebar.elyx` is the visual reference.
-The selected files are copied to `desktop/icons/hugeicons/`. Their stroke
-widths are set to 1.75 per the final user decision. Filled-path outlines and
-solid variants retain their supplied geometry.
+The user supplied the SVGs in `Design/resources/icons-new/`.
+`Sidebar` in `Design/design/blocks/navigation/Sidebar.elyx` is the visual reference.
+Native `src/assets.rs` embeds those same SVGs directly. Virtual `icons/` keys
+are component lookup names, not another disk folder. The former native copies
+and their 1.75 stroke edits were removed on October 1; supplied artwork is unchanged.
+The filled favorite heart also comes from the supplied solid set.
+Hidden games uses EyeOff and discounts use HotPrice.
+See [the icon workflow](../Design/README.md#adding-icons) when adding artwork.
 The app uses the Home, game controller, heart, star, folder, settings-04, and
 plus assets in the sidebar. Shared left, right, and down chevron asset paths
 use the supplied rounded chevrons, including component menus and buttons.

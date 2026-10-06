@@ -1,0 +1,70 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "resources/images/413150.jpg" as cover413150
+import "tokens/typography.elyx" as typography
+import "design/controls/IconLabel.elyx" as iconLabel
+import "resources/icons-new/solid/heart-stroke-rounded-solid.svg" as glyph_2
+import "design/controls/Checkbox.elyx" as checkboxes
+import "tokens/spacing.elyx" as spacing
+
+export TableRow = frame {
+  left: 0px,
+  top: 0px,
+  width: 100%,
+  height: 65px,
+  layout: {align-items: .center, item-gap: spacing.gap.large},
+  border: {color: c.ui.border, sides: .bottom},
+  padding: [8px, 12px],
+  children: [checkbox, cover, title, status, rating, hours],
+
+  checkbox = frame : checkboxes.Checkbox {
+    label {
+      display: .none
+    }
+  }
+
+  cover = frame {
+    width: 30px,
+    height: 44px,
+    fill: {image: {ref: cover413150}},
+    corner-radius: 0px
+  }
+
+  title = text {
+    width: 100%,
+    fill: c.ui.text,
+    contents: "Stardew Valley",
+    font-size: typography.size.body,
+    font-family: typography.family.interface
+  }
+
+  status = text {
+    width: 130px,
+    fill: c.ui.text,
+    contents: "Playing",
+    font-size: typography.size.body,
+    font-family: typography.family.interface
+  }
+
+  rating = frame : iconLabel.IconLabel {
+    width: 110px,
+
+    trailing {
+      contents: glyph_2,
+      sizing: .fill,
+      display: .visible
+    }
+
+    label {
+      contents: "4.5 / 5"
+    }
+  }
+
+  hours = text {
+    width: 85px,
+    fill: c.ui.text,
+    contents: "70.0 h",
+    font-size: typography.size.body,
+    font-family: typography.family.interface
+  }
+}

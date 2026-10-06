@@ -1,0 +1,29 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "design/controls/IconLabel.elyx" as iconLabel
+import "resources/icons-new/search-01-stroke-rounded.svg" as searchIcon
+
+export SearchField = frame {
+  width: 220px,
+  height: 32px,
+  layout: {align-items: .center},
+  fill: c.ui.surface,
+  border: c.ui.border,
+  corner-radius: 18px,
+  padding: [9px, 14px],
+  children: value,
+
+  value = frame : iconLabel.IconLabel {
+    width: 100%,
+
+    label {
+      fill[0].color: c.ui.muted,
+      contents: "Search games or tags…"
+    }
+
+    leading {
+      contents: searchIcon,
+      display: .visible
+    }
+  }
+}

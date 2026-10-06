@@ -94,6 +94,8 @@ impl GameSyncApp {
             reduced: settings.reduce_motion,
         });
         let library = cx.new(|_| library);
+        let best_on = cx.new(|cx| super::best_on_state::BestOnState::new(library.clone(), cx));
+        cx.set_global(super::best_on_state::BestOnGlobal(best_on));
         let sync = cx.new(|_| crate::sync_runtime::SyncState {
             folder: settings.sync_folder.clone(),
             ..Default::default()
@@ -319,6 +321,16 @@ impl GameSyncApp {
 
     fn toolbar(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let home = self.library.read(cx).home;
+        let mut title = if home {
+            "Home".into()
+        } else {
+            self.library
+                .read(cx)
+                .scope_label(&self.library.read(cx).scope)
+        };
+        if self.library.read(cx).best_on_demo {
+            title.push_str(" · Demo");
+        }
         h_flex()
             .h(px(68.))
             .px_5()
@@ -342,13 +354,7 @@ impl GameSyncApp {
                     .min_w_0()
                     .truncate()
                     .font_medium()
-                    .child(if home {
-                        "Home".into()
-                    } else {
-                        self.library
-                            .read(cx)
-                            .scope_label(&self.library.read(cx).scope)
-                    }),
+                    .child(title),
             )
             // Home is not a list of games, so views, filters, and search do not apply.
             .when(!home, |toolbar| toolbar.child(self.library_controls(cx)))
@@ -489,6 +495,8 @@ impl Render for GameSyncApp {
                         .p(px(8.))
                         .child(super::panel::content(self.detail.clone(), cx)),
                 )
+                // The fit details modal opens from the detail panel.
+                .children(gpui_component::Root::render_dialog_layer(window, cx))
                 .into_any_element();
         }
         let sidebar_progress = if super::motion::reduced(cx) {

@@ -418,6 +418,7 @@ impl SettingsView {
             "recommendation_eligible" => "Used for recommendations",
             "reduce_motion" => "Reduce motion",
             "show_hidden_games" => "Show hidden games",
+            "best_on_rules" => "Best on rules",
             "library_display" => "Sort and grouping",
             "smart_groups_open" => "Open smart groups",
             "store_country" => "Store country",

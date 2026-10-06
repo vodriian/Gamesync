@@ -1,0 +1,693 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "design/blocks/shell/SettingsShell.elyx" as settingsSource
+import "tokens/spacing.elyx" as spacing
+import "tokens/typography.elyx" as typography
+import "design/controls/Button.elyx" as buttons
+import "design/controls/LabeledField.elyx" as labeledFields
+import "design/blocks/settings/SettingsGroup.elyx" as settingsGroups
+
+export AiLocal = frame : settingsSource.Settings {
+  left: 0px,
+  top: 0px,
+
+  sections {
+    navigation {
+      ai {
+        fill[0].color: c.ui.selected
+      }
+
+      general {
+        fill[0].color: c.ui.surface
+      }
+    }
+
+    main {
+      body {
+        overrides: [insert(content, after = .nil)]
+      }
+
+      section {
+        contents: "AI"
+      }
+    }
+  }
+
+  content = frame : settingsGroups.SettingsGroup {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    overrides: [
+      insert(preview, after = .nil),
+      insert(local, after = preview),
+      insert(ollama, after = local),
+      insert(providers, after = ollama),
+      insert(tabs, after = providers),
+      insert(provider, after = tabs),
+      insert(model, after = provider),
+      insert(endpoint, after = model),
+      insert(actions, after = endpoint),
+      insert(notice, after = actions)
+    ],
+
+    ollama = frame : buttons.Primary {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Ollama"
+        }
+      }
+    }
+
+    preview = text {
+      width: 100%,
+      fill: c.ui.muted,
+      contents: "Preview · tests are simulated. Use dummy keys; nothing is saved or sent.",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    local = text {
+      fill: c.ui.text,
+      contents: "Local models",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    providers = text {
+      fill: c.ui.text,
+      contents: "API providers",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    tabs = frame {
+      width: 100%,
+      layout: {item-gap: spacing.gap.medium},
+      children: [openai, claude, grok, gemini],
+
+      openai = frame : buttons.Button {
+        label {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          label {
+            contents: "OpenAI"
+          }
+        }
+      }
+
+      claude = frame : buttons.Button {
+        label {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          label {
+            contents: "Claude"
+          }
+        }
+      }
+
+      grok = frame : buttons.Button {
+        label {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          label {
+            contents: "Grok"
+          }
+        }
+      }
+
+      gemini = frame : buttons.Button {
+        label {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          label {
+            contents: "Gemini"
+          }
+        }
+      }
+    }
+
+    provider = text {
+      fill: c.ui.text,
+      contents: "Ollama",
+      font-size: typography.size.title,
+      font-family: typography.family.interface
+    }
+
+    model = frame : labeledFields.LabeledField {
+      input {
+        value {
+          label {
+            contents: "Enter model name"
+          }
+        }
+      }
+
+      label {
+        contents: "Model"
+      }
+    }
+
+    endpoint = frame : labeledFields.LabeledField {
+      input {
+        value {
+          label {
+            contents: "http://localhost:11434"
+          }
+        }
+      }
+
+      label {
+        contents: "Server address"
+      }
+    }
+
+    actions = frame {
+      width: 100%,
+      layout: {item-gap: spacing.gap.medium},
+      children: test,
+
+      test = frame : buttons.Button {
+        label {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          label {
+            contents: "Test connection"
+          }
+        }
+      }
+    }
+
+    notice = text {
+      width: 100%,
+      fill: c.ui.muted,
+      contents: "",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+  }
+}
+
+@variant
+export AiCloud = frame : AiLocal {
+  left: 1360px,
+  top: 0px,
+
+  sections {
+    main {
+      body {
+        content {
+          overrides: [
+            insert(ollamaReplacement, after = AiLocal.content.local),
+            remove(AiLocal.content.ollama)
+          ],
+
+          actions {
+            overrides: [insert(add, after = AiLocal.content.actions.test)],
+
+            test {
+              label {
+                label {
+                  contents: "Test key"
+                }
+              }
+            }
+          }
+
+          endpoint {
+            input {
+              value {
+                label {
+                  contents: "Enter a dummy API key"
+                }
+              }
+            }
+
+            label {
+              contents: "API key"
+            }
+          }
+
+          provider {
+            contents: "OpenAI"
+          }
+
+          tabs {
+            overrides: [
+              insert(openaiReplacement, after = .nil),
+              remove(AiLocal.content.tabs.openai)
+            ]
+          }
+        }
+      }
+    }
+  }
+
+  ollamaReplacement = frame : buttons.Button {
+    left: 0px,
+    top: 0px,
+
+    label {
+      leading {
+        display: .none
+      }
+
+      trailing {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      label {
+        contents: "Ollama"
+      }
+    }
+  }
+
+  openaiReplacement = frame : buttons.Primary {
+    left: 0px,
+    top: 0px,
+
+    label {
+      leading {
+        display: .none
+      }
+
+      trailing {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      label {
+        contents: "OpenAI"
+      }
+    }
+  }
+
+  add = frame : buttons.Primary {
+    left: 0px,
+    top: 0px,
+
+    label {
+      leading {
+        display: .none
+      }
+
+      trailing {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      label {
+        contents: "Add key"
+      }
+    }
+  }
+}
+
+@variant
+export AiTested = frame : AiLocal {
+  left: 2720px,
+  top: 0px,
+
+  sections {
+    main {
+      body {
+        content {
+          overrides: [
+            insert(ollamaReplacement, after = AiLocal.content.local),
+            remove(AiLocal.content.ollama)
+          ],
+
+          notice {
+            contents: "Simulated test passed. No connection was made."
+          }
+
+          actions {
+            overrides: [insert(add, after = AiLocal.content.actions.test)],
+
+            test {
+              label {
+                label {
+                  contents: "Test key"
+                }
+              }
+            }
+          }
+
+          endpoint {
+            input {
+              value {
+                label {
+                  contents: "Enter a dummy API key"
+                }
+              }
+            }
+
+            label {
+              contents: "API key"
+            }
+          }
+
+          provider {
+            contents: "OpenAI"
+          }
+
+          tabs {
+            overrides: [
+              insert(openaiReplacement, after = .nil),
+              remove(AiLocal.content.tabs.openai)
+            ]
+          }
+        }
+      }
+    }
+  }
+
+  ollamaReplacement = frame : buttons.Button {
+    left: 0px,
+    top: 0px,
+
+    label {
+      leading {
+        display: .none
+      }
+
+      trailing {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      label {
+        contents: "Ollama"
+      }
+    }
+  }
+
+  openaiReplacement = frame : buttons.Primary {
+    left: 0px,
+    top: 0px,
+
+    label {
+      leading {
+        display: .none
+      }
+
+      trailing {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      label {
+        contents: "OpenAI"
+      }
+    }
+  }
+
+  add = frame : buttons.Primary {
+    left: 0px,
+    top: 0px,
+
+    label {
+      leading {
+        display: .none
+      }
+
+      trailing {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      label {
+        contents: "Add key"
+      }
+    }
+  }
+}
+
+@variant
+export AiKeyAdded = frame : AiLocal {
+  left: 0px,
+  top: 980px,
+
+  sections {
+    main {
+      body {
+        content {
+          overrides: [
+            insert(ollamaReplacement, after = AiLocal.content.local),
+            remove(AiLocal.content.ollama)
+          ],
+
+          notice {
+            contents: "Key added in this preview only. Nothing was saved."
+          }
+
+          actions {
+            overrides: [insert(add, after = AiLocal.content.actions.test)],
+
+            test {
+              label {
+                label {
+                  contents: "Test key"
+                }
+              }
+            }
+          }
+
+          endpoint {
+            input {
+              value {
+                label {
+                  contents: "Enter a dummy API key"
+                }
+              }
+            }
+
+            label {
+              contents: "API key"
+            }
+          }
+
+          provider {
+            contents: "OpenAI"
+          }
+
+          tabs {
+            overrides: [
+              insert(openaiReplacement, after = .nil),
+              remove(AiLocal.content.tabs.openai)
+            ]
+          }
+        }
+      }
+    }
+  }
+
+  ollamaReplacement = frame : buttons.Button {
+    left: 0px,
+    top: 0px,
+
+    label {
+      leading {
+        display: .none
+      }
+
+      trailing {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      label {
+        contents: "Ollama"
+      }
+    }
+  }
+
+  openaiReplacement = frame : buttons.Primary {
+    left: 0px,
+    top: 0px,
+
+    label {
+      leading {
+        display: .none
+      }
+
+      trailing {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      label {
+        contents: "OpenAI"
+      }
+    }
+  }
+
+  add = frame : buttons.Primary {
+    left: 0px,
+    top: 0px,
+
+    label {
+      leading {
+        display: .none
+      }
+
+      trailing {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      label {
+        contents: "Add key"
+      }
+    }
+  }
+}

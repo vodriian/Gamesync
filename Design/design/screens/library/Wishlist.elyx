@@ -1,0 +1,345 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "resources/icons-new/hot-price-stroke-rounded.svg" as discount
+import "resources/images/1245620.jpg" as cover1245620
+import "resources/images/990080.jpg" as cover990080
+import "resources/images/753640.jpg" as cover753640
+import "design/blocks/shell/LibraryShell.elyx" as librarySource
+import "resources/icons-new/solid/star-stroke-rounded-solid.svg" as navwishlistSolid
+import "design/blocks/library/GridContent.elyx" as gridContent
+import "resources/icons-new/info-stroke-rounded.svg" as glyph_4
+import "resources/icons-new/game-controller-03-stroke-rounded.svg" as navallOutline
+
+export Wishlist = frame : librarySource.Library {
+  left: 0px,
+  top: 0px,
+
+  panel {
+    count {
+      leading {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      trailing {
+        contents: glyph_4,
+        display: .visible
+      }
+
+      label {
+        contents: "3 games ·"
+      }
+    }
+
+    body {
+      overrides: [insert(content, after = .nil)]
+    }
+
+    toolbar {
+      views {
+        boardView {
+          display: .none
+        }
+      }
+
+      title {
+        contents: "Wishlist"
+      }
+    }
+  }
+
+  sidebar {
+    navigation {
+      wishlist {
+        fill[0].color: c.ui.selected,
+
+        glyph {
+          contents: navwishlistSolid,
+          sizing: .fill
+        }
+      }
+
+      all {
+        fill[0]: .nil,
+
+        glyph {
+          contents: navallOutline,
+          sizing: .fit
+        }
+      }
+    }
+  }
+
+  content = frame : gridContent.GridContent {
+    overrides: [
+      remove(gridContent.GridContent.game8),
+      remove(gridContent.GridContent.game7),
+      remove(gridContent.GridContent.game6),
+      remove(gridContent.GridContent.game4),
+      remove(gridContent.GridContent.game5),
+      remove(gridContent.GridContent.game3)
+    ],
+
+    game2 {
+      cover {
+        fill[0].image.ref: cover753640
+      }
+
+      meta {
+        detail {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        leading {
+          contents: discount,
+          display: .visible
+        }
+
+        label {
+          contents: "$14.99 −40%"
+        }
+      }
+
+      title {
+        contents: "Outer Wilds"
+      }
+    }
+
+    game1 {
+      cover {
+        fill[0].image.ref: cover990080
+      }
+
+      meta {
+        detail {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        leading {
+          contents: discount,
+          display: .visible
+        }
+
+        label {
+          contents: "$17.99 −70%"
+        }
+      }
+
+      title {
+        contents: "Hogwarts Legacy"
+      }
+    }
+
+    game0 {
+      cover {
+        fill[0].image.ref: cover1245620
+      }
+
+      meta {
+        detail {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        leading {
+          contents: discount,
+          display: .visible
+        }
+
+        label {
+          contents: "$35.99 −40%"
+        }
+      }
+
+      title {
+        contents: "ELDEN RING"
+      }
+    }
+  }
+}
+
+@variant
+export WishlistPriceLoading = frame : Wishlist {
+  left: 1360px,
+  top: 0px,
+
+  panel {
+    body {
+      content {
+        game0 {
+          meta {
+            leading {
+              display: .none
+            }
+
+            trailing {
+              display: .none
+            }
+
+            detail {
+              display: .none
+            }
+
+            favorite {
+              display: .none
+            }
+
+            label {
+              contents: "Getting price…"
+            }
+          }
+        }
+
+        game1 {
+          meta {
+            leading {
+              display: .none
+            }
+
+            trailing {
+              display: .none
+            }
+
+            detail {
+              display: .none
+            }
+
+            favorite {
+              display: .none
+            }
+
+            label {
+              contents: "Getting price…"
+            }
+          }
+        }
+
+        game2 {
+          meta {
+            leading {
+              display: .none
+            }
+
+            trailing {
+              display: .none
+            }
+
+            detail {
+              display: .none
+            }
+
+            favorite {
+              display: .none
+            }
+
+            label {
+              contents: "Getting price…"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export WishlistPriceUnavailable = frame : Wishlist {
+  left: 2720px,
+  top: 0px,
+
+  panel {
+    body {
+      content {
+        game0 {
+          meta {
+            leading {
+              display: .none
+            }
+
+            trailing {
+              display: .none
+            }
+
+            detail {
+              display: .none
+            }
+
+            favorite {
+              display: .none
+            }
+
+            label {
+              contents: "Price unavailable"
+            }
+          }
+        }
+
+        game1 {
+          meta {
+            leading {
+              display: .none
+            }
+
+            trailing {
+              display: .none
+            }
+
+            detail {
+              display: .none
+            }
+
+            favorite {
+              display: .none
+            }
+
+            label {
+              contents: "Price unavailable"
+            }
+          }
+        }
+
+        game2 {
+          meta {
+            leading {
+              display: .none
+            }
+
+            trailing {
+              display: .none
+            }
+
+            detail {
+              display: .none
+            }
+
+            favorite {
+              display: .none
+            }
+
+            label {
+              contents: "Price unavailable"
+            }
+          }
+        }
+      }
+    }
+  }
+}

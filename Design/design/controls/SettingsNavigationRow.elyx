@@ -1,0 +1,36 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "resources/icons-new/spaceship-stroke-rounded.svg" as icon_settings
+import "tokens/radius.elyx" as radius
+import "tokens/spacing.elyx" as spacing
+import "tokens/typography.elyx" as typography
+
+export SettingsNavigationRow = frame {
+  width: 100%,
+  height: 30px,
+  layout: {justify-content: .center, align-items: .center},
+  fill: c.ui.surface,
+  border: c.ui.border,
+  corner-radius: radius.corner.control,
+  padding: [5px, 12px],
+  children: label,
+
+  label = frame {
+    layout: {align-items: .center, item-gap: spacing.gap.icon},
+    children: [glyphIcon, label],
+
+    glyphIcon = icon {
+      width: spacing.size.icon,
+      height: spacing.size.icon,
+      fill: c.ui.text,
+      contents: icon_settings
+    }
+
+    label = text {
+      fill: c.ui.text,
+      contents: "General",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+  }
+}

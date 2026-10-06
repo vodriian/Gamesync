@@ -2,12 +2,14 @@
 //! Rules are serializable so saved user smart collections can reuse them later.
 
 use crate::records::GameData;
+use crate::suitability::BestOn;
 use serde::{Deserialize, Serialize};
 
 /// The sidebar groups, in display order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SmartKind {
+    BestOn,
     Genre,
     SteamTag,
     MyTag,
@@ -16,7 +18,8 @@ pub enum SmartKind {
 }
 
 impl SmartKind {
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 6] = [
+        Self::BestOn,
         Self::Genre,
         Self::SteamTag,
         Self::MyTag,
@@ -26,6 +29,7 @@ impl SmartKind {
 
     pub fn label(self) -> &'static str {
         match self {
+            Self::BestOn => "Best on",
             Self::Genre => "Genres",
             Self::SteamTag => "Steam tags",
             Self::MyTag => "My tags",
@@ -120,6 +124,7 @@ impl PlaytimeBand {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "kind", content = "value")]
 pub enum SmartRule {
+    BestOn(BestOn),
     Genre(String),
     SteamTag(String),
     MyTag(String),
@@ -130,6 +135,7 @@ pub enum SmartRule {
 impl SmartRule {
     pub fn kind(&self) -> SmartKind {
         match self {
+            Self::BestOn(_) => SmartKind::BestOn,
             Self::Genre(_) => SmartKind::Genre,
             Self::SteamTag(_) => SmartKind::SteamTag,
             Self::MyTag(_) => SmartKind::MyTag,
@@ -140,6 +146,7 @@ impl SmartRule {
 
     pub fn label(&self) -> &str {
         match self {
+            Self::BestOn(band) => band.label(),
             Self::Genre(name) | Self::SteamTag(name) | Self::MyTag(name) => name,
             Self::Rating(band) => band.label(),
             Self::Playtime(band) => band.label(),
@@ -162,7 +169,7 @@ pub fn rules_for(game: &GameData, kind: SmartKind) -> impl Iterator<Item = Smart
         SmartKind::Genre => metadata.map_or(&[][..], |m| &m.genres).iter().collect(),
         SmartKind::SteamTag => metadata.map_or(&[][..], |m| &m.tags).iter().collect(),
         SmartKind::MyTag => game.personal.tags.iter().collect(),
-        SmartKind::Rating | SmartKind::Playtime => Vec::new(),
+        SmartKind::BestOn | SmartKind::Rating | SmartKind::Playtime => Vec::new(),
     };
     let mut seen = std::collections::HashSet::new();
     let text_rules = texts.into_iter().filter_map(move |text| {
@@ -174,6 +181,14 @@ pub fn rules_for(game: &GameData, kind: SmartKind) -> impl Iterator<Item = Smart
         })
     });
     let band = match kind {
+        // Games without Steam Deck evidence yet stay out of this group.
+        SmartKind::BestOn => crate::suitability::assessment(game).map(|assessment| {
+            SmartRule::BestOn(
+                game.personal
+                    .setup_preference
+                    .map_or_else(|| assessment.recommendation(), |choice| choice.best_on()),
+            )
+        }),
         SmartKind::Rating => Some(SmartRule::Rating(RatingBand::of(game.personal.rating))),
         // Only Steam games have playtime. The app does not guess it for manual games.
         SmartKind::Playtime => game

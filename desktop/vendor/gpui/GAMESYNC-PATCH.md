@@ -58,3 +58,8 @@ remaining platform limits. Linux keeps flat cards; Linux 3D remains pending.
 September 22 shadow refinement: card layers carry display scale to the compositor.
 The projected shadow uses y 20, design blur 40 (sigma 20), spread -20 and 27%
 black, with a Gaussian distance-field approximation instead of exponential decay.
+
+October 5 hinge: `CardPose::hinge` moves the vertical rotation axis to a face
+edge (-1 left, 0 center, 1 right). The Metal vertex shader rotates around that
+axis, keeps it at rest position, and draws the thin edge on the free side.
+The uniform block gains one `float4`. Blade ignores the field.

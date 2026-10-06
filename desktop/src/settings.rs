@@ -103,6 +103,13 @@ pub struct Settings {
     /// This device's name for other devices. None uses the host name.
     #[serde(default)]
     pub device_name: Option<String>,
+    /// Best on rules. Shared across devices through data sync.
+    #[serde(default)]
+    pub best_on_rules: crate::suitability::Rules,
+    /// ProtonDB enrichment on this device. Each device downloads its own
+    /// data, so this does not sync.
+    #[serde(default)]
+    pub protondb: bool,
     #[serde(flatten)]
     extra: std::collections::BTreeMap<String, serde_json::Value>,
 }
@@ -172,6 +179,8 @@ impl Default for Settings {
             store_country: None,
             sync_folder: None,
             device_name: None,
+            best_on_rules: Default::default(),
+            protondb: false,
             extra: Default::default(),
         }
     }

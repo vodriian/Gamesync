@@ -13,6 +13,7 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--build-only", action="store_true")
 parser.add_argument("--empty", action="store_true")
 parser.add_argument("--demo", action="store_true")
+parser.add_argument("--best-on-demo", action="store_true")
 parser.add_argument("--stress", action="store_true")
 parser.add_argument("--missing-covers", action="store_true")
 args = parser.parse_args()
@@ -21,18 +22,25 @@ subprocess.run(["cargo", "build", "--manifest-path", str(root / "Cargo.toml"), "
 binary = root / "target/debug/gamesync-desktop"
 
 if sys.platform == "darwin":
-    contents = root / "target/GameSync.app/Contents"
+    bundle = "BestOnDemo.app" if args.best_on_demo else "GameSync.app"
+    contents = root / "target" / bundle / "Contents"
     (contents / "MacOS").mkdir(parents=True, exist_ok=True)
     executable = contents / "MacOS/gamesync-desktop"
-    if not executable.is_symlink():
+    # A distinct executable keeps native automation and Launch Services from
+    # resolving the prototype to the normal app through a shared symlink.
+    if args.best_on_demo:
+        if executable.is_symlink():
+            executable.unlink()
+        shutil.copy2(binary, executable)
+    elif not executable.is_symlink():
         executable.symlink_to("../../../debug/gamesync-desktop")
     resources = contents / "Resources"
     resources.mkdir(exist_ok=True)
     shutil.copy2(root / "icon/app-icon.icns", resources / "app-icon.icns")
     info = {
         "CFBundleExecutable": "gamesync-desktop",
-        "CFBundleIdentifier": "local.gamesync.desktop",
-        "CFBundleName": "GameSync",
+        "CFBundleIdentifier": "local.gamesync.best-on-prototype" if args.best_on_demo else "local.gamesync.desktop",
+        "CFBundleName": "GameSync Best On" if args.best_on_demo else "GameSync",
         "CFBundleIconFile": "app-icon.icns",
         "CFBundlePackageType": "APPL",
         "CFBundleVersion": "0.1.0",
@@ -43,5 +51,5 @@ if sys.platform == "darwin":
 
 print(f"Built: {binary}", flush=True)
 if not args.build_only:
-    flags = [f"--{name.replace('_', '-')}" for name in ("demo", "empty", "stress", "missing_covers") if getattr(args, name)]
+    flags = [f"--{name.replace('_', '-')}" for name in ("demo", "best_on_demo", "empty", "stress", "missing_covers") if getattr(args, name)]
     os.execv(str(binary), [str(binary), *flags])

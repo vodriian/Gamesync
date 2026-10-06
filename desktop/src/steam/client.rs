@@ -163,6 +163,32 @@ impl SteamClient {
         );
         Ok(data["query_summary"].clone())
     }
+    /// Valve's Steam Deck compatibility report. This store endpoint is not a
+    /// documented API; `parse_setup` rejects any shape it does not expect.
+    pub fn deck_report(&self, id: u32) -> Result<Value> {
+        self.json(
+            "https://store.steampowered.com/saleaction/ajaxgetdeckappcompatibilityreport",
+            &[("nAppID", &id.to_string()), ("l", "english")],
+        )
+    }
+    /// Store categories only, for controller support.
+    pub fn store_categories(&self, id: u32) -> Result<Value> {
+        let data = self.json(
+            "https://store.steampowered.com/api/appdetails",
+            &[
+                ("appids", &id.to_string()),
+                ("l", "english"),
+                ("filters", "categories"),
+            ],
+        )?;
+        let result = &data[id.to_string()];
+        ensure!(
+            result["success"] == true,
+            "Store categories are unavailable"
+        );
+        // A game with no categories returns an empty list instead of an object.
+        Ok(result["data"].clone())
+    }
     /// Tag IDs per app, highest weight first. The call takes at most
     /// `TAG_BATCH` apps. An app that is missing from the result must be retried.
     pub fn store_tags(&self, ids: &[u32]) -> Result<BTreeMap<u32, Vec<u32>>> {
@@ -233,7 +259,8 @@ impl SteamClient {
             &[("language", "english")],
         )?)
     }
-    pub fn cover(&self, id: u32) -> Result<Vec<u8>> {
+    /// Store artwork paths for one app, or None when Steam does not list them.
+    fn store_assets(&self, id: u32) -> Option<Value> {
         let request = serde_json::json!({
             "ids": [{"appid": id}],
             "context": {"language": "english", "country_code": "US"},
@@ -244,16 +271,16 @@ impl SteamClient {
                 "https://api.steampowered.com/IStoreBrowseService/GetItems/v1/",
                 &[("input_json", &request.to_string())],
             )
-            .ok();
-        let assets = artwork
-            .as_ref()
-            .and_then(|v| v["response"]["store_items"].as_array())
-            .and_then(|items| {
-                items
-                    .iter()
-                    .find(|item| item["appid"].as_u64() == Some(u64::from(id)))
-            })
-            .map(|item| &item["assets"]);
+            .ok()?;
+        artwork["response"]["store_items"]
+            .as_array()?
+            .iter()
+            .find(|item| item["appid"].as_u64() == Some(u64::from(id)))
+            .map(|item| item["assets"].clone())
+    }
+    pub fn cover(&self, id: u32) -> Result<Vec<u8>> {
+        let assets = self.store_assets(id);
+        let assets = assets.as_ref();
         let mut urls = Vec::new();
         for field in ["library_capsule", "library_capsule_2x"] {
             if let Some(url) = assets
@@ -293,6 +320,34 @@ impl SteamClient {
             }
         }
         bail!("Steam has no usable cover right now. Your previous cover is kept. Try again later.")
+    }
+    /// The landscape store header (920×430, then 460×215) for the inside
+    /// cover. It carries the game logo, so the app shows it uncropped.
+    pub fn banner(&self, id: u32) -> Result<Vec<u8>> {
+        let assets = self.store_assets(id);
+        let mut urls: Vec<String> = ["header_2x", "header"]
+            .into_iter()
+            .filter_map(|field| artwork_url(id, assets.as_ref()?[field].as_str()?))
+            .collect();
+        // Older store responses may expose a header even when artwork metadata is absent.
+        if urls.is_empty() {
+            if let Ok(details) = self.details(id) {
+                urls.extend(
+                    details["header_image"]
+                        .as_str()
+                        .filter(|url| trusted_header(id, url))
+                        .map(str::to_owned),
+                );
+            }
+        }
+        for url in urls {
+            if let Ok(bytes) = self.bytes(&url, &[], 8 * 1024 * 1024) {
+                if validate_banner(&bytes).is_ok() {
+                    return Ok(bytes);
+                }
+            }
+        }
+        bail!("Steam has no landscape artwork right now. Try again later.")
     }
 }
 pub fn parse_owned(data: Value) -> Result<Vec<OwnedGame>> {
@@ -355,6 +410,135 @@ pub fn parse_store_tags(data: &Value) -> Result<BTreeMap<u32, Vec<u32>>> {
 }
 
 /// ISO 3166-1 alpha-2 in upper case, as Steam expects.
+/// Steam Deck report plus store categories. `now` is Unix seconds.
+pub fn parse_setup(
+    report: &Value,
+    categories: &Value,
+    now: i64,
+) -> Result<crate::suitability::SetupEvidence> {
+    use crate::suitability::{
+        ControllerSupport, DeckNote, DeckNoteKind, DeckRating, SetupEvidence,
+    };
+    ensure!(report["success"] == 1, "Steam Deck report is unavailable");
+    let results = &report["results"];
+    let deck = match results["resolved_category"].as_u64() {
+        Some(3) => DeckRating::Verified,
+        Some(2) => DeckRating::Playable,
+        Some(1) => DeckRating::Unsupported,
+        _ => DeckRating::Unknown,
+    };
+    let deck_notes = results["resolved_items"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|item| {
+            let kind = match item["display_type"].as_u64()? {
+                4 => DeckNoteKind::Pass,
+                3 => DeckNoteKind::Warning,
+                2 => DeckNoteKind::Blocker,
+                1 => DeckNoteKind::Info,
+                _ => return None,
+            };
+            let token = item["loc_token"].as_str()?;
+            let token = token.rsplit("_TestResult_").next()?;
+            let valid = !token.is_empty()
+                && token.len() <= 120
+                && token
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b == b'_');
+            valid.then(|| DeckNote {
+                kind,
+                text: sentence(token),
+            })
+        })
+        .take(12)
+        .collect();
+    let ids: Vec<u64> = categories["categories"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|category| category["id"].as_u64())
+        .collect();
+    let controller = if ids.contains(&28) {
+        ControllerSupport::Full
+    } else if ids.contains(&18) {
+        ControllerSupport::Partial
+    } else {
+        ControllerSupport::None
+    };
+    Ok(SetupEvidence {
+        deck,
+        deck_notes,
+        controller,
+        workshop: Some(ids.contains(&30)),
+        checked_at: now,
+    })
+}
+
+/// "InterfaceTextIsNotLegible" becomes "Interface text is not legible".
+/// Valve's test token as a sentence. Common blockers get fixed wording;
+/// other tokens are split into words, keeping acronyms such as VR whole.
+fn sentence(token: &str) -> String {
+    match token {
+        "SteamOSDoesNotSupport" => "SteamOS does not support this game".into(),
+        "UnsupportedAntiCheatConfiguration" | "UnsupportedAntiCheat_Other" => {
+            "Its anti-cheat does not support Steam Deck".into()
+        }
+        _ => match token.strip_prefix("SteamOSDoesNotSupport_") {
+            Some(rest) => format!("SteamOS does not support {}", words(rest)),
+            None => {
+                let text = words(token);
+                let mut chars = text.chars();
+                chars.next().map_or(text.clone(), |first| {
+                    first.to_uppercase().chain(chars).collect()
+                })
+            }
+        },
+    }
+}
+
+/// "InterfaceTextIsNotLegible" becomes "interface text is not legible";
+/// a run of capitals stays one word ("VR", "SteamOS" reads "steam OS").
+fn words(token: &str) -> String {
+    let chars: Vec<char> = token.chars().collect();
+    let mut words: Vec<String> = Vec::new();
+    let mut word = String::new();
+    for (index, &c) in chars.iter().enumerate() {
+        if c == '_' {
+            if !word.is_empty() {
+                words.push(std::mem::take(&mut word));
+            }
+            continue;
+        }
+        let previous = index.checked_sub(1).map(|i| chars[i]);
+        let next = chars.get(index + 1);
+        let starts_word = c.is_ascii_uppercase()
+            && previous.is_some_and(|p| {
+                p.is_ascii_lowercase()
+                    || p.is_ascii_digit()
+                    || (p.is_ascii_uppercase() && next.is_some_and(|n| n.is_ascii_lowercase()))
+            });
+        if starts_word && !word.is_empty() {
+            words.push(std::mem::take(&mut word));
+        }
+        word.push(c);
+    }
+    if !word.is_empty() {
+        words.push(word);
+    }
+    words
+        .into_iter()
+        .map(|word| {
+            if word.len() > 1 && word.chars().all(|c| c.is_ascii_uppercase()) {
+                word
+            } else {
+                word.to_ascii_lowercase()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 pub fn valid_country(code: &str) -> bool {
     code.len() == 2 && code.bytes().all(|b| b.is_ascii_uppercase())
 }
@@ -418,6 +602,21 @@ pub fn parse_tag_names(data: &Value) -> Result<BTreeMap<u32, String>> {
 
 /// Decode before recording success; a partial download must remain retryable.
 pub fn validate_cover(bytes: &[u8]) -> Result<()> {
+    artwork_size(bytes).map(|_| ())
+}
+
+/// A banner must be clearly wider than tall; Steam headers are about 2.14:1.
+pub fn validate_banner(bytes: &[u8]) -> Result<()> {
+    let (width, height) = artwork_size(bytes)?;
+    ensure!(
+        width * 2 >= height * 3,
+        "Landscape artwork is not wide enough"
+    );
+    Ok(())
+}
+
+/// Decoded size of a usable JPEG, after the size and placeholder checks.
+fn artwork_size(bytes: &[u8]) -> Result<(u32, u32)> {
     let mut reader =
         image::ImageReader::with_format(std::io::Cursor::new(bytes), image::ImageFormat::Jpeg);
     let mut limits = image::Limits::default();
@@ -448,7 +647,7 @@ pub fn validate_cover(bytes: &[u8]) -> Result<()> {
         (0..3).any(|i| high[i].saturating_sub(low[i]) > 4),
         "Steam returned a blank placeholder"
     );
-    Ok(())
+    Ok((width, height))
 }
 
 fn artwork_url(id: u32, path: &str) -> Option<String> {
@@ -482,6 +681,58 @@ fn trusted_header(id: u32, value: &str) -> bool {
 #[cfg(test)]
 mod cover_tests {
     use super::*;
+
+    #[test]
+    fn setup_evidence_parses_deck_report_and_controller_categories() {
+        use crate::suitability::{ControllerSupport, DeckNoteKind, DeckRating};
+        let report = serde_json::json!({"success": 1, "results": {"resolved_category": 1,
+            "resolved_items": [
+                {"display_type": 2, "loc_token": "#SteamDeckVerified_TestResult_UnsupportedAntiCheat_Other"},
+                {"display_type": 3, "loc_token": "#SteamDeckVerified_TestResult_InterfaceTextIsNotLegible"},
+                {"display_type": 9, "loc_token": "#SteamDeckVerified_TestResult_Ignored"},
+                {"display_type": 1, "loc_token": "<script>"}]}});
+        let categories = serde_json::json!({"categories": [{"id": 2}, {"id": 18}]});
+        let evidence = super::parse_setup(&report, &categories, 7).unwrap();
+        assert_eq!(evidence.deck, DeckRating::Unsupported);
+        assert_eq!(evidence.controller, ControllerSupport::Partial);
+        assert_eq!(evidence.checked_at, 7);
+        let notes: Vec<_> = evidence
+            .deck_notes
+            .iter()
+            .map(|note| (note.kind, note.text.as_str()))
+            .collect();
+        assert_eq!(
+            notes,
+            [
+                (
+                    DeckNoteKind::Blocker,
+                    "Its anti-cheat does not support Steam Deck"
+                ),
+                (DeckNoteKind::Warning, "Interface text is not legible"),
+            ]
+        );
+        // Acronyms stay whole, and SteamOS blockers name what is missing.
+        assert_eq!(
+            super::sentence("SteamOSDoesNotSupport_VR"),
+            "SteamOS does not support VR"
+        );
+        assert_eq!(
+            super::sentence("SteamOSDoesNotSupport"),
+            "SteamOS does not support this game"
+        );
+        assert_eq!(
+            super::sentence("DefaultControllerConfigFullyFunctional"),
+            "Default controller config fully functional"
+        );
+        // An unrated game is Unknown; a failed report is an error to retry.
+        let unrated = serde_json::json!({"success": 1, "results": {"resolved_category": null}});
+        let none = serde_json::json!([]);
+        assert_eq!(
+            super::parse_setup(&unrated, &none, 0).unwrap().deck,
+            DeckRating::Unknown
+        );
+        assert!(super::parse_setup(&serde_json::json!({"success": 2}), &none, 0).is_err());
+    }
 
     #[test]
     fn gray_placeholder_is_rejected_but_artwork_is_accepted() {

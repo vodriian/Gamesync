@@ -1,0 +1,1497 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "design/blocks/shell/SettingsShell.elyx" as settingsSource
+import "tokens/spacing.elyx" as spacing
+import "tokens/typography.elyx" as typography
+import "design/controls/Button.elyx" as buttons
+import "design/controls/LabeledField.elyx" as labeledFields
+import "design/blocks/settings/SettingsGroup.elyx" as settingsGroups
+
+export SyncOff = frame : settingsSource.Settings {
+  left: 0px,
+  top: 0px,
+
+  sections {
+    navigation {
+      sync {
+        fill[0].color: c.ui.selected
+      }
+
+      general {
+        fill[0].color: c.ui.surface
+      }
+    }
+
+    main {
+      body {
+        overrides: [insert(content, after = .nil)]
+      }
+
+      section {
+        contents: "Sync"
+      }
+    }
+  }
+
+  content = frame : settingsGroups.SettingsGroup {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    overrides: [
+      insert(heading, after = .nil),
+      insert(info, after = heading),
+      insert(offline, after = info),
+      insert(choose, after = offline)
+    ],
+
+    offline = text {
+      width: 100%,
+      fill: c.ui.muted,
+      contents: "Select a folder in Dropbox, Google Drive, or OneDrive, and keep it available offline. GameSync makes a GameSync Sync folder in it.",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    choose = frame : buttons.Primary {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Choose folder…"
+        }
+      }
+    }
+
+    heading = text {
+      fill: c.ui.text,
+      contents: "Sync across devices",
+      font-size: typography.size.title,
+      font-family: typography.family.interface
+    }
+
+    info = text {
+      width: 100%,
+      fill: c.ui.muted,
+      contents: "Keep collections, statuses, notes, tags, ratings, favorites, and settings the same on your computers. GameSync uses a folder that you already sync. Steam data stays on each computer.",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+  }
+}
+
+@variant
+export SyncSampleUnavailable = frame : SyncOff {
+  left: 1360px,
+  top: 0px,
+
+  sections {
+    main {
+      body {
+        content {
+          overrides: [
+            insert(chooseReplacement, after = SyncOff.content.info),
+            remove(SyncOff.content.choose),
+            remove(SyncOff.content.offline)
+          ],
+
+          info {
+            contents: "Sync is not available for the sample library."
+          }
+        }
+      }
+    }
+  }
+
+  chooseReplacement = frame : buttons.Button {
+    left: 0px,
+    top: 0px,
+
+    label {
+      leading {
+        display: .none
+      }
+
+      trailing {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      label {
+        contents: "Choose folder…"
+      }
+    }
+  }
+}
+
+@variant
+export SyncUpToDate = frame : SyncOff {
+  left: 2720px,
+  top: 0px,
+
+  sections {
+    main {
+      body {
+        content {
+          overrides: [
+            insert(folder, after = .nil),
+            insert(path, after = folder),
+            insert(actions, after = path),
+            insert(status, after = actions),
+            insert(device, after = status),
+            insert(save, after = device),
+            insert(devices, after = save),
+            insert(list, after = devices),
+            insert(keys, after = list),
+            insert(keysAction, after = keys),
+            remove(SyncOff.content.choose),
+            remove(SyncOff.content.offline),
+            remove(SyncOff.content.info),
+            remove(SyncOff.content.heading)
+          ]
+        }
+      }
+    }
+  }
+
+  folder = text {
+    left: 0px,
+    top: 0px,
+    fill: c.ui.text,
+    contents: "Folder",
+    font-size: typography.size.title,
+    font-family: typography.family.interface
+  }
+
+  path = text {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    fill: c.ui.muted,
+    contents: "Sample sync folder / GameSync Sync",
+    font-size: typography.size.body,
+    font-family: typography.family.interface
+  }
+
+  actions = frame {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    layout: {item-gap: spacing.gap.regular},
+    children: [sync, show, stop],
+
+    sync = frame : buttons.Primary {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Sync now"
+        }
+      }
+    }
+
+    show = frame : buttons.Button {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Show folder"
+        }
+      }
+    }
+
+    stop = frame : buttons.Button {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Stop syncing"
+        }
+      }
+    }
+  }
+
+  status = text {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    fill: c.ui.muted,
+    contents: "Up to date.",
+    font-size: typography.size.body,
+    font-family: typography.family.interface
+  }
+
+  device = frame : labeledFields.LabeledField {
+    input {
+      value {
+        label {
+          contents: "My Mac"
+        }
+      }
+    }
+
+    label {
+      contents: "This device"
+    }
+  }
+
+  save = frame : buttons.Button {
+    left: 0px,
+    top: 0px,
+
+    label {
+      leading {
+        display: .none
+      }
+
+      trailing {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      label {
+        contents: "Save name"
+      }
+    }
+  }
+
+  devices = text {
+    left: 0px,
+    top: 0px,
+    fill: c.ui.text,
+    contents: "Devices",
+    font-size: typography.size.title,
+    font-family: typography.family.interface
+  }
+
+  list = text {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    fill: c.ui.muted,
+    contents: "My Mac (this device) · macOS\nGaming PC · Linux",
+    font-size: typography.size.body,
+    font-family: typography.family.interface
+  }
+
+  keys = text {
+    left: 0px,
+    top: 0px,
+    fill: c.ui.text,
+    contents: "API keys",
+    font-size: typography.size.title,
+    font-family: typography.family.interface
+  }
+
+  keysAction = frame : buttons.Button {
+    left: 0px,
+    top: 0px,
+
+    label {
+      leading {
+        display: .none
+      }
+
+      trailing {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      label {
+        contents: "Turn on key sync"
+      }
+    }
+  }
+}
+
+@variant
+export SyncChecking = frame : SyncOff {
+  left: 0px,
+  top: 980px,
+
+  sections {
+    main {
+      body {
+        content {
+          overrides: [
+            insert(folder, after = .nil),
+            insert(path, after = folder),
+            insert(actions, after = path),
+            insert(status, after = actions),
+            insert(device, after = status),
+            insert(save, after = device),
+            insert(devices, after = save),
+            insert(list, after = devices),
+            insert(keys, after = list),
+            insert(keysAction, after = keys),
+            remove(SyncOff.content.choose),
+            remove(SyncOff.content.offline),
+            remove(SyncOff.content.info),
+            remove(SyncOff.content.heading)
+          ]
+        }
+      }
+    }
+  }
+
+  folder = text {
+    left: 0px,
+    top: 0px,
+    fill: c.ui.text,
+    contents: "Folder",
+    font-size: typography.size.title,
+    font-family: typography.family.interface
+  }
+
+  path = text {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    fill: c.ui.muted,
+    contents: "Sample sync folder / GameSync Sync",
+    font-size: typography.size.body,
+    font-family: typography.family.interface
+  }
+
+  actions = frame {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    layout: {item-gap: spacing.gap.regular},
+    children: [sync, show, stop],
+
+    sync = frame : buttons.Primary {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Sync now"
+        }
+      }
+    }
+
+    show = frame : buttons.Button {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Show folder"
+        }
+      }
+    }
+
+    stop = frame : buttons.Button {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Stop syncing"
+        }
+      }
+    }
+  }
+
+  status = text {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    fill: c.ui.muted,
+    contents: "Checking the folder…",
+    font-size: typography.size.body,
+    font-family: typography.family.interface
+  }
+
+  device = frame : labeledFields.LabeledField {
+    input {
+      value {
+        label {
+          contents: "My Mac"
+        }
+      }
+    }
+
+    label {
+      contents: "This device"
+    }
+  }
+
+  save = frame : buttons.Button {
+    left: 0px,
+    top: 0px,
+
+    label {
+      leading {
+        display: .none
+      }
+
+      trailing {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      label {
+        contents: "Save name"
+      }
+    }
+  }
+
+  devices = text {
+    left: 0px,
+    top: 0px,
+    fill: c.ui.text,
+    contents: "Devices",
+    font-size: typography.size.title,
+    font-family: typography.family.interface
+  }
+
+  list = text {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    fill: c.ui.muted,
+    contents: "My Mac (this device) · macOS\nGaming PC · Linux",
+    font-size: typography.size.body,
+    font-family: typography.family.interface
+  }
+
+  keys = text {
+    left: 0px,
+    top: 0px,
+    fill: c.ui.text,
+    contents: "API keys",
+    font-size: typography.size.title,
+    font-family: typography.family.interface
+  }
+
+  keysAction = frame : buttons.Button {
+    left: 0px,
+    top: 0px,
+
+    label {
+      leading {
+        display: .none
+      }
+
+      trailing {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      label {
+        contents: "Turn on key sync"
+      }
+    }
+  }
+}
+
+@variant
+export SyncFolderUnavailable = frame : SyncOff {
+  left: 1360px,
+  top: 980px,
+
+  sections {
+    main {
+      body {
+        content {
+          overrides: [
+            insert(folder, after = .nil),
+            insert(path, after = folder),
+            insert(actions, after = path),
+            insert(status, after = actions),
+            insert(device, after = status),
+            insert(save, after = device),
+            insert(devices, after = save),
+            insert(list, after = devices),
+            insert(keys, after = list),
+            insert(keysAction, after = keys),
+            remove(SyncOff.content.choose),
+            remove(SyncOff.content.offline),
+            remove(SyncOff.content.info),
+            remove(SyncOff.content.heading)
+          ]
+        }
+      }
+    }
+  }
+
+  folder = text {
+    left: 0px,
+    top: 0px,
+    fill: c.ui.text,
+    contents: "Folder",
+    font-size: typography.size.title,
+    font-family: typography.family.interface
+  }
+
+  path = text {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    fill: c.ui.muted,
+    contents: "Sample sync folder / GameSync Sync",
+    font-size: typography.size.body,
+    font-family: typography.family.interface
+  }
+
+  actions = frame {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    layout: {item-gap: spacing.gap.regular},
+    children: [sync, show, stop],
+
+    sync = frame : buttons.Primary {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Sync now"
+        }
+      }
+    }
+
+    show = frame : buttons.Button {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Show folder"
+        }
+      }
+    }
+
+    stop = frame : buttons.Button {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Stop syncing"
+        }
+      }
+    }
+  }
+
+  status = text {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    fill: c.ui.muted,
+    contents: "Waiting for the folder. Check that it is available on this computer.",
+    font-size: typography.size.body,
+    font-family: typography.family.interface
+  }
+
+  device = frame : labeledFields.LabeledField {
+    input {
+      value {
+        label {
+          contents: "My Mac"
+        }
+      }
+    }
+
+    label {
+      contents: "This device"
+    }
+  }
+
+  save = frame : buttons.Button {
+    left: 0px,
+    top: 0px,
+
+    label {
+      leading {
+        display: .none
+      }
+
+      trailing {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      label {
+        contents: "Save name"
+      }
+    }
+  }
+
+  devices = text {
+    left: 0px,
+    top: 0px,
+    fill: c.ui.text,
+    contents: "Devices",
+    font-size: typography.size.title,
+    font-family: typography.family.interface
+  }
+
+  list = text {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    fill: c.ui.muted,
+    contents: "My Mac (this device) · macOS\nGaming PC · Linux",
+    font-size: typography.size.body,
+    font-family: typography.family.interface
+  }
+
+  keys = text {
+    left: 0px,
+    top: 0px,
+    fill: c.ui.text,
+    contents: "API keys",
+    font-size: typography.size.title,
+    font-family: typography.family.interface
+  }
+
+  keysAction = frame : buttons.Button {
+    left: 0px,
+    top: 0px,
+
+    label {
+      leading {
+        display: .none
+      }
+
+      trailing {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      label {
+        contents: "Turn on key sync"
+      }
+    }
+  }
+}
+
+@variant
+export SyncPending = frame : SyncOff {
+  left: 2720px,
+  top: 980px,
+
+  sections {
+    main {
+      body {
+        content {
+          overrides: [
+            insert(folder, after = .nil),
+            insert(path, after = folder),
+            insert(actions, after = path),
+            insert(status, after = actions),
+            insert(device, after = status),
+            insert(save, after = device),
+            insert(devices, after = save),
+            insert(list, after = devices),
+            insert(keys, after = list),
+            insert(keysAction, after = keys),
+            remove(SyncOff.content.choose),
+            remove(SyncOff.content.offline),
+            remove(SyncOff.content.info),
+            remove(SyncOff.content.heading)
+          ]
+        }
+      }
+    }
+  }
+
+  folder = text {
+    left: 0px,
+    top: 0px,
+    fill: c.ui.text,
+    contents: "Folder",
+    font-size: typography.size.title,
+    font-family: typography.family.interface
+  }
+
+  path = text {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    fill: c.ui.muted,
+    contents: "Sample sync folder / GameSync Sync",
+    font-size: typography.size.body,
+    font-family: typography.family.interface
+  }
+
+  actions = frame {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    layout: {item-gap: spacing.gap.regular},
+    children: [sync, show, stop],
+
+    sync = frame : buttons.Primary {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Sync now"
+        }
+      }
+    }
+
+    show = frame : buttons.Button {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Show folder"
+        }
+      }
+    }
+
+    stop = frame : buttons.Button {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Stop syncing"
+        }
+      }
+    }
+  }
+
+  status = text {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    fill: c.ui.muted,
+    contents: "3 changes wait to be written to the folder.",
+    font-size: typography.size.body,
+    font-family: typography.family.interface
+  }
+
+  device = frame : labeledFields.LabeledField {
+    input {
+      value {
+        label {
+          contents: "My Mac"
+        }
+      }
+    }
+
+    label {
+      contents: "This device"
+    }
+  }
+
+  save = frame : buttons.Button {
+    left: 0px,
+    top: 0px,
+
+    label {
+      leading {
+        display: .none
+      }
+
+      trailing {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      label {
+        contents: "Save name"
+      }
+    }
+  }
+
+  devices = text {
+    left: 0px,
+    top: 0px,
+    fill: c.ui.text,
+    contents: "Devices",
+    font-size: typography.size.title,
+    font-family: typography.family.interface
+  }
+
+  list = text {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    fill: c.ui.muted,
+    contents: "My Mac (this device) · macOS\nGaming PC · Linux",
+    font-size: typography.size.body,
+    font-family: typography.family.interface
+  }
+
+  keys = text {
+    left: 0px,
+    top: 0px,
+    fill: c.ui.text,
+    contents: "API keys",
+    font-size: typography.size.title,
+    font-family: typography.family.interface
+  }
+
+  keysAction = frame : buttons.Button {
+    left: 0px,
+    top: 0px,
+
+    label {
+      leading {
+        display: .none
+      }
+
+      trailing {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      label {
+        contents: "Turn on key sync"
+      }
+    }
+  }
+}
+
+@variant
+export SyncStopConfirmation = frame : SyncOff {
+  left: 0px,
+  top: 1960px,
+
+  sections {
+    main {
+      body {
+        content {
+          overrides: [
+            insert(folder, after = .nil),
+            insert(path, after = folder),
+            insert(actions, after = path),
+            insert(status, after = actions),
+            insert(device, after = status),
+            insert(save, after = device),
+            insert(devices, after = save),
+            insert(list, after = devices),
+            insert(keys, after = list),
+            insert(keysAction, after = keys),
+            remove(SyncOff.content.choose),
+            remove(SyncOff.content.offline),
+            remove(SyncOff.content.info),
+            remove(SyncOff.content.heading)
+          ]
+        }
+      }
+    }
+  }
+
+  folder = text {
+    left: 0px,
+    top: 0px,
+    fill: c.ui.text,
+    contents: "Folder",
+    font-size: typography.size.title,
+    font-family: typography.family.interface
+  }
+
+  path = text {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    fill: c.ui.muted,
+    contents: "Sample sync folder / GameSync Sync",
+    font-size: typography.size.body,
+    font-family: typography.family.interface
+  }
+
+  actions = frame {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    layout: {item-gap: spacing.gap.regular},
+    children: [sync, show, stop],
+
+    sync = frame : buttons.Primary {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Sync now"
+        }
+      }
+    }
+
+    show = frame : buttons.Button {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Show folder"
+        }
+      }
+    }
+
+    stop = frame : buttons.Button {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Stop anyway"
+        }
+      }
+    }
+  }
+
+  status = text {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    fill: c.ui.muted,
+    contents: "3 changes on this device are not in the folder yet. Stop anyway to discard them from sync; your library keeps them.",
+    font-size: typography.size.body,
+    font-family: typography.family.interface
+  }
+
+  device = frame : labeledFields.LabeledField {
+    input {
+      value {
+        label {
+          contents: "My Mac"
+        }
+      }
+    }
+
+    label {
+      contents: "This device"
+    }
+  }
+
+  save = frame : buttons.Button {
+    left: 0px,
+    top: 0px,
+
+    label {
+      leading {
+        display: .none
+      }
+
+      trailing {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      label {
+        contents: "Save name"
+      }
+    }
+  }
+
+  devices = text {
+    left: 0px,
+    top: 0px,
+    fill: c.ui.text,
+    contents: "Devices",
+    font-size: typography.size.title,
+    font-family: typography.family.interface
+  }
+
+  list = text {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    fill: c.ui.muted,
+    contents: "My Mac (this device) · macOS\nGaming PC · Linux",
+    font-size: typography.size.body,
+    font-family: typography.family.interface
+  }
+
+  keys = text {
+    left: 0px,
+    top: 0px,
+    fill: c.ui.text,
+    contents: "API keys",
+    font-size: typography.size.title,
+    font-family: typography.family.interface
+  }
+
+  keysAction = frame : buttons.Button {
+    left: 0px,
+    top: 0px,
+
+    label {
+      leading {
+        display: .none
+      }
+
+      trailing {
+        display: .none
+      }
+
+      detail {
+        display: .none
+      }
+
+      favorite {
+        display: .none
+      }
+
+      label {
+        contents: "Turn on key sync"
+      }
+    }
+  }
+}
+
+@variant
+export SyncReviewChanges = frame : SyncOff {
+  left: 1360px,
+  top: 1960px,
+
+  sections {
+    main {
+      body {
+        content {
+          overrides: [
+            insert(game, after = SyncOff.content.info),
+            insert(choices, after = game),
+            insert(notes, after = choices),
+            insert(sample, after = notes),
+            insert(noteChoices, after = sample),
+            remove(SyncOff.content.choose),
+            remove(SyncOff.content.offline)
+          ],
+
+          info {
+            contents: "Different values arrived from another computer. Choose the value to keep."
+          }
+
+          heading {
+            contents: "Review changes"
+          }
+        }
+      }
+    }
+  }
+
+  game = text {
+    left: 0px,
+    top: 0px,
+    fill: c.ui.text,
+    contents: "Stardew Valley · Status",
+    font-size: typography.size.title,
+    font-family: typography.family.interface
+  }
+
+  choices = frame {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    layout: {item-gap: spacing.gap.regular},
+    children: [local, other],
+
+    local = frame : buttons.Primary {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "This device: Playing"
+        }
+      }
+    }
+
+    other = frame : buttons.Button {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Gaming PC: Completed"
+        }
+      }
+    }
+  }
+
+  notes = text {
+    left: 0px,
+    top: 0px,
+    fill: c.ui.text,
+    contents: "Stardew Valley · Notes",
+    font-size: typography.size.title,
+    font-family: typography.family.interface
+  }
+
+  sample = text {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    fill: c.ui.muted,
+    contents: "This device: Finish the community center.\nGaming PC: Start a new farm.",
+    font-size: typography.size.body,
+    font-family: typography.family.interface
+  }
+
+  noteChoices = frame {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    layout: {item-gap: spacing.gap.regular},
+    children: [keepLocal, keepOther],
+
+    keepLocal = frame : buttons.Button {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Keep this device"
+        }
+      }
+    }
+
+    keepOther = frame : buttons.Button {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Keep other device"
+        }
+      }
+    }
+  }
+}

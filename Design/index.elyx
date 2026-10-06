@@ -1,0 +1,20 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "design/screens/library/Grid.elyx" as library
+import "design/blocks/navigation/Sidebar.elyx" as navigation
+import "design/screens/settings/General.elyx" as settings
+
+// Entry canvas only. Edit the imported screen or component source.
+Library = frame : library.Grid {
+  left: 0px,
+  top: 0px
+}
+
+Settings = frame : settings.SettingsGeneral {
+  left: 1360px,
+  top: 0px
+}
+
+Sidebar = frame : navigation.Sidebar {
+  left: 2260px,
+  top: 0px
+}

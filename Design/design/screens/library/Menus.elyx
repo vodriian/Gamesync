@@ -1,0 +1,828 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "design/blocks/shell/LibraryShell.elyx" as librarySource
+import "resources/icons-new/chevron-right-stroke-rounded.svg" as glyph_8
+import "resources/icons-new/check-stroke-rounded.svg" as glyph_10
+import "design/blocks/menus/Menu.elyx" as menuSource
+import "design/blocks/library/GridContent.elyx" as gridContent
+import "design/controls/MenuItem.elyx" as menuItems
+import "design/screens/library/Wishlist.elyx" as wishlistSource
+
+export DisplayMenu = frame : librarySource.Library {
+  doc: "05 · Menus / DisplayMenu",
+  left: 0px,
+  top: 0px,
+
+  panel {
+    body {
+      overrides: [insert(content, after = .nil)]
+    }
+  }
+
+  overlay {
+    overrides: [insert(popover, after = .nil)]
+  }
+
+  content = frame : gridContent.GridContent {
+    width: 100%
+  }
+
+  popover = frame : menuSource.Menu {
+    doc: "Intentional popup overlay; excluded from the content stack.",
+    top: 66px,
+    right: 24px,
+    width: 218px,
+    ignore-stack: .true,
+    overrides: [
+      insert(item0, after = .nil),
+      insert(item1, after = item0),
+      insert(item2, after = item1),
+      insert(item3, after = item2)
+    ],
+
+    item0 = frame : menuItems.MenuItem {
+      label {
+        trailing {
+          contents: glyph_8,
+          display: .visible
+        }
+
+        label {
+          contents: "Filter"
+        }
+      }
+    }
+
+    item1 = frame : menuItems.MenuItem {
+      label {
+        trailing {
+          contents: glyph_8,
+          display: .visible
+        }
+
+        label {
+          contents: "Sort by"
+        }
+      }
+    }
+
+    item2 = frame : menuItems.MenuItem {
+      label {
+        trailing {
+          contents: glyph_8,
+          display: .visible
+        }
+
+        label {
+          contents: "Group by"
+        }
+      }
+    }
+
+    item3 = frame : menuItems.MenuItem {
+      label {
+        trailing {
+          contents: glyph_8,
+          display: .visible
+        }
+
+        label {
+          contents: "View"
+        }
+      }
+    }
+  }
+}
+
+@variant
+export FilterMenu = frame : DisplayMenu {
+  left: 1360px,
+  top: 0px,
+
+  overlay {
+    popover {
+      doc: "Intentional popup overlay; excluded from the content stack.",
+      top: 66px,
+      right: 24px,
+
+      item0 {
+        label {
+          leading {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          trailing {
+            contents: glyph_8,
+            display: .visible
+          }
+
+          label {
+            contents: "Status"
+          }
+        }
+      }
+
+      item1 {
+        label {
+          leading {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          trailing {
+            contents: glyph_8,
+            display: .visible
+          }
+
+          label {
+            contents: "Collections"
+          }
+        }
+      }
+
+      item2 {
+        label {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          label {
+            contents: "Favorites only"
+          }
+        }
+      }
+
+      item3 {
+        label {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          label {
+            contents: "Clear filters"
+          }
+        }
+      }
+
+      ignore-stack: .true
+    }
+  }
+}
+
+@variant
+export SortMenu = frame : DisplayMenu {
+  left: 2720px,
+  top: 0px,
+
+  overlay {
+    popover {
+      overrides: [
+        insert(item4, after = DisplayMenu.popover.item3),
+        insert(item5, after = item4),
+        insert(item6, after = item5)
+      ],
+      doc: "Intentional popup overlay; excluded from the content stack.",
+      top: 66px,
+      right: 24px,
+
+      item0 {
+        label {
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          leading {
+            contents: glyph_10,
+            display: .visible
+          }
+
+          label {
+            contents: "Name"
+          }
+        }
+      }
+
+      item1 {
+        label {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          label {
+            contents: "Status"
+          }
+        }
+      }
+
+      item2 {
+        label {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          label {
+            contents: "Hours"
+          }
+        }
+      }
+
+      item3 {
+        label {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          label {
+            contents: "Collection"
+          }
+        }
+      }
+
+      ignore-stack: .true
+    }
+  }
+
+  item4 = frame : menuItems.MenuItem {
+    label {
+      label {
+        contents: "Ascending"
+      }
+    }
+  }
+
+  item5 = frame : menuItems.MenuItem {
+    label {
+      label {
+        contents: "Descending"
+      }
+    }
+  }
+
+  item6 = frame : menuItems.MenuItem {
+    label {
+      label {
+        contents: "Manual order"
+      }
+    }
+  }
+}
+
+@variant
+export GroupMenu = frame : DisplayMenu {
+  left: 0px,
+  top: 980px,
+
+  overlay {
+    popover {
+      overrides: [remove(DisplayMenu.popover.item3)],
+
+      item2 {
+        label {
+          trailing {
+            display: .none
+          }
+
+          label {
+            contents: "Collections"
+          }
+        }
+      }
+
+      item1 {
+        label {
+          trailing {
+            display: .none
+          }
+
+          label {
+            contents: "Status"
+          }
+        }
+      }
+
+      item0 {
+        label {
+          trailing {
+            display: .none
+          }
+
+          label {
+            contents: "None"
+          }
+
+          leading {
+            display: .visible
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export GridViewMenu = frame : DisplayMenu {
+  left: 1360px,
+  top: 980px,
+
+  overlay {
+    popover {
+      overrides: [
+        remove(DisplayMenu.popover.item2),
+        remove(DisplayMenu.popover.item3)
+      ],
+
+      item1 {
+        label {
+          trailing {
+            display: .none
+          }
+
+          label {
+            contents: "Show details"
+          }
+
+          leading {
+            display: .visible
+          }
+        }
+      }
+
+      item0 {
+        label {
+          trailing {
+            display: .none
+          }
+
+          label {
+            contents: "Show title"
+          }
+
+          leading {
+            display: .visible
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export GameContextMenu = frame : DisplayMenu {
+  left: 2720px,
+  top: 980px,
+
+  overlay {
+    popover {
+      overrides: [insert(item4, after = DisplayMenu.popover.item3)],
+      doc: "Intentional popup overlay; excluded from the content stack.",
+      left: 470px,
+      top: 280px,
+
+      item0 {
+        label {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          label {
+            contents: "Add to favorites"
+          }
+        }
+      }
+
+      item1 {
+        label {
+          leading {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          trailing {
+            contents: glyph_8,
+            display: .visible
+          }
+
+          label {
+            contents: "Status"
+          }
+        }
+      }
+
+      item2 {
+        label {
+          leading {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          trailing {
+            contents: glyph_8,
+            display: .visible
+          }
+
+          label {
+            contents: "Collections"
+          }
+        }
+      }
+
+      item3 {
+        label {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          label {
+            contents: "Add note"
+          }
+        }
+      }
+
+      ignore-stack: .true
+    }
+  }
+
+  item4 = frame : menuItems.MenuItem {
+    label {
+      label {
+        contents: "Hide"
+      }
+    }
+  }
+}
+
+@variant
+export StatusMenu = frame : DisplayMenu {
+  left: 0px,
+  top: 1960px,
+
+  overlay {
+    popover {
+      overrides: [
+        insert(item4, after = DisplayMenu.popover.item3),
+        insert(item5, after = item4)
+      ],
+      doc: "Intentional popup overlay; excluded from the content stack.",
+      left: 470px,
+      top: 280px,
+
+      item0 {
+        label {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          label {
+            contents: "Backlog"
+          }
+        }
+      }
+
+      item1 {
+        label {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          label {
+            contents: "Want to play"
+          }
+        }
+      }
+
+      item2 {
+        label {
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          leading {
+            contents: glyph_10,
+            display: .visible
+          }
+
+          label {
+            contents: "Playing"
+          }
+        }
+      }
+
+      item3 {
+        label {
+          leading {
+            display: .none
+          }
+
+          trailing {
+            display: .none
+          }
+
+          detail {
+            display: .none
+          }
+
+          favorite {
+            display: .none
+          }
+
+          label {
+            contents: "Paused"
+          }
+        }
+      }
+
+      ignore-stack: .true
+    }
+  }
+
+  item4 = frame : menuItems.MenuItem {
+    label {
+      label {
+        contents: "Completed"
+      }
+    }
+  }
+
+  item5 = frame : menuItems.MenuItem {
+    label {
+      label {
+        contents: "Dropped"
+      }
+    }
+  }
+}
+
+@variant
+export CollectionMenu = frame : DisplayMenu {
+  left: 1360px,
+  top: 1960px,
+
+  overlay {
+    popover {
+      overrides: [
+        remove(DisplayMenu.popover.item2),
+        remove(DisplayMenu.popover.item3)
+      ],
+      left: 470px,
+      top: 280px,
+
+      item1 {
+        label {
+          trailing {
+            display: .none
+          }
+
+          label {
+            contents: "No collections yet"
+          }
+        }
+      }
+
+      item0 {
+        label {
+          trailing {
+            display: .none
+          }
+
+          label {
+            contents: "Cozy evenings"
+          }
+
+          leading {
+            display: .visible
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export WishlistSortMenu = frame : wishlistSource.Wishlist {
+  left: 2720px,
+  top: 1960px,
+
+  overlay {
+    overrides: [insert(popover, after = .nil)]
+  }
+
+  popover = frame : menuSource.Menu {
+    doc: "Intentional menu overlay.",
+    top: 60px,
+    right: 24px,
+    width: 218px,
+    overrides: [insert(item0, after = .nil), insert(item1, after = item0)],
+
+    item0 = frame : menuItems.MenuItem {
+      label {
+        trailing {
+          contents: glyph_8,
+          display: .visible
+        }
+
+        label {
+          contents: "Sort by"
+        }
+      }
+    }
+
+    item1 = frame : menuItems.MenuItem {
+      label {
+        trailing {
+          contents: glyph_8,
+          display: .visible
+        }
+
+        label {
+          contents: "View"
+        }
+      }
+    }
+  }
+}
+
+@variant
+export WishlistContextMenu = frame : wishlistSource.Wishlist {
+  left: 0px,
+  top: 2940px,
+
+  overlay {
+    overrides: [insert(popover, after = .nil)]
+  }
+
+  popover = frame : menuSource.Menu {
+    doc: "Intentional menu overlay.",
+    left: 490px,
+    top: 270px,
+    width: 218px,
+    overrides: [insert(item0, after = .nil), insert(item1, after = item0)],
+
+    item0 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Add note…"
+        }
+      }
+    }
+
+    item1 = frame : menuItems.MenuItem {
+      label {
+        label {
+          contents: "Hide"
+        }
+      }
+    }
+  }
+}

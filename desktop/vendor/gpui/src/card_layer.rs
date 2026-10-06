@@ -29,6 +29,10 @@ pub struct CardPose {
     /// Fraction of the surface height to blur for an overlaid library toolbar.
     /// A positive value disables card lighting and uses the surface as flat chrome.
     pub frosted_top: f32,
+    /// Vertical rotation axis as a fraction of half the width: -1 is the left edge,
+    /// 0 the center, and 1 the right edge. An edge axis turns the face like a book
+    /// cover on its spine. Metal only; Blade keeps the center axis.
+    pub hinge: f32,
 }
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]

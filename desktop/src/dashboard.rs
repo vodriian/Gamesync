@@ -267,6 +267,7 @@ mod tests {
             status_label: "Backlog".into(),
             collections: vec![],
             cover_path: None,
+            banner_path: None,
             rating: spec.rating,
             tags: vec![],
             playtime_minutes: spec.minutes.unwrap_or(0),

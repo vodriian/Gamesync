@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build a standalone, signed macOS app and ZIP for local testing."""
 
+import argparse
 import os
 import platform
 from pathlib import Path
@@ -37,6 +38,10 @@ def signing_identity():
 
 
 root = Path(__file__).resolve().parents[1]
+parser = argparse.ArgumentParser()
+# A separate folder keeps a test build apart from the current local release.
+parser.add_argument("--output", type=Path, default=root / "target/macos")
+args = parser.parse_args()
 version = tomllib.loads((root / "Cargo.toml").read_text())["package"]["version"]
 subprocess.run([
     "cargo", "build", "--release", "--locked", "--manifest-path",
@@ -49,7 +54,8 @@ minimum_os = re.search(r"\bminos\s+(\S+)", load_commands)
 if not minimum_os:
     raise SystemExit("Could not read the executable's minimum macOS version.")
 
-output = root / "target/macos"
+output = args.output.resolve()
+output.mkdir(parents=True, exist_ok=True)
 app = output / "GameSync.app"
 if app.exists():
     shutil.rmtree(app)

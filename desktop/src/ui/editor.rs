@@ -13,7 +13,7 @@ use gpui_component::{
     input::{Input, InputEvent, InputState},
     menu::{DropdownMenu as _, PopupMenuItem},
     popover::Popover,
-    v_flex, ActiveTheme as _, Disableable as _, Icon, IconName, Sizable as _, StyledExt as _,
+    v_flex, ActiveTheme as _, Disableable as _, Icon, IconName, Sizable as _,
 };
 use std::path::PathBuf;
 
@@ -52,7 +52,9 @@ impl EventEmitter<EditorEvent> for InspectorEditor {}
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Field {
     Top,
+    Favorite,
     Status,
+    Preference,
     Rating,
     Collections,
     Tags,
@@ -565,8 +567,119 @@ fn suggest_tags<'a>(
     )
 }
 
-impl Render for InspectorEditor {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+/// The open card is a two-page spread. The detail panel places each page on the
+/// book; the editor keeps the drafts, listeners, and save status for both.
+impl InspectorEditor {
+    pub fn save_now(&mut self, cx: &mut Context<Self>) {
+        self.save(cx);
+    }
+
+    /// Best on choice from the panel. It saves like any other personal field.
+    pub fn set_setup_preference(
+        &mut self,
+        preference: Option<gamesync_desktop::suitability::SetupPreference>,
+        cx: &mut Context<Self>,
+    ) {
+        self.personal.setup_preference = preference;
+        self.change_now(Field::Preference, cx);
+    }
+
+    /// Left page, below the cover: title and favorite, description, Steam facts,
+    /// playtime, collections, and tags.
+    pub fn summary_page(&mut self, cx: &mut Context<Self>) -> gpui::AnyElement {
+        let favorite = self.personal.favorite;
+        let wishlisted = self.base.game.wishlisted();
+        v_flex()
+            .id("summary-page")
+            .flex_1()
+            .min_h_0()
+            .overflow_y_scroll()
+            .track_scroll(&self.scroll)
+            .px_4()
+            .pt_3()
+            .pb_4()
+            .gap_3()
+            .child(
+                h_flex()
+                    .items_start()
+                    .justify_between()
+                    .gap_2()
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .font_family("Georgia")
+                            .text_xl()
+                            .line_clamp(2)
+                            .child(self.base.game.title.clone()),
+                    )
+                    // Wishlist games are not owned, so they cannot be favorites.
+                    .when(!wishlisted, |row| {
+                        row.child(
+                            Button::new("edit-favorite")
+                                .ghost()
+                                .w(px(32.))
+                                .h(px(32.))
+                                .p_0()
+                                .flex_shrink_0()
+                                .tooltip(if favorite {
+                                    "Remove from favorites"
+                                } else {
+                                    "Add to favorites"
+                                })
+                                .child(
+                                    if favorite {
+                                        Icon::new(crate::assets::FavoriteIcon)
+                                    } else {
+                                        Icon::new(IconName::Heart)
+                                    }
+                                    .size(px(22.)),
+                                )
+                                .on_click(cx.listener(|this, _, _, cx| {
+                                    this.personal.favorite = !this.personal.favorite;
+                                    this.change_now(Field::Favorite, cx);
+                                })),
+                        )
+                    }),
+            )
+            .children(self.status_line(Field::Favorite, cx))
+            .child(
+                div().text_sm().child(
+                    self.base
+                        .game
+                        .description()
+                        .unwrap_or("No Steam description.")
+                        .to_owned(),
+                ),
+            )
+            .children(self.steam_facts(cx))
+            .when(!wishlisted, |page| {
+                page.child(div().text_sm().child(format!(
+                        "{:.1} hours played",
+                        self.base
+                            .game
+                            .steam
+                            .as_ref()
+                            .map_or(0, |s| s.playtime_minutes) as f32
+                            / 60.
+                    )))
+                .child(hint("Collections", cx))
+                .child(self.collections_row(cx))
+                .children(self.status_line(Field::Collections, cx))
+            })
+            .child(hint("Tags", cx))
+            .child(self.tags_row(cx))
+            .children(self.status_line(Field::Tags, cx))
+            .into_any_element()
+    }
+
+    /// Right page: status and rating, the optional Best on panel, then notes.
+    /// Wishlist games show their price in place of status and rating.
+    pub fn personal_page(
+        &mut self,
+        best_on: Option<gpui::AnyElement>,
+        cx: &mut Context<Self>,
+    ) -> gpui::AnyElement {
         let selected = self.personal.status.clone();
         let statuses = self.manifest.definitions.statuses.clone();
         let status_label = self
@@ -577,60 +690,27 @@ impl Render for InspectorEditor {
             .unwrap_or(selected.clone());
         let target = cx.entity();
         let rating = self.personal.rating;
-        let favorite = self.personal.favorite;
         let wishlisted = self.base.game.wishlisted();
         v_flex()
-            .id("inspector-editor")
-            .on_action(cx.listener(|this, _: &crate::SaveDetails, _, cx| this.save(cx)))
+            .id("personal-page")
             .size_full()
-            .child(
-                v_flex()
-                    .id("edit-fields")
-                    .flex_1()
-                    .min_h_0()
-                    .overflow_y_scroll()
-                    .track_scroll(&self.scroll)
-                    .p_4()
-                    .gap_3()
-                    .child(
-                        div()
-                            .text_lg()
-                            .font_semibold()
-                            .child(self.base.game.title.clone()),
-                    )
-                    .children(self.status_line(Field::Top, cx))
-                    .when(!wishlisted, |fields| {
-                        fields.child(hint(
-                            &format!(
-                                "{:.1} hours played",
-                                self.base
-                                    .game
-                                    .steam
-                                    .as_ref()
-                                    .map_or(0, |s| s.playtime_minutes)
-                                    as f32
-                                    / 60.
-                            ),
-                            cx,
-                        ))
-                    })
-                    .child(
-                        div().text_sm().child(
-                            self.base
-                                .game
-                                .description()
-                                .unwrap_or("No Steam description.")
-                                .to_owned(),
-                        ),
-                    )
-                    .children(self.steam_facts(cx))
-                    .children(wishlisted.then(|| self.price_block(cx)))
-                    // Owned-game fields. Wishlist games are not owned, so they have
-                    // no status, rating, favorite, or collections.
-                    .when(!wishlisted, |fields| {
-                        fields
-                            .child(hint("Status", cx))
-                            .child(
+            .overflow_y_scroll()
+            .px_4()
+            .pt_4()
+            .pb_4()
+            .gap_3()
+            .children(self.status_line(Field::Top, cx))
+            .children(wishlisted.then(|| self.price_block(cx)))
+            .when(!wishlisted, |page| {
+                // Status and rating share a row so the page keeps room below.
+                page.child(
+                    h_flex()
+                        .flex_wrap()
+                        .gap_x_6()
+                        .gap_y_2()
+                        .items_start()
+                        .child(
+                            v_flex().gap_1().child(hint("Status", cx)).child(
                                 Button::new("edit-status")
                                     .label(status_label)
                                     .dropdown_menu(move |mut menu, _, _| {
@@ -650,158 +730,109 @@ impl Render for InspectorEditor {
                                         }
                                         menu
                                     }),
-                            )
-                            .children(self.status_line(Field::Status, cx))
-                            // Rating and favorite share one row: a small label above each control.
-                            .child(
-                                // Wraps on a narrow card so the heart never overflows.
-                                h_flex()
-                                    .flex_wrap()
-                                    .gap_x_6()
-                                    .gap_y_2()
-                                    .items_start()
-                                    .child(v_flex().gap_1().child(hint("Your rating", cx)).child(
-                                        h_flex().children((1u8..=5).map(|stars| {
-                                            let value = stars * 2;
-                                            // Keep old half-star values visible; new choices use whole stars.
-                                            let fill = rating
-                                                .unwrap_or(0)
-                                                .saturating_sub(value - 2)
-                                                .min(2);
-                                            Button::new(("rating-star", usize::from(stars)))
-                                                .ghost()
-                                                .w(px(36.))
-                                                .h(px(36.))
-                                                .p_0()
-                                                .tooltip(if rating == Some(value) {
-                                                    "Clear rating".to_owned()
-                                                } else {
-                                                    format!(
-                                                        "Rate {stars} {}",
-                                                        if stars == 1 { "star" } else { "stars" }
-                                                    )
-                                                })
-                                                .child(
-                                                    div()
-                                                        .relative()
-                                                        .w(px(24.))
-                                                        .h(px(24.))
-                                                        .child(
-                                                            Icon::new(IconName::Star).size(px(24.)),
-                                                        )
-                                                        .child(
-                                                            div()
-                                                                .absolute()
-                                                                .top_0()
-                                                                .left_0()
-                                                                .overflow_hidden()
-                                                                .w(px(f32::from(fill) * 12.))
-                                                                .h_full()
-                                                                .child(
-                                                                    Icon::new(
-                                                                        crate::assets::RatingIcon,
-                                                                    )
-                                                                    .size(px(24.)),
-                                                                ),
-                                                        ),
-                                                )
-                                                .on_click(cx.listener(move |this, _, _, cx| {
-                                                    this.personal.rating = (this.personal.rating
-                                                        != Some(value))
-                                                    .then_some(value);
-                                                    this.change_now(Field::Rating, cx);
-                                                }))
-                                        })),
-                                    ))
+                            ),
+                        )
+                        .child(v_flex().gap_1().child(hint("Rating", cx)).child(
+                            h_flex().children((1u8..=5).map(|stars| {
+                                let value = stars * 2;
+                                // Keep old half-star values visible; new choices use whole stars.
+                                let fill = rating.unwrap_or(0).saturating_sub(value - 2).min(2);
+                                Button::new(("rating-star", usize::from(stars)))
+                                    .ghost()
+                                    .w(px(36.))
+                                    .h(px(36.))
+                                    .p_0()
+                                    .tooltip(if rating == Some(value) {
+                                        "Clear rating".to_owned()
+                                    } else {
+                                        format!(
+                                            "Rate {stars} {}",
+                                            if stars == 1 { "star" } else { "stars" }
+                                        )
+                                    })
                                     .child(
-                                        v_flex().gap_1().child(hint("Favorite", cx)).child(
-                                            Button::new("edit-favorite")
-                                                .ghost()
-                                                .w(px(36.))
-                                                .h(px(36.))
-                                                .p_0()
-                                                .tooltip(if favorite {
-                                                    "Remove from favorites"
-                                                } else {
-                                                    "Add to favorites"
-                                                })
-                                                .child(
-                                                    if favorite {
-                                                        Icon::new(crate::assets::FavoriteIcon)
-                                                    } else {
-                                                        Icon::new(IconName::Heart)
-                                                    }
-                                                    .size(px(24.)),
-                                                )
-                                                .on_click(cx.listener(|this, _, _, cx| {
-                                                    this.personal.favorite =
-                                                        !this.personal.favorite;
-                                                    this.change_now(Field::Rating, cx);
-                                                })),
-                                        ),
-                                    ),
-                            )
-                            .children(self.status_line(Field::Rating, cx))
-                            .child(hint("Collections", cx))
-                            .child(
-                                h_flex().flex_wrap().gap_2().children(
-                                    self.manifest
-                                        .definitions
-                                        .collections
-                                        .clone()
-                                        .into_iter()
-                                        .filter(|c| !c.archived)
-                                        .map(|collection| {
-                                            let id = collection.id;
-                                            let member = self.personal.collections.contains(&id);
-                                            // Filled with a check when the game is in it; outlined
-                                            // and muted otherwise, so both states read at a glance.
-                                            Button::new(gpui::SharedString::from(format!(
-                                                "member-{id}"
-                                            )))
-                                            .small()
-                                            .label(collection.name)
-                                            .when(member, |chip| {
-                                                chip.primary().icon(IconName::Check)
-                                            })
-                                            .when(!member, |chip| {
-                                                chip.outline()
-                                                    .text_color(cx.theme().muted_foreground)
-                                            })
-                                            .tooltip(if member {
-                                                "In this collection. Click to remove."
-                                            } else {
-                                                "Click to add to this collection."
-                                            })
-                                            .on_click(cx.listener(move |this, _, _, cx| {
-                                                if this.personal.collections.contains(&id) {
-                                                    this.personal.collections.retain(|v| *v != id);
-                                                } else {
-                                                    this.personal.collections.push(id);
-                                                }
-                                                this.change_now(Field::Collections, cx);
-                                            }))
-                                        }),
-                                ),
-                            )
-                            .children(self.status_line(Field::Collections, cx))
-                    })
-                    .child(hint("Tags", cx))
-                    .child(self.tags_row(cx))
-                    .children(self.status_line(Field::Tags, cx))
-                    .child(hint("Notes", cx))
-                    .child(
-                        // Notes fill the rest of the card, so the card ends with the
-                        // last field instead of empty space.
-                        Input::new(&self.notes)
-                            .flex_1()
-                            .min_h(px(88.))
-                            .flex_shrink_0()
-                            .small()
-                            .disabled(false),
-                    )
-                    .children(self.status_line(Field::Notes, cx)),
+                                        div()
+                                            .relative()
+                                            .w(px(24.))
+                                            .h(px(24.))
+                                            .child(Icon::new(IconName::Star).size(px(24.)))
+                                            .child(
+                                                div()
+                                                    .absolute()
+                                                    .top_0()
+                                                    .left_0()
+                                                    .overflow_hidden()
+                                                    .w(px(f32::from(fill) * 12.))
+                                                    .h_full()
+                                                    .child(
+                                                        Icon::new(crate::assets::RatingIcon)
+                                                            .size(px(24.)),
+                                                    ),
+                                            ),
+                                    )
+                                    .on_click(cx.listener(move |this, _, _, cx| {
+                                        this.personal.rating =
+                                            (this.personal.rating != Some(value)).then_some(value);
+                                        this.change_now(Field::Rating, cx);
+                                    }))
+                            })),
+                        )),
+                )
+                .children(self.status_line(Field::Status, cx))
+                .children(self.status_line(Field::Rating, cx))
+            })
+            .children(best_on)
+            .children(self.status_line(Field::Preference, cx))
+            .child(hint("Notes", cx))
+            .child(
+                // Notes fill the rest of the page, so the page ends with the
+                // last field instead of empty space.
+                Input::new(&self.notes)
+                    .flex_1()
+                    .min_h(px(88.))
+                    .flex_shrink_0()
+                    .small()
+                    .disabled(false),
             )
+            .children(self.status_line(Field::Notes, cx))
+            .into_any_element()
+    }
+
+    /// Filled chips with a check for member collections; outlined and muted
+    /// otherwise, so both states read at a glance.
+    fn collections_row(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        h_flex().flex_wrap().gap_2().children(
+            self.manifest
+                .definitions
+                .collections
+                .clone()
+                .into_iter()
+                .filter(|c| !c.archived)
+                .map(|collection| {
+                    let id = collection.id;
+                    let member = self.personal.collections.contains(&id);
+                    Button::new(gpui::SharedString::from(format!("member-{id}")))
+                        .small()
+                        .label(collection.name)
+                        .when(member, |chip| chip.primary().icon(IconName::Check))
+                        .when(!member, |chip| {
+                            chip.outline().text_color(cx.theme().muted_foreground)
+                        })
+                        .tooltip(if member {
+                            "In this collection. Click to remove."
+                        } else {
+                            "Click to add to this collection."
+                        })
+                        .on_click(cx.listener(move |this, _, _, cx| {
+                            if this.personal.collections.contains(&id) {
+                                this.personal.collections.retain(|v| *v != id);
+                            } else {
+                                this.personal.collections.push(id);
+                            }
+                            this.change_now(Field::Collections, cx);
+                        }))
+                }),
+        )
     }
 }
 

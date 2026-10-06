@@ -1,0 +1,235 @@
+{
+  "schemaVersion": 1,
+  "collections": [
+    {
+      "id": "1e294ba4-d24a-5723-9e40-a18d98544d4a",
+      "name": "Controls",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "design/controls",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "9f092c07-b7b4-5f87-9ce9-57a72ff83273",
+      "name": "Blocks",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "design/blocks",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "b7d4ad1e-4b33-5f3b-ab8c-43ba09a22e85",
+      "name": "Home",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "design/screens/home",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "1f3e6584-7527-51d1-bf13-4439fed1d99c",
+      "name": "Library",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "design/screens/library",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "32b4407a-6138-5385-877a-24ee0ffabe98",
+      "name": "Game details",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "design/screens/details",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "2794e4ad-30bb-568c-bf2d-11992845a524",
+      "name": "Settings",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "design/screens/settings",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "d378b52b-edc5-5557-b715-37e94b694064",
+      "name": "Review",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "design/screens/review",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "eaa4afa7-0cde-58c9-976b-ec1ea0f5e845",
+      "name": "Tokens",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "tokens",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".elyx"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "9965b504-9873-576f-aa4f-7f0caa913cb5",
+      "name": "Icons",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "resources/icons-new",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".svg"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    },
+    {
+      "id": "a2f1e2df-5272-5a37-b655-e6dff8ef85f6",
+      "name": "Images",
+      "gallery": {
+        "type": "folderGallery",
+        "rootPath": "resources/images",
+        "query": {
+          "filters": {
+            "diagnostics": [],
+            "extensions": [
+              ".jpg"
+            ],
+            "gitStatuses": [],
+            "modifiedWithin": null
+          },
+          "search": "",
+          "sort": {
+            "field": "name",
+            "direction": "ascending"
+          }
+        }
+      }
+    }
+  ]
+}

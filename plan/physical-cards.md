@@ -44,13 +44,44 @@ is not painted or hit-tested while a card is focused.
 
 - Library Cards: up to 5 degrees pitch and 8 degrees yaw. Grid/Table stay still.
 - Focused front: up to 8 degrees pitch and 12 degrees yaw. Editing stays flat.
-- Mouse and Space turn around the vertical center by 180 degrees. A critically
-  damped angular spring settles in about 400 ms. Reversal keeps angle and velocity.
+- Mouse and Space open the focused card like a book (branch `details-card-v2`,
+  prototype). The cover turns 180 degrees on its left edge. Its back becomes
+  the left page; the right page lies beneath it. The spine slides so the closed
+  card and the open book both stay centered. The same critically damped spring
+  is about 90% open after 150 ms and settles in about 400 ms. Reversal keeps
+  angle and velocity. See [Book details](#book-details-prototype).
 - Pointer exit returns smoothly to neutral. Animation requests stop at rest,
   outside rendered virtual rows and while the window is inactive.
 - Reduced motion uses immediate faces and no tilt. Space in an input stays text.
 - Keep Escape and turn controls available. Preserve pending-save safeguards and
   keep a card open if editing removes it from the active filter.
+
+## Book details prototype
+
+The open card is a two-page spread. Each page keeps the card proportions.
+The page width fits both the window height and two pages across.
+
+| Left page | Right page |
+| --- | --- |
+| Inside cover, title, favorite | Status and rating in one row; actions menu (top right) |
+| Description, year and Steam reviews, genres | Best on: setup and confidence; More details for fit and preference |
+| Hours played | Notes, filling the rest of the page |
+| Collections, tags | |
+
+The inside cover is Steam's landscape header (`header_2x`, then `header`),
+shown uncropped at its 460×215 shape so the logo stays whole. It is saved as
+`steam.metadata.banner` in `media/`, apart from the portrait cover. A game
+without one, or with a personal cover, shows a 150 px strip of its cover.
+
+Wishlist games show the price in place of status and rating. Best on uses
+Steam Deck evidence, or demo values in `--best-on-demo`; see [Best on](best-on.md). Read-only pages
+remain only for preview modes without a store (`--stress`, `--empty`,
+`--missing-covers`).
+A conflict review replaces the right page. The editor builds both pages and
+keeps all drafts and save status. The detail panel places them on the book.
+
+Only Metal turns a face on its edge (`CardPose::hinge`). Other renderers and
+reduced motion switch between the closed card and the open book immediately.
 
 ## Platform boundary
 

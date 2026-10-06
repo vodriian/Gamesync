@@ -35,6 +35,8 @@ pub struct Game {
     pub collections: Vec<String>,
     #[serde(skip)]
     pub cover_path: Option<PathBuf>,
+    /// Landscape Steam header for the open book's left page.
+    pub banner_path: Option<PathBuf>,
     /// Half-star units, from 1 to 10. None means unrated.
     pub rating: Option<u8>,
     pub tags: Vec<String>,
@@ -152,6 +154,9 @@ pub struct SmartGroup {
 /// Counts cover games in All games, so hidden games are excluded.
 fn smart_groups(games: &[Game]) -> Vec<SmartGroup> {
     let band_order = |rule: &SmartRule| match rule {
+        SmartRule::BestOn(band) => gamesync_desktop::suitability::BestOn::ALL
+            .iter()
+            .position(|b| b == band),
         SmartRule::Rating(band) => RatingBand::ALL.iter().position(|b| b == band),
         SmartRule::Playtime(band) => PlaytimeBand::ALL.iter().position(|b| b == band),
         _ => None,
@@ -231,6 +236,8 @@ pub struct BoardColumn {
 
 /// One selection shared by the grid and inspector. IDs survive sorting/filtering.
 pub struct Library {
+    /// Explicit, in-memory prototype. Never inferred from a library name or path.
+    pub best_on_demo: bool,
     pub games: Vec<Game>,
     pub visible: Arc<Vec<usize>>,
     pub selected: Option<Uuid>,
@@ -288,6 +295,7 @@ impl Library {
         let smart = smart_groups(&games);
         Self {
             games,
+            best_on_demo: false,
             visible,
             name: "Demo library".into(),
             statuses,
@@ -325,6 +333,7 @@ impl Library {
                     title: record.game.title.clone(),
                     cover: "covers/missing.jpg".into(),
                     cover_path: loaded.covers.get(&record.game_id).cloned(),
+                    banner_path: loaded.banners.get(&record.game_id).cloned(),
                     description: record.game.description().unwrap_or("").into(),
                     status: personal.status.clone(),
                     status_label: loaded
@@ -389,6 +398,12 @@ impl Library {
         next.price_cache = self.price_cache.clone();
         next.apply_quotes();
         next.display = self.display.clone();
+        next.best_on_demo = self.best_on_demo;
+        // The Best on demo opens on its Steam Deck collection, before its
+        // fresh store first loads.
+        if self.best_on_demo && !same_folder {
+            next.scope = self.scope.clone();
+        }
         if same_folder {
             next.filter_status = self.filter_status.clone();
             next.filter_collection = self.filter_collection;
@@ -580,6 +595,13 @@ impl Library {
             .iter()
             .map(|g| format!("{} {}", g.title, g.tags.join(" ")).to_lowercase())
             .collect();
+        self.smart = smart_groups(&self.games);
+        self.recompute();
+    }
+
+    /// Best on rules or enrichment changed: recount the sidebar bands and
+    /// refilter, since a Best on scope can now match other games.
+    pub fn refresh_best_on(&mut self) {
         self.smart = smart_groups(&self.games);
         self.recompute();
     }

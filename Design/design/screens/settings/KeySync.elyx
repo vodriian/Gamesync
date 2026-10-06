@@ -1,0 +1,287 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "design/blocks/shell/SettingsShell.elyx" as settingsSource
+import "tokens/typography.elyx" as typography
+import "design/controls/Button.elyx" as buttons
+import "design/controls/LabeledField.elyx" as labeledFields
+import "design/blocks/settings/SettingsGroup.elyx" as settingsGroups
+
+export KeySyncOff = frame : settingsSource.Settings {
+  left: 0px,
+  top: 0px,
+
+  sections {
+    navigation {
+      sync {
+        fill[0].color: c.ui.selected
+      }
+
+      general {
+        fill[0].color: c.ui.surface
+      }
+    }
+
+    main {
+      body {
+        overrides: [insert(content, after = .nil)]
+      }
+
+      section {
+        contents: "Sync"
+      }
+    }
+  }
+
+  content = frame : settingsGroups.SettingsGroup {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    overrides: [
+      insert(heading, after = .nil),
+      insert(info, after = heading),
+      insert(passphrase, after = info),
+      insert(confirm, after = passphrase),
+      insert(help, after = confirm),
+      insert(action, after = help)
+    ],
+
+    heading = text {
+      fill: c.ui.text,
+      contents: "API keys",
+      font-size: typography.size.title,
+      font-family: typography.family.interface
+    }
+
+    info = text {
+      width: 100%,
+      fill: c.ui.muted,
+      contents: "Sync the Steam API key, and later AI keys, encrypted with a passphrase. Enter the same passphrase once on each computer.",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    passphrase = frame : labeledFields.LabeledField {
+      input {
+        value {
+          label {
+            contents: "Sync passphrase"
+          }
+        }
+      }
+
+      label {
+        contents: "Passphrase"
+      }
+    }
+
+    confirm = frame : labeledFields.LabeledField {
+      input {
+        value {
+          label {
+            contents: "Repeat the passphrase"
+          }
+        }
+      }
+
+      label {
+        contents: "Confirm passphrase"
+      }
+    }
+
+    help = text {
+      width: 100%,
+      fill: c.ui.muted,
+      contents: "Use at least 10 characters. GameSync cannot recover a lost passphrase.",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    action = frame : buttons.Primary {
+      label {
+        leading {
+          display: .none
+        }
+
+        trailing {
+          display: .none
+        }
+
+        detail {
+          display: .none
+        }
+
+        favorite {
+          display: .none
+        }
+
+        label {
+          contents: "Turn on key sync"
+        }
+      }
+    }
+  }
+}
+
+@variant
+export KeySyncLocked = frame : KeySyncOff {
+  left: 1360px,
+  top: 0px,
+
+  sections {
+    main {
+      body {
+        content {
+          action {
+            label {
+              leading {
+                display: .none
+              }
+
+              trailing {
+                display: .none
+              }
+
+              detail {
+                display: .none
+              }
+
+              favorite {
+                display: .none
+              }
+
+              label {
+                contents: "Unlock"
+              }
+            }
+          }
+
+          confirm {
+            display: .none
+          }
+
+          help {
+            display: .none
+          }
+
+          info {
+            contents: "Key sync is on. Enter its passphrase to send and receive keys on this computer."
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export KeySyncUnlocked = frame : KeySyncOff {
+  left: 2720px,
+  top: 0px,
+
+  sections {
+    main {
+      body {
+        content {
+          action {
+            label {
+              leading {
+                display: .none
+              }
+
+              trailing {
+                display: .none
+              }
+
+              detail {
+                display: .none
+              }
+
+              favorite {
+                display: .none
+              }
+
+              label {
+                contents: "Change passphrase"
+              }
+            }
+          }
+
+          heading {
+            contents: "Change passphrase"
+          }
+
+          info {
+            contents: "Keys sync on this computer: Steam API key."
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export KeySyncChanged = frame : KeySyncOff {
+  left: 0px,
+  top: 980px,
+
+  sections {
+    main {
+      body {
+        content {
+          action {
+            label {
+              leading {
+                display: .none
+              }
+
+              trailing {
+                display: .none
+              }
+
+              detail {
+                display: .none
+              }
+
+              favorite {
+                display: .none
+              }
+
+              label {
+                contents: "Unlock"
+              }
+            }
+          }
+
+          confirm {
+            display: .none
+          }
+
+          help {
+            display: .none
+          }
+
+          info {
+            contents: "The sync key changed on another computer. Enter the passphrase again."
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export KeySyncError = frame : KeySyncOff {
+  left: 1360px,
+  top: 980px,
+
+  sections {
+    main {
+      body {
+        content {
+          info {
+            contents: "The passphrases are different."
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "tokens/radius.elyx" as radius
+import "design/controls/IconLabel.elyx" as iconLabel
+
+export Button = frame {
+  left: 0px,
+  top: 0px,
+  height: 30px,
+  layout: {justify-content: .center, align-items: .center},
+  fill: c.ui.surface,
+  border: c.ui.border,
+  corner-radius: radius.corner.control,
+  padding: [5px, 12px],
+  children: label,
+
+  label = frame : iconLabel.IconLabel {
+    label {
+      contents: "Button"
+    }
+  }
+}
+
+@variant
+export Primary = frame : Button {
+  left: 120px,
+  top: 0px,
+  fill[0].color: c.ui.selected
+}

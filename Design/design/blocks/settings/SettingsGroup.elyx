@@ -1,0 +1,13 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "tokens/radius.elyx" as radius
+import "tokens/spacing.elyx" as spacing
+
+export SettingsGroup = frame {
+  width: 100%,
+  layout: {direction: .column, item-gap: spacing.gap.section},
+  fill: c.ui.chrome,
+  corner-radius: radius.corner.panel,
+  slot: .true,
+  padding: 20px
+}

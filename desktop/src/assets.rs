@@ -51,160 +51,180 @@ const COVERS: &[(&str, &[u8])] = &[
         include_bytes!("../fixtures/covers/990080.jpg"),
     ),
 ];
-/// App-owned SVGs. Sidebar Hugeicons use the chosen 1.75 stroke width.
+/// Embed the shared design artwork; virtual keys keep component icon overrides stable.
 const ICONS: &[(&str, &[u8])] = &[
     (
+        "icons/hugeicons/gameboy-stroke-rounded.svg",
+        include_bytes!("../../Design/resources/icons-new/gameboy-stroke-rounded.svg"),
+    ),
+    (
+        "icons/hugeicons/computer-stroke-rounded.svg",
+        include_bytes!("../../Design/resources/icons-new/computer-stroke-rounded.svg"),
+    ),
+    (
+        "icons/hugeicons/info-stroke-rounded.svg",
+        include_bytes!("../../Design/resources/icons-new/info-stroke-rounded.svg"),
+    ),
+    (
+        "icons/eye-off.svg",
+        include_bytes!("../../Design/resources/icons-new/eye-off-stroke-rounded.svg"),
+    ),
+    (
         "icons/hugeicons/bookshelf-03-stroke-rounded.svg",
-        include_bytes!("../icons/hugeicons/bookshelf-03-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/bookshelf-03-stroke-rounded.svg"),
     ),
     (
         "icons/hugeicons/tags-stroke-rounded.svg",
-        include_bytes!("../icons/hugeicons/tags-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/tags-stroke-rounded.svg"),
     ),
     (
         "icons/hugeicons/star-square-stroke-rounded.svg",
-        include_bytes!("../icons/hugeicons/star-square-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/star-square-stroke-rounded.svg"),
     ),
     (
         "icons/hugeicons/time-04-stroke-rounded.svg",
-        include_bytes!("../icons/hugeicons/time-04-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/time-04-stroke-rounded.svg"),
     ),
     (
         "icons/panel-left.svg",
-        include_bytes!("../icons/hugeicons/sidebar-left-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/sidebar-left-stroke-rounded.svg"),
     ),
     (
         "icons/layout-dashboard.svg",
-        include_bytes!("../icons/hugeicons/dashboard-square-01-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/dashboard-square-01-stroke-rounded.svg"),
     ),
     (
         "icons/gallery-vertical-end.svg",
-        include_bytes!("../icons/hugeicons/cards-02-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/cards-02-stroke-rounded.svg"),
     ),
     (
         "icons/menu.svg",
-        include_bytes!("../icons/hugeicons/layout-list-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/layout-list-stroke-rounded.svg"),
     ),
     (
         "icons/settings-2.svg",
-        include_bytes!("../icons/hugeicons/filter-horizontal-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/filter-horizontal-stroke-rounded.svg"),
     ),
     (
         "icons/search.svg",
-        include_bytes!("../icons/hugeicons/search-01-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/search-01-stroke-rounded.svg"),
     ),
     (
         "icons/info.svg",
-        include_bytes!("../icons/hugeicons/info-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/info-stroke-rounded.svg"),
     ),
     (
         "icons/panel-bottom.svg",
-        include_bytes!("../icons/hugeicons/layout-bottom-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/layout-bottom-stroke-rounded.svg"),
     ),
     (
         "icons/ellipsis.svg",
-        include_bytes!("../icons/hugeicons/more-horizontal-square-01-stroke-rounded.svg"),
+        include_bytes!(
+            "../../Design/resources/icons-new/more-horizontal-square-01-stroke-rounded.svg"
+        ),
     ),
     (
         "icons/arrow-left.svg",
-        include_bytes!("../icons/hugeicons/arrow-left-02-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/arrow-left-02-stroke-rounded.svg"),
     ),
     (
         "icons/settings.svg",
-        include_bytes!("../icons/hugeicons/spaceship-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/spaceship-stroke-rounded.svg"),
     ),
     (
         "icons/folder-open.svg",
-        include_bytes!("../icons/hugeicons/cloud-sync-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/cloud-sync-stroke-rounded.svg"),
     ),
     (
         "icons/palette.svg",
-        include_bytes!("../icons/hugeicons/palette-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/palette-stroke-rounded.svg"),
     ),
     (
         "icons/bot.svg",
-        include_bytes!("../icons/hugeicons/bot-message-square-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/bot-message-square-stroke-rounded.svg"),
     ),
     (
         "icons/heart.svg",
-        include_bytes!("../icons/hugeicons/heart-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/heart-stroke-rounded.svg"),
     ),
     (
         "icons/star.svg",
-        include_bytes!("../icons/hugeicons/star-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/star-stroke-rounded.svg"),
     ),
     (
         "icons/hugeicons/folder-03-stroke-rounded.svg",
-        include_bytes!("../icons/hugeicons/folder-03-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/folder-03-stroke-rounded.svg"),
     ),
     (
         "icons/hugeicons/home-07-stroke-rounded-solid.svg",
-        include_bytes!("../icons/hugeicons/home-07-stroke-rounded-solid.svg"),
+        include_bytes!("../../Design/resources/icons-new/solid/home-07-stroke-rounded-solid.svg"),
     ),
     (
         "icons/hugeicons/game-controller-03-stroke-rounded-solid.svg",
-        include_bytes!("../icons/hugeicons/game-controller-03-stroke-rounded-solid.svg"),
+        include_bytes!(
+            "../../Design/resources/icons-new/solid/game-controller-03-stroke-rounded-solid.svg"
+        ),
     ),
     (
         "icons/hugeicons/heart-stroke-rounded-solid.svg",
-        include_bytes!("../icons/hugeicons/heart-stroke-rounded-solid.svg"),
+        include_bytes!("../../Design/resources/icons-new/solid/heart-stroke-rounded-solid.svg"),
     ),
     (
         "icons/hugeicons/star-stroke-rounded-solid.svg",
-        include_bytes!("../icons/hugeicons/star-stroke-rounded-solid.svg"),
+        include_bytes!("../../Design/resources/icons-new/solid/star-stroke-rounded-solid.svg"),
     ),
     (
         "icons/hugeicons/home-07-stroke-rounded.svg",
-        include_bytes!("../icons/hugeicons/home-07-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/home-07-stroke-rounded.svg"),
     ),
     (
         "icons/hugeicons/game-controller-03-stroke-rounded.svg",
-        include_bytes!("../icons/hugeicons/game-controller-03-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/game-controller-03-stroke-rounded.svg"),
     ),
     (
         "icons/hugeicons/heart-stroke-rounded.svg",
-        include_bytes!("../icons/hugeicons/heart-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/heart-stroke-rounded.svg"),
     ),
     (
         "icons/hugeicons/star-stroke-rounded.svg",
-        include_bytes!("../icons/hugeicons/star-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/star-stroke-rounded.svg"),
     ),
     (
         "icons/hugeicons/folder-01-stroke-rounded.svg",
-        include_bytes!("../icons/hugeicons/folder-01-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/folder-01-stroke-rounded.svg"),
     ),
     (
         "icons/hugeicons/settings-04-stroke-rounded.svg",
-        include_bytes!("../icons/hugeicons/settings-04-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/settings-04-stroke-rounded.svg"),
     ),
     (
         "icons/hugeicons/plus-stroke-rounded.svg",
-        include_bytes!("../icons/hugeicons/plus-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/plus-stroke-rounded.svg"),
     ),
     // Override shared paths so buttons and menus use the same chevrons.
     (
         "icons/chevron-down.svg",
-        include_bytes!("../icons/hugeicons/chevron-down-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/chevron-down-stroke-rounded.svg"),
     ),
     (
         "icons/chevron-left.svg",
-        include_bytes!("../icons/hugeicons/chevron-left-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/chevron-left-stroke-rounded.svg"),
     ),
     (
         "icons/chevron-right.svg",
-        include_bytes!("../icons/hugeicons/chevron-right-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/chevron-right-stroke-rounded.svg"),
     ),
     (
         "icons/square-kanban.svg",
-        include_bytes!("../icons/hugeicons/kanban-stroke-rounded.svg"),
+        include_bytes!("../../Design/resources/icons-new/kanban-stroke-rounded.svg"),
     ),
     (
         "icons/heart-filled.svg",
-        include_bytes!("../icons/hugeicons/heart-stroke-rounded-solid.svg"),
+        include_bytes!("../../Design/resources/icons-new/solid/heart-stroke-rounded-solid.svg"),
     ),
     (
         "icons/badge-percent.svg",
-        include_bytes!("../icons/badge-percent.svg"),
+        include_bytes!("../../Design/resources/icons-new/hot-price-stroke-rounded.svg"),
     ),
 ];
 
@@ -231,9 +251,29 @@ impl gpui_component::IconNamed for FavoriteIcon {
     }
 }
 
-/// Sidebar_v2 icons; keep these separate from icons in other app views.
+/// Setups in the Best on details: a handheld for Steam Deck, a monitor for
+/// PC, and the (i) that opens how fit is calculated.
+#[derive(Clone, Copy)]
+pub enum SetupIcon {
+    SteamDeck,
+    Pc,
+    Info,
+}
+impl gpui_component::IconNamed for SetupIcon {
+    fn path(self) -> SharedString {
+        match self {
+            Self::SteamDeck => "icons/hugeicons/gameboy-stroke-rounded.svg",
+            Self::Pc => "icons/hugeicons/computer-stroke-rounded.svg",
+            Self::Info => "icons/hugeicons/info-stroke-rounded.svg",
+        }
+        .into()
+    }
+}
+
+/// Sidebar icon roles share the same artwork as the Elyx workspace.
 #[derive(Clone, Copy)]
 pub enum SidebarIcon {
+    BestOn,
     Genres,
     Tags,
     Rating,
@@ -273,6 +313,7 @@ impl gpui_component::IconNamed for SidebarIcon {
     fn path(self) -> SharedString {
         match self {
             Self::Genres => "icons/hugeicons/bookshelf-03-stroke-rounded.svg",
+            Self::BestOn => "icons/hugeicons/computer-stroke-rounded.svg",
             Self::Tags => "icons/hugeicons/tags-stroke-rounded.svg",
             Self::Rating => "icons/hugeicons/star-square-stroke-rounded.svg",
             Self::Playtime => "icons/hugeicons/time-04-stroke-rounded.svg",
@@ -325,6 +366,27 @@ impl AssetSource for Assets {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn hidden_and_discount_roles_load_supplied_artwork() {
+        use gpui_component::IconNamed;
+
+        for (path, expected) in [
+            (
+                gpui_component::IconName::EyeOff.path(),
+                include_bytes!("../../Design/resources/icons-new/eye-off-stroke-rounded.svg")
+                    .as_slice(),
+            ),
+            (
+                DiscountIcon.path(),
+                include_bytes!("../../Design/resources/icons-new/hot-price-stroke-rounded.svg")
+                    .as_slice(),
+            ),
+        ] {
+            let actual = Assets.load(path.as_ref()).unwrap().unwrap();
+            assert_eq!(actual.as_ref(), expected);
+        }
+    }
+
     #[test]
     fn each_demo_game_has_a_cover() {
         for game in crate::fixtures::games().unwrap() {
