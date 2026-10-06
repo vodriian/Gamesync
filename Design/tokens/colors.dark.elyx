@@ -13,5 +13,7 @@ export darkUi = tokens : base.ui {
   selected: rgb(16.0784%, 24.7059%, 31.37%),
   accent: rgb(50.1961%, 65.49%, 87.0588%),
   error: rgb(89.0196%, 55.29%, 50.98%),
-  success: rgb(51.37%, 70.5882%, 58.82%)
+  success: rgb(51.37%, 70.5882%, 58.82%),
+  deck: rgb(58%, 52%, 100%),
+  pc: rgb(36%, 78%, 52%)
 }

@@ -3,6 +3,7 @@ import "tokens/colors.elyx" as c
 import "resources/icons-new/cloud-sync-stroke-rounded.svg" as icon_folder
 import "resources/icons-new/palette-stroke-rounded.svg" as icon_palette
 import "resources/icons-new/bot-message-square-stroke-rounded.svg" as icon_bot
+import "resources/icons-new/computer-stroke-rounded.svg" as icon_bestOn
 import "design/controls/WindowButtons.elyx" as trafficSource
 import "tokens/radius.elyx" as radius
 import "tokens/spacing.elyx" as spacing
@@ -44,7 +45,7 @@ export Settings = frame {
       layout: {direction: .column, item-gap: 6px},
       border: {color: c.ui.border, sides: .right},
       padding: 8px,
-      children: [general, sync, appearance, ai],
+      children: [general, sync, appearance, bestOn, ai],
 
       general = frame : settingsRows.SettingsNavigationRow {
         fill[0].color: c.ui.selected
@@ -70,6 +71,18 @@ export Settings = frame {
 
           label {
             contents: "Look and feel"
+          }
+        }
+      }
+
+      bestOn = frame : settingsRows.SettingsNavigationRow {
+        label {
+          glyphIcon {
+            contents: icon_bestOn
+          }
+
+          label {
+            contents: "Best on"
           }
         }
       }

@@ -10,6 +10,6 @@ export ui = tokens {
   accent: rgb(28.2353%, 49.8%, 80.78%),
   error: rgb(70.5882%, 27.0588%, 22.35%),
   success: rgb(22.35%, 50.5882%, 37.25%),
-  violetNew: rgb(33.7%, 22%, 100%),
-  greenishNew: rgb(7.4%, 66.6%, 28.12%)
+  deck: rgb(33.7%, 22%, 100%),
+  pc: rgb(7.4%, 66.6%, 28.12%)
 }

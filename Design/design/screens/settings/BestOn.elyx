@@ -1,0 +1,841 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "design/blocks/shell/SettingsShell.elyx" as settingsSource
+import "tokens/radius.elyx" as radius
+import "tokens/spacing.elyx" as spacing
+import "tokens/typography.elyx" as typography
+import "design/controls/Button.elyx" as buttons
+import "design/controls/IconLabel.elyx" as iconLabel
+import "design/controls/Checkbox.elyx" as checkboxes
+import "design/controls/Tag.elyx" as tagSource
+import "resources/icons-new/cancel-01-stroke-rounded.svg" as removeIcon
+import "design/controls/IconButton.elyx" as iconButtons
+import "resources/icons-new/plus-stroke-rounded.svg" as plusIcon
+import "design/blocks/settings/SettingsGroup.elyx" as settingsGroups
+
+export SettingsBestOn = frame : settingsSource.Settings {
+  doc: "Your rules for Best on. They apply after Steam data and where you played. A choice on one game still wins.",
+  left: 0px,
+  top: 0px,
+
+  sections {
+    navigation {
+      general {
+        fill[0].color: c.ui.surface
+      }
+
+      bestOn {
+        fill[0].color: c.ui.selected
+      }
+    }
+
+    main {
+      section {
+        contents: "Best on"
+      }
+
+      body {
+        overrides: [insert(content, after = .nil)]
+      }
+    }
+  }
+
+  content = frame {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    layout: {direction: .column, item-gap: spacing.gap.large},
+    children: [summary, pc, preferPc, preferDeck, equipment, enrichment],
+
+    summary = text {
+      width: 100%,
+      fill: c.ui.muted,
+      contents: "With these rules: 48 games on PC, 31 on Steam Deck, 12 on both, 6 need review.",
+      font-size: typography.size.body,
+      font-family: typography.family.interface
+    }
+
+    pc = frame : settingsGroups.SettingsGroup {
+      left: .auto,
+      top: .auto,
+      layout.item-gap: spacing.gap.regular,
+      overrides: [
+        insert(title, after = .nil),
+        insert(choices, after = title),
+        insert(hint, after = choices)
+      ],
+
+      title = text {
+        fill: c.ui.text,
+        contents: "My PC",
+        font-size: typography.size.title,
+        font-family: typography.family.interface,
+        font-style: "Medium"
+      }
+
+      choices = frame {
+        layout: {item-gap: spacing.gap.medium},
+        children: [standard, highEnd],
+
+        standard = frame : buttons.Button {
+          label {
+            label {
+              contents: "Standard"
+            }
+          }
+        }
+
+        highEnd = frame : buttons.Primary {
+          left: .auto,
+          top: .auto,
+
+          label {
+            label {
+              contents: "High-end"
+            }
+          }
+        }
+      }
+
+      hint = text {
+        width: 100%,
+        fill: c.ui.muted,
+        contents: "High-end means 4K, HDR, high refresh rate, and room for mods. PC fit starts at 85 instead of 75.",
+        font-size: typography.size.caption,
+        font-family: typography.family.interface
+      }
+    }
+
+    preferPc = frame : settingsGroups.SettingsGroup {
+      left: .auto,
+      top: .auto,
+      layout.item-gap: spacing.gap.regular,
+      overrides: [
+        insert(title, after = .nil),
+        insert(hint, after = title),
+        insert(tags, after = hint),
+        insert(suggestions, after = tags),
+        insert(mods, after = suggestions)
+      ],
+
+      title = text {
+        fill: c.ui.text,
+        contents: "Prefer PC for",
+        font-size: typography.size.title,
+        font-family: typography.family.interface,
+        font-style: "Medium"
+      }
+
+      hint = text {
+        width: 100%,
+        fill: c.ui.muted,
+        contents: "Games with any of these Steam tags get +15 on PC and −15 on Steam Deck.",
+        font-size: typography.size.caption,
+        font-family: typography.family.interface
+      }
+
+      tags = frame {
+        width: 100%,
+        layout: {
+          align-items: .center,
+          item-gap: spacing.gap.medium,
+          wrap: .true,
+          line-gap: spacing.gap.medium
+        },
+        children: [openWorld, fps, story, add],
+
+        openWorld = frame : tagSource.Tag {
+          label {
+            contents: "Open World"
+          }
+        }
+
+        fps = frame : tagSource.Tag {
+          label {
+            contents: "FPS"
+          }
+        }
+
+        story = frame : tagSource.Tag {
+          label {
+            contents: "Story Rich"
+          }
+        }
+
+        add = frame : iconLabel.IconLabel {
+          leading {
+            contents: plusIcon,
+            display: .visible
+          }
+
+          label {
+            contents: "Add tag",
+            font-size: typography.size.caption
+          }
+        }
+      }
+
+      suggestions = frame {
+        width: 100%,
+        display: .none,
+        layout: {
+          item-gap: spacing.gap.small,
+          wrap: .true,
+          line-gap: spacing.gap.small
+        },
+        children: [add0, add1, add2],
+
+        add0 = frame : buttons.Button {
+          height: 24px,
+          padding-top: 2px,
+          padding-left: 8px,
+          padding-bottom: 2px,
+          padding-right: 8px,
+
+          label {
+            leading {
+              contents: plusIcon,
+              display: .visible
+            }
+
+            label {
+              contents: "Open World",
+              font-size: typography.size.caption
+            }
+          }
+        }
+
+        add1 = frame : buttons.Button {
+          height: 24px,
+          padding-top: 2px,
+          padding-left: 8px,
+          padding-bottom: 2px,
+          padding-right: 8px,
+
+          label {
+            leading {
+              contents: plusIcon,
+              display: .visible
+            }
+
+            label {
+              contents: "FPS",
+              font-size: typography.size.caption
+            }
+          }
+        }
+
+        add2 = frame : buttons.Button {
+          height: 24px,
+          padding-top: 2px,
+          padding-left: 8px,
+          padding-bottom: 2px,
+          padding-right: 8px,
+
+          label {
+            leading {
+              contents: plusIcon,
+              display: .visible
+            }
+
+            label {
+              contents: "Story Rich",
+              font-size: typography.size.caption
+            }
+          }
+        }
+      }
+
+      mods = frame : checkboxes.Checked {
+        left: .auto,
+        top: .auto,
+
+        label {
+          contents: "Games with mod support (Steam Workshop)"
+        }
+      }
+    }
+
+    preferDeck = frame : settingsGroups.SettingsGroup {
+      left: .auto,
+      top: .auto,
+      layout.item-gap: spacing.gap.regular,
+      overrides: [
+        insert(title, after = .nil),
+        insert(hint, after = title),
+        insert(tags, after = hint),
+        insert(suggestions, after = tags)
+      ],
+
+      title = text {
+        fill: c.ui.text,
+        contents: "Prefer Steam Deck for",
+        font-size: typography.size.title,
+        font-family: typography.family.interface,
+        font-style: "Medium"
+      }
+
+      hint = text {
+        width: 100%,
+        fill: c.ui.muted,
+        contents: "Games with any of these Steam tags get +15 on Steam Deck and −15 on PC. A game in both lists keeps its Steam fit.",
+        font-size: typography.size.caption,
+        font-family: typography.family.interface
+      }
+
+      tags = frame {
+        width: 100%,
+        layout: {
+          align-items: .center,
+          item-gap: spacing.gap.medium,
+          wrap: .true,
+          line-gap: spacing.gap.medium
+        },
+        children: [casual, cards, deckbuilder, add],
+
+        casual = frame : tagSource.Tag {
+          label {
+            contents: "Casual"
+          }
+        }
+
+        cards = frame : tagSource.Tag {
+          label {
+            contents: "Card Game"
+          }
+        }
+
+        deckbuilder = frame : tagSource.Tag {
+          label {
+            contents: "Roguelike Deckbuilder"
+          }
+        }
+
+        add = frame : iconLabel.IconLabel {
+          leading {
+            contents: plusIcon,
+            display: .visible
+          }
+
+          label {
+            contents: "Add tag",
+            font-size: typography.size.caption
+          }
+        }
+      }
+
+      suggestions = frame {
+        width: 100%,
+        display: .none,
+        layout: {
+          item-gap: spacing.gap.small,
+          wrap: .true,
+          line-gap: spacing.gap.small
+        },
+        children: [add0, add1, add2],
+
+        add0 = frame : buttons.Button {
+          height: 24px,
+          padding-top: 2px,
+          padding-left: 8px,
+          padding-bottom: 2px,
+          padding-right: 8px,
+
+          label {
+            leading {
+              contents: plusIcon,
+              display: .visible
+            }
+
+            label {
+              contents: "Casual",
+              font-size: typography.size.caption
+            }
+          }
+        }
+
+        add1 = frame : buttons.Button {
+          height: 24px,
+          padding-top: 2px,
+          padding-left: 8px,
+          padding-bottom: 2px,
+          padding-right: 8px,
+
+          label {
+            leading {
+              contents: plusIcon,
+              display: .visible
+            }
+
+            label {
+              contents: "Card Game",
+              font-size: typography.size.caption
+            }
+          }
+        }
+
+        add2 = frame : buttons.Button {
+          height: 24px,
+          padding-top: 2px,
+          padding-left: 8px,
+          padding-bottom: 2px,
+          padding-right: 8px,
+
+          label {
+            leading {
+              contents: plusIcon,
+              display: .visible
+            }
+
+            label {
+              contents: "Roguelike Deckbuilder",
+              font-size: typography.size.caption
+            }
+          }
+        }
+      }
+    }
+
+    equipment = frame : settingsGroups.SettingsGroup {
+      left: .auto,
+      top: .auto,
+      layout.item-gap: spacing.gap.regular,
+      overrides: [
+        insert(title, after = .nil),
+        insert(hint, after = title),
+        insert(wheel, after = hint),
+        insert(sticks, after = wheel),
+        insert(suggestions, after = sticks),
+        insert(add, after = suggestions)
+      ],
+
+      title = text {
+        fill: c.ui.text,
+        contents: "Equipment · PC only",
+        font-size: typography.size.title,
+        font-family: typography.family.interface,
+        font-style: "Medium"
+      }
+
+      hint = text {
+        width: 100%,
+        fill: c.ui.muted,
+        contents: "Games with these tags need equipment that connects to your PC. They show PC only, whatever Steam says.",
+        font-size: typography.size.caption,
+        font-family: typography.family.interface
+      }
+
+      wheel = frame {
+        width: 100%,
+        layout: {align-items: .center, item-gap: spacing.gap.regular},
+        fill: c.ui.surface,
+        border: c.ui.border,
+        corner-radius: radius.corner.control,
+        padding: [8px, 8px, 8px, 12px],
+        children: [details, remove],
+
+        details = frame {
+          width: 100%,
+          layout: {direction: .column, item-gap: spacing.gap.small},
+          children: [name, tags],
+
+          name = text {
+            fill: c.ui.text,
+            contents: "Moza R5 wheel",
+            font-size: typography.size.body,
+            font-family: typography.family.interface,
+            font-style: "Medium"
+          }
+
+          tags = text {
+            width: 100%,
+            fill: c.ui.muted,
+            contents: "Racing · Automobile Sim · Driving",
+            font-size: typography.size.caption,
+            font-family: typography.family.interface
+          }
+        }
+
+        remove = frame : iconButtons.IconButton {
+          width: 24px,
+          height: 24px,
+
+          glyph {
+            fill[0].color: c.ui.muted,
+            width: 14px,
+            height: 14px,
+            contents: removeIcon
+          }
+        }
+      }
+
+      sticks = frame {
+        width: 100%,
+        layout: {align-items: .center, item-gap: spacing.gap.regular},
+        fill: c.ui.surface,
+        border: c.ui.border,
+        corner-radius: radius.corner.control,
+        padding: [8px, 8px, 8px, 12px],
+        children: [details, remove],
+
+        details = frame {
+          width: 100%,
+          layout: {direction: .column, item-gap: spacing.gap.small},
+          children: [name, tags],
+
+          name = text {
+            fill: c.ui.text,
+            contents: "VKB Gladiator sticks",
+            font-size: typography.size.body,
+            font-family: typography.family.interface,
+            font-style: "Medium"
+          }
+
+          tags = text {
+            width: 100%,
+            fill: c.ui.muted,
+            contents: "Flight · Space Sim",
+            font-size: typography.size.caption,
+            font-family: typography.family.interface
+          }
+        }
+
+        remove = frame : iconButtons.IconButton {
+          width: 24px,
+          height: 24px,
+
+          glyph {
+            fill[0].color: c.ui.muted,
+            width: 14px,
+            height: 14px,
+            contents: removeIcon
+          }
+        }
+      }
+
+      suggestions = frame {
+        width: 100%,
+        display: .none,
+        layout: {
+          item-gap: spacing.gap.small,
+          wrap: .true,
+          line-gap: spacing.gap.small
+        },
+        children: [add0, add1],
+
+        add0 = frame : buttons.Button {
+          height: 24px,
+          padding-top: 2px,
+          padding-left: 8px,
+          padding-bottom: 2px,
+          padding-right: 8px,
+
+          label {
+            leading {
+              contents: plusIcon,
+              display: .visible
+            }
+
+            label {
+              contents: "Racing wheel",
+              font-size: typography.size.caption
+            }
+          }
+        }
+
+        add1 = frame : buttons.Button {
+          height: 24px,
+          padding-top: 2px,
+          padding-left: 8px,
+          padding-bottom: 2px,
+          padding-right: 8px,
+
+          label {
+            leading {
+              contents: plusIcon,
+              display: .visible
+            }
+
+            label {
+              contents: "Flight sticks",
+              font-size: typography.size.caption
+            }
+          }
+        }
+      }
+
+      add = frame : buttons.Button {
+        label {
+          leading {
+            contents: plusIcon,
+            display: .visible
+          }
+
+          label {
+            contents: "Add equipment"
+          }
+        }
+      }
+    }
+
+    enrichment = frame : settingsGroups.SettingsGroup {
+      doc: "Community data for Steam Deck fit. Nothing downloads until a source is on; turning it off deletes its data.",
+      left: .auto,
+      top: .auto,
+      layout.item-gap: spacing.gap.regular,
+      overrides: [
+        insert(title, after = .nil),
+        insert(hint, after = title),
+        insert(protonDb, after = hint),
+        insert(status, after = protonDb),
+        insert(actions, after = status),
+        insert(credit, after = actions)
+      ],
+
+      title = text {
+        fill: c.ui.text,
+        contents: "Enrichment",
+        font-size: typography.size.title,
+        font-family: typography.family.interface,
+        font-style: "Medium"
+      }
+
+      hint = text {
+        width: 100%,
+        fill: c.ui.muted,
+        contents: "Add community reports to Steam Deck fit. They can lower fit for heavy games and rate games Valve has not checked.",
+        font-size: typography.size.caption,
+        font-family: typography.family.interface
+      }
+
+      protonDb = frame : checkboxes.Checked {
+        left: .auto,
+        top: .auto,
+
+        label {
+          contents: "ProtonDB Steam Deck reports"
+        }
+      }
+
+      status = text {
+        width: 100%,
+        fill: c.ui.muted,
+        contents: "Updated October 1, 2026 · 214 of your games have enough Deck reports. Checks for new data each month.",
+        font-size: typography.size.caption,
+        font-family: typography.family.interface
+      }
+
+      actions = frame {
+        layout: {item-gap: spacing.gap.medium},
+        children: [update, cancel],
+
+        update = frame : buttons.Button {
+          label {
+            label {
+              contents: "Update now"
+            }
+          }
+        }
+
+        cancel = frame : buttons.Button {
+          display: .none,
+
+          label {
+            label {
+              contents: "Cancel"
+            }
+          }
+        }
+      }
+
+      credit = text {
+        width: 100%,
+        fill: c.ui.muted,
+        contents: "Contains information from ProtonDB, made available under the ODbL.",
+        font-size: typography.size.caption,
+        font-family: typography.family.interface
+      }
+    }
+  }
+}
+
+@variant
+export SettingsBestOnEmpty = frame : SettingsBestOn {
+  doc: "First run: no rules yet. Suggestions add a rule in one click; nothing applies until you add it.",
+  left: 1360px,
+  top: 0px,
+
+  sections {
+    main {
+      body {
+        content {
+          pc {
+            choices {
+              standard {
+                fill[0].color: rgb(84.31%, 91.37%, 94.1176%)
+              }
+
+              highEnd {
+                fill[0].color: .white
+              }
+            }
+          }
+
+          preferPc {
+            mods {
+              box {
+                fill[0].color: .white,
+
+                glyph {
+                  display: .none
+                }
+              }
+            }
+
+            tags {
+              openWorld {
+                display: .none
+              }
+
+              fps {
+                display: .none
+              }
+
+              story {
+                display: .none
+              }
+            }
+
+            suggestions {
+              display: .visible
+            }
+          }
+
+          enrichment {
+            protonDb {
+              box {
+                fill[0].color: c.ui.surface,
+
+                glyph {
+                  display: .none
+                }
+              }
+            }
+
+            actions {
+              display: .none
+            }
+
+            credit {
+              display: .none
+            }
+
+            status {
+              contents: "Off. Turning it on downloads about 70 MB, then checks for new data once a month."
+            }
+          }
+
+          preferDeck {
+            tags {
+              casual {
+                display: .none
+              }
+
+              cards {
+                display: .none
+              }
+
+              deckbuilder {
+                display: .none
+              }
+            }
+
+            suggestions {
+              display: .visible
+            }
+          }
+
+          equipment {
+            wheel {
+              display: .none
+            }
+
+            sticks {
+              display: .none
+            }
+
+            suggestions {
+              display: .visible
+            }
+          }
+
+          summary {
+            contents: "No rules yet. Best on uses Steam data and where you played."
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export SettingsProtonDbUpdating = frame : SettingsBestOn {
+  doc: "Download and import run in the background. Fit keeps the previous data until the new data is ready.",
+  left: 0px,
+  top: 980px,
+
+  sections {
+    main {
+      body {
+        content {
+          enrichment {
+            actions {
+              update {
+                display: .none
+              }
+
+              cancel {
+                display: .visible
+              }
+            }
+
+            status {
+              contents: "Downloading ProtonDB data · 38 of 72 MB"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export SettingsProtonDbFailed = frame : SettingsBestOn {
+  left: 1360px,
+  top: 980px,
+
+  sections {
+    main {
+      body {
+        content {
+          enrichment {
+            status {
+              fill[0].color: c.ui.error,
+              contents: "Could not update ProtonDB data. The September 1 data still applies."
+            }
+
+            actions {
+              update {
+                label {
+                  label {
+                    contents: "Try again"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

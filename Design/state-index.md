@@ -17,8 +17,11 @@ or illustrative. AI Settings remain a simulated preview.
 
 Card details now show the open book from the `details-card-v2` branch: the
 Steam summary on the left page and personal fields on the right. The Best on
-block lives in [BestOn.elyx](design/blocks/details/BestOn.elyx) with collapsed,
-expanded, and blocked states. Two detail states were added after the original
+block lives in [BestOn.elyx](design/blocks/details/BestOn.elyx): fit is its
+only metric, shown on one scale (Steam Deck left, PC right). Its states are
+Steam Deck, PC, Both, PC only (equipment), and Needs review; (i) shows
+`FitTooltip` on hover and opens the `FitInfo` modal on click. Best on rules
+have their own Settings section, with optional ProtonDB enrichment. Six states were added after the original
 90. The fold animation and the 3D turn are native only and are not drawn here.
 
 Use the [workspace guide](README.md) for editing and validation commands.
@@ -87,13 +90,17 @@ records the completed static checks and remaining native comparison limit.
 | DetailsStatusMenu | [CardDetails.elyx](design/screens/details/CardDetails.elyx) | `DetailsStatusMenu` | light |
 | DetailsActionsMenu | [CardDetails.elyx](design/screens/details/CardDetails.elyx) | `DetailsActionsMenu` | light |
 | DetailsTagPicker | [CardDetails.elyx](design/screens/details/CardDetails.elyx) | `DetailsTagPicker` | light |
-| DetailsBestOnExpanded | [CardDetails.elyx](design/screens/details/CardDetails.elyx) | `DetailsBestOnExpanded` | light |
+| DetailsFitInfo | [CardDetails.elyx](design/screens/details/CardDetails.elyx) | `DetailsFitInfo` | light |
 | DetailsNoBestOn | [CardDetails.elyx](design/screens/details/CardDetails.elyx) | `DetailsNoBestOn` | light |
 | SettingsGeneral | [General.elyx](design/screens/settings/General.elyx) | `SettingsGeneral` | light |
 | SteamConnected | [General.elyx](design/screens/settings/General.elyx) | `SteamConnected` | light |
 | SteamSyncing | [General.elyx](design/screens/settings/General.elyx) | `SteamSyncing` | light |
 | SteamSyncFailed | [General.elyx](design/screens/settings/General.elyx) | `SteamSyncFailed` | light |
 | SteamKeyTestFailed | [General.elyx](design/screens/settings/General.elyx) | `SteamKeyTestFailed` | light |
+| SettingsBestOn | [BestOn.elyx](design/screens/settings/BestOn.elyx) | `SettingsBestOn` | light |
+| SettingsBestOnEmpty | [BestOn.elyx](design/screens/settings/BestOn.elyx) | `SettingsBestOnEmpty` | light |
+| SettingsProtonDbUpdating | [BestOn.elyx](design/screens/settings/BestOn.elyx) | `SettingsProtonDbUpdating` | light |
+| SettingsProtonDbFailed | [BestOn.elyx](design/screens/settings/BestOn.elyx) | `SettingsProtonDbFailed` | light |
 | SettingsAppearance | [Appearance.elyx](design/screens/settings/Appearance.elyx) | `SettingsAppearance` | light |
 | SettingsOmarchy | [Appearance.elyx](design/screens/settings/Appearance.elyx) | `SettingsOmarchy` | light |
 | AiLocal | [AI.elyx](design/screens/settings/AI.elyx) | `AiLocal` | light |

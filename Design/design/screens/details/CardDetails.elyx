@@ -1,3 +1,4 @@
+import "tokens/colors.dark.elyx" as darkTheme
 import "tokens/colors.elyx" as c
 import "design/controls/WindowButtons.elyx" as trafficSource
 import "tokens/radius.elyx" as radius
@@ -452,14 +453,6 @@ export CardDetails = frame : focusedSource.Focused {
               contents: "Demo"
             }
           }
-
-          result {
-            confidence {
-              value {
-                contents: "91/100"
-              }
-            }
-          }
         }
 
         notes = frame {
@@ -827,41 +820,69 @@ export DetailsTagPicker = frame : CardDetails {
 }
 
 @variant
-export DetailsBestOnExpanded = frame : CardDetails {
+export DetailsFitInfo = frame : CardDetails {
   left: 1360px,
   top: 2940px,
 
   overlay {
-    display: .hidden
+    overrides: [insert(modal, after = .nil)],
+    fill[0].color: rgb(0%, 0%, 0%, 25%),
+    layout.justify-content: .center,
+    layout.align-items: .center
   }
 
-  body {
-    content {
-      stage {
-        book {
-          right {
-            bestOn {
-              details {
-                preferenceNote {
-                  display: .none
-                }
+  modal = frame : bestOnSource.FitInfo {
+    left: .auto,
+    top: .auto,
 
-                display: .visible
-              }
+    deck {
+      rule {
+        display: .none
+      }
 
-              toggle {
-                button {
-                  label {
-                    label {
-                      contents: "Fewer details"
-                    }
-                  }
-                }
-              }
-            }
-          }
+      protonDb {
+        label {
+          contents: "ProtonDB: 66 Deck reports, few problems"
+        }
+
+        points {
+          contents: "0"
         }
       }
+
+      heading {
+        total {
+          contents: "90/100"
+        }
+      }
+    }
+
+    pc {
+      highEnd {
+        display: .none
+      }
+
+      habit {
+        display: .none
+      }
+
+      rule {
+        display: .none
+      }
+
+      heading {
+        total {
+          contents: "75/100"
+        }
+      }
+    }
+
+    title {
+      contents: "Fit for Stardew Valley"
+    }
+
+    rules {
+      contents: "Steam Deck is 15 points ahead, so this game is best on Steam Deck. Fits within 15 points show Both."
     }
   }
 }

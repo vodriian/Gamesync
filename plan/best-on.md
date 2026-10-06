@@ -147,3 +147,19 @@ is blocked by current editor/card compilation errors (`InspectorEditor` lacks
 had a fresh native visual check. A subsequent retry of
 `python3 desktop/scripts/dev.py --best-on-demo --build-only` passed and produced
 `desktop/target/BestOnDemo.app`; the compilation blockers are resolved.
+
+## Planned: rules and enrichment
+
+Accepted direction on 2026-10-06; designs are in Elyx and not built yet.
+
+- Fit is the only metric. Confidence leaves the interface. (i) shows a
+  tooltip on hover and a modal with each fit step on click.
+- Settings → Best on holds your rules: My PC (Standard or High-end), Prefer
+  PC tags, Prefer Steam Deck tags, and equipment that makes a game PC only.
+  Rules start empty with one-click suggestions and live in app settings.
+- Enrichment: ProtonDB Steam Deck reports, off by default. Turning it on
+  downloads the monthly ODbL export (about 70 MB) from
+  `github.com/bdefore/protondb-data`, keeps only small per-game results in a
+  local cache, and checks monthly. Turning it off deletes the cache. Fit and
+  Settings show the ODbL credit. The undocumented ProtonDB API and SteamDB
+  (no API; scraping not allowed) are not used.
