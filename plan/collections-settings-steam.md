@@ -64,12 +64,17 @@ accessibility tree; keyboard operation does not establish screen-reader support.
 3. Add editable mood, energy, and session length; then the offline feeling/time picker.
 4. Add AI suggestions after manual tuning works. Backup/restore and ProtonDB stay deferred.
 
-## AI settings preview
+## AI settings
 
-Ollama, OpenAI, Claude, Grok, and Gemini share one provider row, with Ollama
-last. Each form starts with one field: the server address for Ollama, or the
-API key for a cloud provider. A passing test shows a model dropdown; for cloud
-providers it also shows Add key. Tests, add/remove states, and model lists are
-simulated and kept only while Settings is open. No network requests or
-credential writes occur. Real provider integration and model discovery remain
-deferred.
+Settings → AI lists added providers. Each row shows the provider, a model
+dropdown, and an info button. The info button opens a dialog to replace the
+key (or Ollama's server address) or to delete the provider. A saved key is
+not read back and not tested again; an empty key field keeps it.
+
+To add a provider, choose OpenAI, Claude, Grok, Gemini, or Ollama, enter the
+key or server address, and test it. A passing test shows the model dropdown
+and the Add button. API keys go to the OS credential store
+(`app.GameSync.AI`, one entry per provider). The chosen model and Ollama's
+address are device settings (`ai_providers`) and do not sync. Key tests and
+model lists are still simulated, because GameSync makes no AI requests yet.
+Real tests, model discovery, and AI analysis remain deferred.

@@ -141,8 +141,8 @@ Change a game's collection chips on the card back. Removing a
 collection preserves its games and membership history.
 
 Open **Settings** from the sidebar or Command/Control-comma. General contains Steam
-and sync; Look and feel contains all themes and Reduce motion; AI contains an interactive preview for OpenAI, Claude, Grok, Gemini, and Ollama.
-A passing key or connection test shows a model list. AI tests and models are simulated; keys are not saved or sent. For Steam, enter your masked profile and key, select
+and sync; Look and feel contains all themes and Reduce motion; AI lists added providers (OpenAI, Claude, Grok, Gemini, and Ollama) with a model choice each; the info button replaces or deletes a key.
+AI keys are saved in the OS credential store. AI tests and model lists are still simulated, and no AI requests are sent. For Steam, enter your masked profile and key, select
 **Test key**, then **Save key** after success. Saved keys are reused on restart.
 Changing either input requires another test. Use **Sync now** to update Steam. Cancel stops after the current
 request; completed writes stay. Failed metadata stages retry on the next sync.

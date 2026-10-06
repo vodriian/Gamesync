@@ -19,6 +19,12 @@ impl OsCredential {
             entry: keyring::Entry::new("app.GameSync.Steam", &library.to_string())?,
         })
     }
+    /// The API key of one AI provider on this device, for every library.
+    pub fn ai(provider: &str) -> Result<Self> {
+        Ok(Self {
+            entry: keyring::Entry::new("app.GameSync.AI", provider)?,
+        })
+    }
     /// The sync key of one sync folder. See `sync::secrets`.
     pub fn sync_key(sync_id: Uuid) -> Result<Self> {
         Ok(Self {

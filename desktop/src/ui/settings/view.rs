@@ -300,5 +300,7 @@ impl Render for SettingsView {
                             }),
                     ),
             )
+            // AI provider details open in a modal.
+            .children(gpui_component::Root::render_dialog_layer(window, cx))
     }
 }
