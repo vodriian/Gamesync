@@ -18,7 +18,7 @@ export FitScale = frame {
   border: c.ui.border,
   corner-radius: radius.corner.control,
   padding: spacing.inset.small,
-  children: [setups, bar, scores, note],
+  children: [setups, bar, scores],
 
   setups = frame {
     width: 100%,
@@ -137,15 +137,6 @@ export FitScale = frame {
       font-family: typography.family.interface,
       align: .right
     }
-  }
-
-  note = text {
-    width: 100%,
-    display: .none,
-    fill: c.ui.error,
-    contents: "Steam Deck does not support its anti-cheat.",
-    font-size: typography.size.caption,
-    font-family: typography.family.interface
   }
 }
 
@@ -392,23 +383,6 @@ export BestOnPcOnly = frame : BestOn {
   left: 1600px,
 
   scale {
-    note {
-      fill[0].color: c.ui.muted,
-      contents: "Needs your Moza R5 wheel.",
-      display: .visible
-    }
-
-    scores {
-      deck {
-        fill[0].color: c.ui.error,
-        contents: "Blocked"
-      }
-
-      pc {
-        contents: "85/100"
-      }
-    }
-
     setups {
       deck {
         label {
@@ -434,6 +408,16 @@ export BestOnPcOnly = frame : BestOn {
         }
       }
     }
+
+    scores {
+      deck {
+        contents: "Not supported"
+      }
+
+      pc {
+        contents: "85/100"
+      }
+    }
   }
 
   result {
@@ -453,13 +437,20 @@ export BestOnPcOnly = frame : BestOn {
 export BestOnNeedsReview = frame : BestOn {
   left: 2000px,
 
-  scale {
-    note {
+  result {
+    fit {
       fill[0].color: c.ui.muted,
-      contents: "Valve has not rated this game on Steam Deck yet.",
-      display: .visible
+      contents: "–"
     }
 
+    title {
+      label {
+        contents: "Needs review"
+      }
+    }
+  }
+
+  scale {
     bar {
       deckTrack {
         value {
@@ -471,19 +462,6 @@ export BestOnNeedsReview = frame : BestOn {
     scores {
       deck {
         contents: "Unknown"
-      }
-    }
-  }
-
-  result {
-    fit {
-      fill[0].color: c.ui.muted,
-      contents: "–"
-    }
-
-    title {
-      label {
-        contents: "Needs review"
       }
     }
   }
