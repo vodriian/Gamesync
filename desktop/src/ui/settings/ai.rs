@@ -4,17 +4,35 @@ use gpui_component::{
     button::{Button, ButtonVariants as _},
     h_flex,
     input::{Input, InputEvent, InputState},
-    v_flex, ActiveTheme as _, Disableable as _, Selectable as _, StyledExt as _,
+    menu::{DropdownMenu as _, PopupMenuItem},
+    v_flex, ActiveTheme as _, Disableable as _, IconName, Selectable as _, StyledExt as _,
 };
 
 const PROVIDERS: [&str; 5] = ["Ollama", "OpenAI", "Claude", "Grok", "Gemini"];
+const OLLAMA: usize = 0;
+
+/// Sample lists that stand in for model discovery until real tests exist.
+const MODELS: [&[&str]; 5] = [
+    &["llama3.2", "qwen2.5", "mistral"],
+    &["gpt-5", "gpt-5-mini", "gpt-4.1"],
+    &["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-4-5"],
+    &["grok-4", "grok-3-mini"],
+    &["gemini-2.5-pro", "gemini-2.5-flash"],
+];
 
 struct Connection {
-    model: Entity<InputState>,
     key: Entity<InputState>,
     tested: bool,
     added: bool,
+    model: Option<usize>,
     message: &'static str,
+}
+
+impl Connection {
+    /// Models show only after a passing test or for an added key.
+    fn models_ready(&self) -> bool {
+        self.tested || self.added
+    }
 }
 
 pub struct AiSettings {
@@ -23,82 +41,104 @@ pub struct AiSettings {
     endpoint: Entity<InputState>,
 }
 
+/// An edit invalidates the last simulated test for that provider.
+fn reset_on_change(input: &Entity<InputState>, index: usize, cx: &mut Context<AiSettings>) {
+    cx.subscribe(input, move |this, _, event, cx| {
+        if matches!(event, InputEvent::Change) {
+            this.connections[index].tested = false;
+            this.connections[index].message = "";
+            cx.notify();
+        }
+    })
+    .detach();
+}
+
+fn key_input(
+    placeholder: &'static str,
+    window: &mut Window,
+    cx: &mut Context<AiSettings>,
+) -> Entity<InputState> {
+    cx.new(|cx| {
+        InputState::new(window, cx)
+            .masked(true)
+            .placeholder(placeholder)
+    })
+}
+
 impl AiSettings {
     pub fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
         let endpoint =
             cx.new(|cx| InputState::new(window, cx).default_value("http://localhost:11434"));
-        cx.subscribe(&endpoint, |this, _, event, cx| {
-            if matches!(event, InputEvent::Change) {
-                this.connections[0].tested = false;
-                this.connections[0].message = "";
-                cx.notify();
-            }
-        })
-        .detach();
-        let connections = (0..5)
+        reset_on_change(&endpoint, OLLAMA, cx);
+        let connections = (0..PROVIDERS.len())
             .map(|index| {
-                let model =
-                    cx.new(|cx| InputState::new(window, cx).placeholder("Enter model name"));
-                let key = cx.new(|cx| {
-                    InputState::new(window, cx)
-                        .masked(true)
-                        .placeholder("Enter a dummy API key")
-                });
-                for input in [&model, &key] {
-                    cx.subscribe(input, move |this, _, event, cx| {
-                        if matches!(event, InputEvent::Change) {
-                            this.connections[index].tested = false;
-                            this.connections[index].message = "";
-                            cx.notify();
-                        }
-                    })
-                    .detach();
-                }
+                let key = key_input("Enter a dummy API key", window, cx);
+                reset_on_change(&key, index, cx);
                 Connection {
-                    model,
                     key,
                     tested: false,
                     added: false,
+                    model: None,
                     message: "",
                 }
             })
             .collect();
         Self {
             connections,
-            provider: 0,
+            provider: OLLAMA,
             endpoint,
         }
+    }
+
+    fn model_picker(&self, index: usize, cx: &mut Context<Self>) -> impl IntoElement {
+        let target = cx.entity();
+        let selected = self.connections[index].model;
+        let label = selected.map_or("Choose a model", |model| MODELS[index][model]);
+        Button::new("ai-model")
+            .outline()
+            .label(label)
+            .icon(IconName::ChevronDown)
+            .dropdown_menu(move |mut menu, _, _| {
+                for (model, name) in MODELS[index].iter().enumerate() {
+                    let target = target.clone();
+                    menu = menu.item(
+                        PopupMenuItem::new(*name)
+                            .checked(selected == Some(model))
+                            .on_click(move |_, _, cx| {
+                                target.update(cx, |this, cx| {
+                                    this.connections[index].model = Some(model);
+                                    cx.notify();
+                                });
+                            }),
+                    );
+                }
+                menu
+            })
     }
 }
 
 impl Render for AiSettings {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let index = self.provider;
-        let local = index == 0;
+        let local = index == OLLAMA;
         let connection = &self.connections[index];
-        let ready = !connection.model.read(cx).value().trim().is_empty()
-            && if local {
-                !self.endpoint.read(cx).value().trim().is_empty()
-            } else {
-                !connection.key.read(cx).value().trim().is_empty() || connection.added
-            };
+        let ready = if local {
+            !self.endpoint.read(cx).value().trim().is_empty()
+        } else {
+            !connection.key.read(cx).value().trim().is_empty() || connection.added
+        };
+        let models_ready = connection.models_ready();
         v_flex().gap_4()
             .child(div().text_sm().text_color(cx.theme().muted_foreground)
-                .child("Preview · tests are simulated. Use dummy keys; nothing is saved or sent."))
-            .child(v_flex().gap_2()
-                .child(div().font_semibold().child("Local models"))
-                .child(Button::new("ollama-provider").label("Ollama").selected(local)
-                    .on_click(cx.listener(|this, _, _, cx| { this.provider = 0; cx.notify(); }))))
+                .child("Preview · tests and models are simulated. Use dummy keys; nothing is saved or sent."))
             .child(v_flex().gap_2()
                 .child(div().font_semibold().child("API providers"))
-                .child(h_flex().flex_wrap().gap_2().children((1..5).map(|index| {
-                    Button::new(PROVIDERS[index]).label(PROVIDERS[index]).selected(self.provider == index)
+                .child(h_flex().flex_wrap().gap_2().children(PROVIDERS.iter().enumerate().map(|(index, name)| {
+                    Button::new(*name).label(*name).selected(self.provider == index)
                         .on_click(cx.listener(move |this, _, _, cx| { this.provider = index; cx.notify(); }))
                 }))))
             .child(v_flex().p_5().gap_4().rounded(cx.theme().radius_lg).bg(cx.theme().secondary)
                 .child(div().font_semibold().child(PROVIDERS[index]))
-                .child("Model")
-                .child(Input::new(&connection.model))
                 .when(local, |group| group.child("Server address").child(Input::new(&self.endpoint)))
                 .when(!local, |group| group.child(if connection.added { "API key added · preview" } else { "API key" })
                     .child(Input::new(&connection.key)))
@@ -110,19 +150,13 @@ impl Render for AiSettings {
                             connection.message = "Simulated test passed. No connection was made.";
                             cx.notify();
                         })))
-                    .when(!local, |row| row
+                    .when(!local && models_ready, |row| row
                         .child(Button::new("add-ai-key").primary().label(if connection.added { "Replace key" } else { "Add key" })
                             .disabled(!connection.tested || connection.key.read(cx).value().trim().is_empty())
                             .on_click(cx.listener(move |this, _, window, cx| {
                                 // Replace the input entity so the mock does not retain the entered secret.
-                                let key = cx.new(|cx| InputState::new(window, cx).masked(true).placeholder("Enter a dummy replacement key"));
-                                cx.subscribe(&key, move |this, _, event, cx| {
-                                    if matches!(event, InputEvent::Change) {
-                                        this.connections[index].tested = false;
-                                        this.connections[index].message = "";
-                                        cx.notify();
-                                    }
-                                }).detach();
+                                let key = key_input("Enter a dummy replacement key", window, cx);
+                                reset_on_change(&key, index, cx);
                                 let connection = &mut this.connections[index];
                                 connection.key = key;
                                 connection.added = true;
@@ -137,9 +171,11 @@ impl Render for AiSettings {
                                 connection.key.update(cx, |input, cx| input.set_value("", window, cx));
                                 connection.added = false;
                                 connection.tested = false;
+                                connection.model = None;
                                 connection.message = "Preview key removed.";
                                 cx.notify();
                             }))))))
-                .when(!connection.message.is_empty(), |group| group.child(div().text_sm().child(connection.message))))
+                .when(!connection.message.is_empty(), |group| group.child(div().text_sm().child(connection.message)))
+                .when(models_ready, |group| group.child("Model").child(h_flex().child(self.model_picker(index, cx)))))
     }
 }

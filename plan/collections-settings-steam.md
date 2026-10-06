@@ -66,7 +66,10 @@ accessibility tree; keyboard operation does not establish screen-reader support.
 
 ## AI settings preview
 
-Ollama and OpenAI, Claude, Grok, and Gemini have interactive mock forms. Model
-entry comes before the API key. Test and add/remove states are simulated and
-kept only while Settings is open. No network requests or credential writes occur.
-Actual provider integration and model discovery remain deferred.
+Ollama, OpenAI, Claude, Grok, and Gemini share one provider row, with Ollama
+first. Each form starts with one field: the server address for Ollama, or the
+API key for a cloud provider. A passing test shows a model dropdown; for cloud
+providers it also shows Add key. Tests, add/remove states, and model lists are
+simulated and kept only while Settings is open. No network requests or
+credential writes occur. Real provider integration and model discovery remain
+deferred.
