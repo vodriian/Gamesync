@@ -1,4 +1,3 @@
-import "tokens/colors.dark.elyx" as darkTheme
 import "tokens/colors.elyx" as c
 import "design/controls/WindowButtons.elyx" as trafficSource
 import "tokens/radius.elyx" as radius
@@ -9,18 +8,19 @@ import "design/controls/IconLabel.elyx" as iconLabel
 import "tokens/typography.elyx" as typography
 import "design/blocks/menus/Menu.elyx" as menuSource
 import "design/blocks/details/Filmstrip.elyx" as filmstripSource
+import "resources/images/413150.jpg" as cover413150
 import "resources/icons-new/arrow-left-02-stroke-rounded.svg" as glyph_16
 import "resources/icons-new/chevron-left-stroke-rounded.svg" as glyph_9
 import "resources/icons-new/chevron-right-stroke-rounded.svg" as glyph_8
 import "design/controls/Rating.elyx" as ratingControl
-import "resources/icons-new/solid/star-stroke-rounded-solid.svg" as ratingSolid
 import "resources/icons-new/star-stroke-rounded.svg" as ratingOutline
-import "resources/icons-new/solid/heart-stroke-rounded-solid.svg" as glyph_2
+import "resources/icons-new/solid/heart-stroke-rounded-solid.svg" as heartSolid
 import "design/controls/MenuItem.elyx" as menuItems
 import "design/controls/Tag.elyx" as tagSource
 import "resources/icons-new/plus-stroke-rounded.svg" as plusIcon
 import "resources/icons-new/more-horizontal-square-01-stroke-rounded.svg" as moreIcon
 import "design/controls/IconButton.elyx" as iconButtons
+import "design/blocks/details/BestOn.elyx" as bestOnSource
 
 export CardDetails = frame : focusedSource.Focused {
   doc: "08 · Focused card / CardDetails",
@@ -106,13 +106,14 @@ export CardDetails = frame : focusedSource.Focused {
       },
       overflow: .scroll,
       padding: 16px,
-      children: [card, flip]
+      children: [book, flip]
     }
 
-    card = frame {
-      width: 440px,
-      min-height: 574px,
-      layout: {direction: .column, item-gap: 13px},
+    book = frame {
+      doc: "Open book: Steam summary on the left page, personal fields on the right.",
+      width: 800px,
+      height: 584px,
+      layout: {direction: .row},
       fill: c.ui.surface,
       border: c.ui.border,
       shadow: {
@@ -123,300 +124,366 @@ export CardDetails = frame : focusedSource.Focused {
         }
       },
       corner-radius: 16px,
-      padding: 16px,
-      children: [
-        eyebrow,
-        title,
-        hours,
-        description,
-        genres,
-        statusLabel,
-        status,
-        ratingGroup,
-        collectionsLabel,
-        collection,
-        tagsLabel,
-        tags,
-        notes,
-        feedback
-      ],
+      children: [left, spine, right],
 
-      eyebrow = frame {
-        width: 100%,
-        layout: {align-items: .center, item-gap: 8px},
-        children: [label, more],
+      left = frame {
+        width: 50%,
+        height: 100%,
+        layout: {direction: .column},
+        children: [cover, summary],
 
-        label = text {
+        cover = frame {
           width: 100%,
-          fill: c.ui.muted,
-          contents: "GameSync / Card details",
-          font-size: typography.size.caption,
-          font-family: typography.family.interface
-        }
+          height: 162px,
+          layout: {direction: .row},
+          padding: [12px, 12px, 0px],
+          children: art,
 
-        more = frame : iconButtons.IconButton {
-          glyph {
-            contents: moreIcon
+          art = frame {
+            width: 100%,
+            height: 100%,
+            fill: {image: {ref: cover413150}},
+            corner-radius: 10px
           }
         }
-      }
 
-      title = text {
-        fill: c.ui.text,
-        contents: "Stardew Valley",
-        font-size: typography.size.heading,
-        font-family: typography.family.interface,
-        font-style: "Bold"
-      }
+        summary = frame {
+          width: 100%,
+          height: 100%,
+          layout: {direction: .column, item-gap: spacing.gap.regular},
+          overflow: .scroll,
+          padding: [12px, 16px, 16px],
+          children: [
+            titleRow,
+            description,
+            facts,
+            genres,
+            hours,
+            collectionsLabel,
+            collections,
+            tagsLabel,
+            tags
+          ],
 
-      hours = text {
-        width: 408px,
-        fill: c.ui.muted,
-        contents: "70.0 hours played",
-        font-size: typography.size.caption,
-        font-family: typography.family.interface
-      }
+          titleRow = frame {
+            width: 100%,
+            layout: {item-gap: spacing.gap.medium},
+            children: [title, favorite],
 
-      description = text {
-        width: 100%,
-        fill: c.ui.text,
-        contents: "Build a farm, meet your neighbors, and take each day at your own pace.",
-        font-size: typography.size.body,
-        font-family: typography.family.interface
-      }
+            title = text {
+              width: 100%,
+              fill: c.ui.text,
+              contents: "Stardew Valley",
+              font-size: 20,
+              font-family: "Georgia"
+            }
 
-      genres = frame {
-        layout: {align-items: .center, item-gap: 16px},
-        children: [label0, label1, label2],
-
-        label0 = text {
-          fill: c.ui.text,
-          contents: "Indie",
-          font-size: typography.size.caption,
-          font-family: typography.family.interface
-        }
-
-        label1 = text {
-          fill: c.ui.text,
-          contents: "RPG",
-          font-size: typography.size.caption,
-          font-family: typography.family.interface
-        }
-
-        label2 = text {
-          fill: c.ui.text,
-          contents: "Simulation",
-          font-size: typography.size.caption,
-          font-family: typography.family.interface
-        }
-      }
-
-      statusLabel = text {
-        fill: c.ui.muted,
-        contents: "Status",
-        font-size: typography.size.caption,
-        font-family: typography.family.interface
-      }
-
-      status = frame : buttons.Button {
-        width: 408px,
-
-        label {
-          leading {
-            display: .none
+            favorite = frame : iconButtons.IconButton {
+              glyph {
+                width: 22px,
+                height: 22px,
+                contents: heartSolid,
+                sizing: .fill
+              }
+            }
           }
 
-          trailing {
-            display: .none
+          description = text {
+            width: 100%,
+            fill: c.ui.text,
+            contents: "Build a farm, meet your neighbors, and take each day at your own pace.",
+            font-size: typography.size.body,
+            font-family: typography.family.interface
           }
 
-          detail {
-            display: .none
-          }
-
-          favorite {
-            display: .none
-          }
-
-          label {
-            contents: "Playing"
-          }
-        }
-      }
-
-      ratingGroup = frame {
-        width: 408px,
-        layout: {item-gap: spacing.gap.regular},
-        children: [rating, favorite],
-
-        rating = frame {
-          width: 190px,
-          layout: {direction: .column, item-gap: 6px},
-          children: [label, stars],
-
-          label = text {
+          facts = text {
+            width: 100%,
             fill: c.ui.muted,
-            contents: "Your rating",
+            contents: "2016 · Overwhelmingly Positive, 98%",
+            font-size: typography.size.body,
+            font-family: typography.family.interface
+          }
+
+          genres = frame {
+            width: 100%,
+            layout: {
+              item-gap: spacing.gap.small,
+              wrap: .true,
+              line-gap: spacing.gap.small
+            },
+            children: [indie, rpg, simulation],
+
+            indie = frame : buttons.Button {
+              height: 22px,
+              corner-radius: 12px,
+              padding-top: 2px,
+              padding-left: 8px,
+              padding-bottom: 2px,
+              padding-right: 8px,
+
+              label {
+                label {
+                  contents: "Indie",
+                  font-size: typography.size.caption
+                }
+              }
+            }
+
+            rpg = frame : buttons.Button {
+              height: 22px,
+              corner-radius: 12px,
+              padding-top: 2px,
+              padding-left: 8px,
+              padding-bottom: 2px,
+              padding-right: 8px,
+
+              label {
+                label {
+                  contents: "RPG",
+                  font-size: typography.size.caption
+                }
+              }
+            }
+
+            simulation = frame : buttons.Button {
+              height: 22px,
+              corner-radius: 12px,
+              padding-top: 2px,
+              padding-left: 8px,
+              padding-bottom: 2px,
+              padding-right: 8px,
+
+              label {
+                label {
+                  contents: "Simulation",
+                  font-size: typography.size.caption
+                }
+              }
+            }
+          }
+
+          hours = text {
+            fill: c.ui.text,
+            contents: "70.0 hours played",
+            font-size: typography.size.body,
+            font-family: typography.family.interface
+          }
+
+          collectionsLabel = text {
+            fill: c.ui.muted,
+            contents: "Collections",
             font-size: typography.size.caption,
             font-family: typography.family.interface
           }
 
-          stars = frame : ratingControl.Rating {
-            star1 {
-              contents: ratingSolid,
-              sizing: .fill
+          collections = frame {
+            width: 100%,
+            layout: {
+              item-gap: spacing.gap.medium,
+              wrap: .true,
+              line-gap: spacing.gap.medium
+            },
+            children: [cozy, roguelike],
+
+            cozy = frame : buttons.Button {
+              border[0].color: c.ui.accent,
+              fill[0].color: c.ui.accent,
+
+              label {
+                label {
+                  fill[0].color: .white,
+                  contents: "Cozy evenings"
+                }
+
+                leading {
+                  fill[0].color: .white,
+                  display: .visible
+                }
+              }
             }
 
-            star2 {
-              contents: ratingSolid,
-              sizing: .fill
-            }
-
-            star3 {
-              contents: ratingSolid,
-              sizing: .fill
-            }
-
-            star4 {
-              contents: ratingSolid,
-              sizing: .fill
-            }
-
-            star5 {
-              contents: ratingOutline
-            }
-
-            value {
-              display: .visible
+            roguelike = frame : buttons.Button {
+              label {
+                label {
+                  contents: "Roguelike runs"
+                }
+              }
             }
           }
-        }
 
-        favorite = frame {
-          width: 150px,
-          layout: {direction: .column, item-gap: 6px},
-          children: [label, heart],
-
-          label = text {
+          tagsLabel = text {
             fill: c.ui.muted,
-            contents: "Favorite",
+            contents: "Tags",
             font-size: typography.size.caption,
             font-family: typography.family.interface
           }
 
-          heart = frame : iconLabel.IconLabel {
-            leading {
-              contents: glyph_2,
-              sizing: .fill,
-              display: .visible
+          tags = frame {
+            width: 100%,
+            layout: {
+              align-items: .center,
+              item-gap: spacing.gap.medium,
+              wrap: .true,
+              line-gap: spacing.gap.medium
+            },
+            children: [cozy, farming, add],
+
+            cozy = frame : tagSource.Tag {
+              label {
+                contents: "Cozy"
+              }
             }
 
-            label {
-              contents: "",
-              font-size: 24
+            farming = frame : tagSource.Tag {
+              label {
+                contents: "Farming"
+              }
+            }
+
+            add = frame : iconLabel.IconLabel {
+              leading {
+                contents: plusIcon,
+                display: .visible
+              }
+
+              label {
+                contents: "Add tag",
+                font-size: typography.size.caption
+              }
             }
           }
         }
       }
 
-      collectionsLabel = text {
-        fill: c.ui.muted,
-        contents: "Collections",
-        font-size: typography.size.caption,
-        font-family: typography.family.interface
+      spine = frame {
+        doc: "The fold between the pages.",
+        width: 1px,
+        height: 100%,
+        fill: c.ui.border
       }
 
-      collection = frame : buttons.Button {
-        label {
-          leading {
-            display: .none
-          }
-
-          trailing {
-            display: .none
-          }
-
-          detail {
-            display: .none
-          }
-
-          favorite {
-            display: .none
-          }
-
-          label {
-            contents: "Cozy evenings"
-          }
-        }
-      }
-
-      tagsLabel = text {
-        fill: c.ui.muted,
-        contents: "Tags",
-        font-size: typography.size.caption,
-        font-family: typography.family.interface
-      }
-
-      tags = frame {
+      right = frame {
         width: 100%,
-        layout: {
-          item-gap: spacing.gap.medium,
-          wrap: .true,
-          line-gap: spacing.gap.medium
-        },
-        children: [cozy, farming, add],
+        height: 100%,
+        layout: {direction: .column, item-gap: spacing.gap.regular},
+        overflow: .scroll,
+        padding: 16px,
+        children: [feedback, top, bestOn, notes],
 
-        cozy = frame : tagSource.Tag {
-          label {
-            contents: "Cozy"
-          }
-        }
-
-        farming = frame : tagSource.Tag {
-          label {
-            contents: "Farming"
-          }
-        }
-
-        add = frame : iconLabel.IconLabel {
-          leading {
-            contents: plusIcon,
-            display: .visible
-          }
-
-          label {
-            contents: "Add tag"
-          }
-        }
-      }
-
-      notes = frame {
-        width: 408px,
-        layout: {direction: .column, item-gap: spacing.gap.icon},
-        children: [label, input],
-
-        label = text {
+        feedback = text {
+          width: 100%,
+          display: .none,
           fill: c.ui.muted,
-          contents: "Notes",
+          contents: "",
           font-size: typography.size.caption,
           font-family: typography.family.interface
         }
 
-        input = frame {
-          width: 408px,
-          height: 74px,
-          fill: c.ui.surface,
-          border: c.ui.border,
-          corner-radius: radius.corner.control
-        }
-      }
+        top = frame {
+          width: 100%,
+          layout: {justify-content: .space-between},
+          children: [fields, more],
 
-      feedback = text {
-        width: 100%,
-        fill: c.ui.muted,
-        contents: "",
-        font-size: typography.size.caption,
-        font-family: typography.family.interface
+          fields = frame {
+            layout: {item-gap: spacing.gap.section},
+            children: [status, rating],
+
+            status = frame {
+              layout: {direction: .column, item-gap: 6px},
+              children: [label, button],
+
+              label = text {
+                fill: c.ui.muted,
+                contents: "Status",
+                font-size: typography.size.caption,
+                font-family: typography.family.interface
+              }
+
+              button = frame : buttons.Button {
+                label {
+                  label {
+                    contents: "Playing"
+                  }
+                }
+              }
+            }
+
+            rating = frame {
+              layout: {direction: .column, item-gap: 6px},
+              children: [label, stars],
+
+              label = text {
+                fill: c.ui.muted,
+                contents: "Rating",
+                font-size: typography.size.caption,
+                font-family: typography.family.interface
+              }
+
+              stars = frame : ratingControl.Rating {
+                height: 30px,
+                layout.align-items: .center,
+                layout.direction: .row,
+                layout.item-gap: 0,
+
+                star5 {
+                  contents: ratingOutline
+                }
+              }
+            }
+          }
+
+          more = frame : iconButtons.IconButton {
+            width: 24px,
+            height: 24px,
+
+            glyph {
+              contents: moreIcon
+            }
+          }
+        }
+
+        bestOn = frame : bestOnSource.BestOn {
+          left: .auto,
+          top: .auto,
+          width: 100%,
+
+          heading {
+            source {
+              contents: "Demo"
+            }
+          }
+
+          result {
+            confidence {
+              value {
+                contents: "91/100"
+              }
+            }
+          }
+        }
+
+        notes = frame {
+          width: 100%,
+          height: 100%,
+          min-height: 120px,
+          layout: {direction: .column, item-gap: spacing.gap.icon},
+          children: [label, input],
+
+          label = text {
+            fill: c.ui.muted,
+            contents: "Notes",
+            font-size: typography.size.caption,
+            font-family: typography.family.interface
+          }
+
+          input = frame {
+            width: 100%,
+            height: 100%,
+            fill: c.ui.surface,
+            border: c.ui.border,
+            corner-radius: radius.corner.control
+          }
+        }
       }
     }
 
@@ -451,9 +518,12 @@ export DetailsUnsaved = frame : CardDetails {
   body {
     content {
       stage {
-        card {
-          feedback {
-            contents: "Unsaved changes…"
+        book {
+          right {
+            feedback {
+              display: .visible,
+              contents: "Unsaved changes…"
+            }
           }
         }
       }
@@ -469,9 +539,12 @@ export DetailsSaving = frame : CardDetails {
   body {
     content {
       stage {
-        card {
-          feedback {
-            contents: "Saving…"
+        book {
+          right {
+            feedback {
+              display: .visible,
+              contents: "Saving…"
+            }
           }
         }
       }
@@ -487,9 +560,12 @@ export DetailsSaved = frame : CardDetails {
   body {
     content {
       stage {
-        card {
-          feedback {
-            contents: "Saved."
+        book {
+          right {
+            feedback {
+              display: .visible,
+              contents: "Saved."
+            }
           }
         }
       }
@@ -505,9 +581,12 @@ export DetailsSaveFailed = frame : CardDetails {
   body {
     content {
       stage {
-        card {
-          feedback {
-            contents: "Save failed. Your draft is kept."
+        book {
+          right {
+            feedback {
+              display: .visible,
+              contents: "Save failed. Your draft is kept."
+            }
           }
         }
       }
@@ -523,9 +602,12 @@ export DetailsConflict = frame : CardDetails {
   body {
     content {
       stage {
-        card {
-          feedback {
-            contents: "Saved versions changed. Review conflicts."
+        book {
+          right {
+            feedback {
+              display: .visible,
+              contents: "Saved versions changed. Review conflicts."
+            }
           }
         }
       }
@@ -541,9 +623,12 @@ export DetailsReadOnly = frame : CardDetails {
   body {
     content {
       stage {
-        card {
-          feedback {
-            contents: "Preview card. Changes are unavailable in this preview."
+        book {
+          right {
+            feedback {
+              display: .visible,
+              contents: "Preview card. Changes are unavailable in this preview."
+            }
           }
         }
       }
@@ -562,8 +647,8 @@ export DetailsStatusMenu = frame : CardDetails {
 
   popover = frame : menuSource.Menu {
     doc: "Intentional popup overlay; excluded from the content stack.",
-    left: 650px,
-    top: 360px,
+    left: 641px,
+    top: 172px,
     width: 218px,
     ignore-stack: .true,
     overrides: [
@@ -640,8 +725,8 @@ export DetailsActionsMenu = frame : CardDetails {
 
   popover = frame : menuSource.Menu {
     doc: "Intentional popup overlay; excluded from the content stack.",
-    left: 650px,
-    top: 360px,
+    left: 806px,
+    top: 142px,
     width: 218px,
     ignore-stack: .true,
     overrides: [
@@ -687,8 +772,8 @@ export DetailsTagPicker = frame : CardDetails {
 
   popover = frame : menuSource.Menu {
     doc: "Intentional popup overlay; excluded from the content stack.",
-    left: 650px,
-    top: 360px,
+    left: 412px,
+    top: 576px,
     width: 218px,
     ignore-stack: .true,
     overrides: [
@@ -738,5 +823,105 @@ export DetailsTagPicker = frame : CardDetails {
         }
       }
     }
+  }
+}
+
+@variant
+export DetailsBestOnExpanded = frame : CardDetails {
+  left: 1360px,
+  top: 2940px,
+
+  overlay {
+    display: .hidden
+  }
+
+  body {
+    content {
+      stage {
+        book {
+          right {
+            bestOn {
+              details {
+                preferenceNote {
+                  display: .none
+                }
+
+                display: .visible
+              }
+
+              toggle {
+                button {
+                  label {
+                    label {
+                      contents: "Fewer details"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export DetailsNoBestOn = frame : CardDetails {
+  doc: "Games without Steam Deck evidence show no Best on block.",
+  left: 2720px,
+  top: 2940px,
+
+  body {
+    content {
+      stage {
+        book {
+          right {
+            bestOn {
+              display: .none
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+pc = frame {
+  left: 2141.47px,
+  top: 4476.48px,
+  width: 100%,
+  height: 63px,
+  layout: {direction: .column, item-gap: 6px},
+  fill: c.ui.surface,
+  border: c.ui.border,
+  corner-radius: radius.corner.control,
+  padding: spacing.inset.small,
+  children: [bar, blocker],
+
+  bar = frame {
+    width: 100%,
+    height: 4px,
+    layout: {direction: .row},
+    fill: c.ui.border,
+    corner-radius: 2px,
+    children: value
+  }
+
+  value = frame {
+    width: 75%,
+    height: 100%,
+    opacity: 0.4,
+    fill: c.ui.text,
+    corner-radius: 2px
+  }
+
+  blocker = text {
+    width: 100%,
+    display: .none,
+    fill: c.ui.error,
+    contents: "Not supported: anti-cheat.",
+    font-size: typography.size.caption,
+    font-family: typography.family.interface
   }
 }
