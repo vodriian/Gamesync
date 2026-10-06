@@ -8,16 +8,16 @@ use gpui_component::{
     v_flex, ActiveTheme as _, Disableable as _, IconName, Selectable as _, StyledExt as _,
 };
 
-const PROVIDERS: [&str; 5] = ["Ollama", "OpenAI", "Claude", "Grok", "Gemini"];
-const OLLAMA: usize = 0;
+const PROVIDERS: [&str; 5] = ["OpenAI", "Claude", "Grok", "Gemini", "Ollama"];
+const OLLAMA: usize = 4;
 
 /// Sample lists that stand in for model discovery until real tests exist.
 const MODELS: [&[&str]; 5] = [
-    &["llama3.2", "qwen2.5", "mistral"],
     &["gpt-5", "gpt-5-mini", "gpt-4.1"],
     &["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-4-5"],
     &["grok-4", "grok-3-mini"],
     &["gemini-2.5-pro", "gemini-2.5-flash"],
+    &["llama3.2", "qwen2.5", "mistral"],
 ];
 
 struct Connection {
@@ -72,7 +72,7 @@ impl AiSettings {
         reset_on_change(&endpoint, OLLAMA, cx);
         let connections = (0..PROVIDERS.len())
             .map(|index| {
-                let key = key_input("Enter a dummy API key", window, cx);
+                let key = key_input("Add API key", window, cx);
                 reset_on_change(&key, index, cx);
                 Connection {
                     key,
@@ -85,7 +85,7 @@ impl AiSettings {
             .collect();
         Self {
             connections,
-            provider: OLLAMA,
+            provider: 0,
             endpoint,
         }
     }
@@ -129,8 +129,6 @@ impl Render for AiSettings {
         };
         let models_ready = connection.models_ready();
         v_flex().gap_4()
-            .child(div().text_sm().text_color(cx.theme().muted_foreground)
-                .child("Preview · tests and models are simulated. Use dummy keys; nothing is saved or sent."))
             .child(v_flex().gap_2()
                 .child(div().font_semibold().child("API providers"))
                 .child(h_flex().flex_wrap().gap_2().children(PROVIDERS.iter().enumerate().map(|(index, name)| {
@@ -155,7 +153,7 @@ impl Render for AiSettings {
                             .disabled(!connection.tested || connection.key.read(cx).value().trim().is_empty())
                             .on_click(cx.listener(move |this, _, window, cx| {
                                 // Replace the input entity so the mock does not retain the entered secret.
-                                let key = key_input("Enter a dummy replacement key", window, cx);
+                                let key = key_input("Add a new API key", window, cx);
                                 reset_on_change(&key, index, cx);
                                 let connection = &mut this.connections[index];
                                 connection.key = key;

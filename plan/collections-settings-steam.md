@@ -67,7 +67,7 @@ accessibility tree; keyboard operation does not establish screen-reader support.
 ## AI settings preview
 
 Ollama, OpenAI, Claude, Grok, and Gemini share one provider row, with Ollama
-first. Each form starts with one field: the server address for Ollama, or the
+last. Each form starts with one field: the server address for Ollama, or the
 API key for a cloud provider. A passing test shows a model dropdown; for cloud
 providers it also shows Add key. Tests, add/remove states, and model lists are
 simulated and kept only while Settings is open. No network requests or
