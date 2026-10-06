@@ -100,19 +100,21 @@ Sample games and their collections persist separately in app storage. The
 `demo_library` and `card_geometry_library` examples remain storage fixtures for
 service-level checks, not user-facing folder import features.
 
-## Best on prototype
+## Best on
+
+Real libraries get Best on from Steam evidence after a Steam sync: Valve's
+Steam Deck rating, controller support, Steam Workshop, and where you played.
+Set your rules in **Settings → Best on**: your PC, tags that prefer PC or
+Steam Deck, and equipment that makes games PC only. ProtonDB Steam Deck
+reports are optional; turning them on downloads about 70 MB once a month.
+On a card, (i) shows how each fit is calculated.
 
 ```sh
 python3 desktop/scripts/dev.py --best-on-demo
 ```
 
-Opens a separate in-memory demo with thirteen games and four Best on groups:
-Steam Deck, PC, Both, and Needs review. Open a card and turn to Details to
-review reasons, expand **Why this fit?**, or change **Your preference**.
-Choices update collection counts and reset on restart. All scores and reasons
-are mock examples. The normal Steam library and persistent sample store are
-not opened. On macOS, the prototype has its own `BestOnDemo.app` bundle ID.
-See [the phased plan](../plan/best-on.md). Automated tests follow prototype review.
+Opens a demo store with saved example values; it is recreated on each launch.
+On macOS it has its own `BestOnDemo.app` bundle ID. See [Best on](../plan/best-on.md).
 
 ## Checks
 

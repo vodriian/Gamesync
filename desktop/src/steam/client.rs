@@ -470,26 +470,73 @@ pub fn parse_setup(
         deck,
         deck_notes,
         controller,
+        workshop: Some(ids.contains(&30)),
         checked_at: now,
     })
 }
 
 /// "InterfaceTextIsNotLegible" becomes "Interface text is not legible".
+/// Valve's test token as a sentence. Common blockers get fixed wording;
+/// other tokens are split into words, keeping acronyms such as VR whole.
 fn sentence(token: &str) -> String {
-    let mut text = String::new();
-    for (index, c) in token.chars().enumerate() {
-        if c == '_' {
-            text.push(' ');
-        } else if c.is_ascii_uppercase() && index > 0 && !text.ends_with(' ') {
-            text.push(' ');
-            text.push(c.to_ascii_lowercase());
-        } else if index > 0 {
-            text.push(c.to_ascii_lowercase());
-        } else {
-            text.push(c);
+    match token {
+        "SteamOSDoesNotSupport" => "SteamOS does not support this game".into(),
+        "UnsupportedAntiCheatConfiguration" | "UnsupportedAntiCheat_Other" => {
+            "Its anti-cheat does not support Steam Deck".into()
         }
+        _ => match token.strip_prefix("SteamOSDoesNotSupport_") {
+            Some(rest) => format!("SteamOS does not support {}", words(rest)),
+            None => {
+                let text = words(token);
+                let mut chars = text.chars();
+                chars.next().map_or(text.clone(), |first| {
+                    first.to_uppercase().chain(chars).collect()
+                })
+            }
+        },
     }
-    text
+}
+
+/// "InterfaceTextIsNotLegible" becomes "interface text is not legible";
+/// a run of capitals stays one word ("VR", "SteamOS" reads "steam OS").
+fn words(token: &str) -> String {
+    let chars: Vec<char> = token.chars().collect();
+    let mut words: Vec<String> = Vec::new();
+    let mut word = String::new();
+    for (index, &c) in chars.iter().enumerate() {
+        if c == '_' {
+            if !word.is_empty() {
+                words.push(std::mem::take(&mut word));
+            }
+            continue;
+        }
+        let previous = index.checked_sub(1).map(|i| chars[i]);
+        let next = chars.get(index + 1);
+        let starts_word = c.is_ascii_uppercase()
+            && previous.is_some_and(|p| {
+                p.is_ascii_lowercase()
+                    || p.is_ascii_digit()
+                    || (p.is_ascii_uppercase() && next.is_some_and(|n| n.is_ascii_lowercase()))
+            });
+        if starts_word && !word.is_empty() {
+            words.push(std::mem::take(&mut word));
+        }
+        word.push(c);
+    }
+    if !word.is_empty() {
+        words.push(word);
+    }
+    words
+        .into_iter()
+        .map(|word| {
+            if word.len() > 1 && word.chars().all(|c| c.is_ascii_uppercase()) {
+                word
+            } else {
+                word.to_ascii_lowercase()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 pub fn valid_country(code: &str) -> bool {
@@ -657,9 +704,25 @@ mod cover_tests {
         assert_eq!(
             notes,
             [
-                (DeckNoteKind::Blocker, "Unsupported anti cheat other"),
+                (
+                    DeckNoteKind::Blocker,
+                    "Its anti-cheat does not support Steam Deck"
+                ),
                 (DeckNoteKind::Warning, "Interface text is not legible"),
             ]
+        );
+        // Acronyms stay whole, and SteamOS blockers name what is missing.
+        assert_eq!(
+            super::sentence("SteamOSDoesNotSupport_VR"),
+            "SteamOS does not support VR"
+        );
+        assert_eq!(
+            super::sentence("SteamOSDoesNotSupport"),
+            "SteamOS does not support this game"
+        );
+        assert_eq!(
+            super::sentence("DefaultControllerConfigFullyFunctional"),
+            "Default controller config fully functional"
         );
         // An unrated game is Unknown; a failed report is an error to retry.
         let unrated = serde_json::json!({"success": 1, "results": {"resolved_category": null}});

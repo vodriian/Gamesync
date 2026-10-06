@@ -103,7 +103,7 @@ fn deck_report_names_an_anti_cheat_blocker() {
     assert!(evidence
         .deck_notes
         .iter()
-        .any(|note| note.kind == DeckNoteKind::Blocker && note.text.contains("anti cheat")));
+        .any(|note| note.kind == DeckNoteKind::Blocker && note.text.contains("anti-cheat")));
 }
 
 #[test]

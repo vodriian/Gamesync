@@ -102,8 +102,10 @@ User decision (October 6): real libraries use Steam evidence, not demo values.
   adds 10 to Deck; at most 20% adds 10 to PC. Deck share uses total playtime,
   because Steam can also count Deck time as Linux. The existing classifier
   (minimum 50, 15-point difference) chooses the result.
-- Confidence measures evidence coverage, not accuracy: 15, plus 50 for a Deck
-  rating, 15 for store categories, and 20 for two hours of play.
+- Confidence is no longer calculated or shown. Fit is the only metric; only
+  saved demo fixtures still carry a confidence value.
+- Store category 30 (Steam Workshop) is saved as `workshop`. Evidence saved
+  before that field existed is fetched again on the next sync.
 - The panel names the source: Demo, or Steam with the check age. Personal
   records gain no field until the user chooses a preference.
 
@@ -148,18 +150,41 @@ had a fresh native visual check. A subsequent retry of
 `python3 desktop/scripts/dev.py --best-on-demo --build-only` passed and produced
 `desktop/target/BestOnDemo.app`; the compilation blockers are resolved.
 
-## Planned: rules and enrichment
+## Rules and enrichment
 
-Accepted direction on 2026-10-06; designs are in Elyx and not built yet.
+Accepted on 2026-10-06 and built on `details-card-v2`.
 
-- Fit is the only metric. Confidence leaves the interface. (i) shows a
-  tooltip on hover and a modal with each fit step on click.
-- Settings → Best on holds your rules: My PC (Standard or High-end), Prefer
-  PC tags, Prefer Steam Deck tags, and equipment that makes a game PC only.
-  Rules start empty with one-click suggestions and live in app settings.
-- Enrichment: ProtonDB Steam Deck reports, off by default. Turning it on
-  downloads the monthly ODbL export (about 70 MB) from
-  `github.com/bdefore/protondb-data`, keeps only small per-game results in a
-  local cache, and checks monthly. Turning it off deletes the cache. Fit and
-  Settings show the ODbL credit. The undocumented ProtonDB API and SteamDB
-  (no API; scraping not allowed) are not used.
+- Fit is the only metric. The card shows one scale (Steam Deck left, PC
+  right), the result, and the recommended fit; Both shows the higher fit and
+  a Deck blocker reads "PC only". (i) has a tooltip and opens a modal with
+  every step in order. Each `SetupFit` keeps its steps; saved demo values
+  have none and show their reason text.
+- Order: Valve rating and test warnings, controller support, where you
+  played, My PC (High-end adds 10 to PC), ProtonDB, tag preferences, then
+  equipment. A preference match moves 15 points each way; a game in both
+  lists keeps its fit. Prefer PC can also match games with Steam Workshop.
+  Equipment makes Steam Deck blocked ("Needs your <name>.") and wins over
+  everything except a choice on the game itself. Points change only known
+  scores, so a rule never invents Deck evidence.
+- Rules live in app settings as `best_on_rules` and sync between devices.
+  They start empty, with one-click suggestions. `suitability::Context` holds
+  the rules and ProtonDB results; changing either recalculates the library.
+- ProtonDB enrichment is off by default and stays on one device
+  (`protondb` setting). Turning it on downloads the newest monthly ODbL
+  export from `github.com/bdefore/protondb-data` (about 70 MB), reads it as
+  a stream, and keeps only per-game Deck results in
+  `protondb-deck.json` in app data. It checks for a new export after 30
+  days. Turning it off deletes the file. The card modal and Settings show the
+  ODbL credit. The undocumented protondb.com API and SteamDB are not used.
+- ProtonDB rules, with at least 5 Deck reports: for a game Valve has not
+  rated, 90% or more "runs" gives a Deck start of 70, 70% or more gives 55,
+  and less blocks the Deck. For a rated game, under 70% "runs" removes 15.
+  Performance problems in 25% or more of reports remove 10; battery or
+  readability problems in 30% or more remove 5 each.
+- All Deck reports count, so 2,604 games qualify in the October 2026 export
+  (a two-year window keeps 776). Older complaints can be out of date: in the
+  last two years Cyberpunk 2077 has 18% performance and 26% battery
+  complaints, against 28% and 33% over all years.
+- "yes" to the battery and readability questions is read as a problem. The
+  export has no documentation for these fields; heavy games have far higher
+  shares than light ones.

@@ -62,6 +62,10 @@ const ICONS: &[(&str, &[u8])] = &[
         include_bytes!("../../Design/resources/icons-new/computer-stroke-rounded.svg"),
     ),
     (
+        "icons/hugeicons/info-stroke-rounded.svg",
+        include_bytes!("../../Design/resources/icons-new/info-stroke-rounded.svg"),
+    ),
+    (
         "icons/eye-off.svg",
         include_bytes!("../../Design/resources/icons-new/eye-off-stroke-rounded.svg"),
     ),
@@ -247,17 +251,20 @@ impl gpui_component::IconNamed for FavoriteIcon {
     }
 }
 
-/// Setups in the Best on details: a handheld for Steam Deck, a monitor for PC.
+/// Setups in the Best on details: a handheld for Steam Deck, a monitor for
+/// PC, and the (i) that opens how fit is calculated.
 #[derive(Clone, Copy)]
 pub enum SetupIcon {
     SteamDeck,
     Pc,
+    Info,
 }
 impl gpui_component::IconNamed for SetupIcon {
     fn path(self) -> SharedString {
         match self {
             Self::SteamDeck => "icons/hugeicons/gameboy-stroke-rounded.svg",
             Self::Pc => "icons/hugeicons/computer-stroke-rounded.svg",
+            Self::Info => "icons/hugeicons/info-stroke-rounded.svg",
         }
         .into()
     }

@@ -232,6 +232,7 @@ impl Render for SettingsView {
                                     Section::General,
                                     Section::Sync,
                                     Section::Appearance,
+                                    Section::BestOn,
                                     Section::Ai,
                                 ]
                                 .into_iter()
@@ -240,12 +241,21 @@ impl Render for SettingsView {
                                         .ghost()
                                         .label(section.label())
                                         .icon(match section {
-                                            Section::General => gpui_component::IconName::Settings,
-                                            Section::Sync => gpui_component::IconName::FolderOpen,
-                                            Section::Appearance => {
-                                                gpui_component::IconName::Palette
-                                            }
-                                            Section::Ai => gpui_component::IconName::Bot,
+                                            Section::General => gpui_component::Icon::from(
+                                                gpui_component::IconName::Settings,
+                                            ),
+                                            Section::Sync => gpui_component::Icon::from(
+                                                gpui_component::IconName::FolderOpen,
+                                            ),
+                                            Section::Appearance => gpui_component::Icon::from(
+                                                gpui_component::IconName::Palette,
+                                            ),
+                                            Section::BestOn => gpui_component::Icon::new(
+                                                crate::assets::SetupIcon::Pc,
+                                            ),
+                                            Section::Ai => gpui_component::Icon::from(
+                                                gpui_component::IconName::Bot,
+                                            ),
                                         })
                                         .justify_start()
                                         .w_full()
@@ -281,6 +291,9 @@ impl Render for SettingsView {
                             })
                             .when(self.section == Section::Sync, |column| {
                                 column.child(self.sync_section(cx))
+                            })
+                            .when(self.section == Section::BestOn, |column| {
+                                column.child(self.best_on.clone())
                             })
                             .when(self.section == Section::Ai, |column| {
                                 column.child(self.ai.clone())

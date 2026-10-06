@@ -77,11 +77,13 @@ pub fn best_on_games() -> Result<Vec<Game>> {
             score: None,
             reason: "Local handheld play is unavailable in this scenario.".into(),
             blocker: Some("Demo blocker: anti-cheat does not support SteamOS.".into()),
+            steps: Vec::new(),
         },
         pc: SetupFit {
             score: Some(87),
             reason: "The fictional Windows setup supports this game and mouse aiming.".into(),
             blocker: None,
+            steps: Vec::new(),
         },
     });
     blocked.record = Some(GameRevision {

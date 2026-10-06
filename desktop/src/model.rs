@@ -599,6 +599,13 @@ impl Library {
         self.recompute();
     }
 
+    /// Best on rules or enrichment changed: recount the sidebar bands and
+    /// refilter, since a Best on scope can now match other games.
+    pub fn refresh_best_on(&mut self) {
+        self.smart = smart_groups(&self.games);
+        self.recompute();
+    }
+
     pub fn set_scope(&mut self, scope: Scope) {
         self.home = false;
         self.scope = scope;

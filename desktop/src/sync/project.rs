@@ -245,6 +245,14 @@ fn project_settings(settings: &Settings, fields: &mut Projection) {
         "store_country",
         json!(settings.store_country),
     );
+    if settings.best_on_rules != crate::suitability::Rules::default() {
+        set(
+            fields,
+            &target,
+            "best_on_rules",
+            json!(settings.best_on_rules),
+        );
+    }
 }
 
 /// Section keys hold any text, such as a smart rule in JSON. Hex keeps them
@@ -284,5 +292,19 @@ mod tests {
         assert!(fields.fields.is_empty(), "{:?}", fields.fields);
         assert!(fields.targets.contains(&Target::Library));
         assert!(fields.targets.contains(&Target::Status("backlog".into())));
+    }
+
+    #[test]
+    fn best_on_rules_sync_but_protondb_stays_on_this_device() {
+        let mut settings = Settings::default();
+        settings.best_on_rules.prefer_pc = vec!["Open World".into()];
+        settings.protondb = true;
+        let fields = project(&default_definitions(), &[], &settings).fields;
+        let names: Vec<_> = fields
+            .keys()
+            .filter(|key| key.0 == Target::Settings)
+            .map(|key| key.1.as_str())
+            .collect();
+        assert_eq!(names, ["best_on_rules"]);
     }
 }

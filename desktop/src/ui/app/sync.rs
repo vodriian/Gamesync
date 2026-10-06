@@ -73,6 +73,12 @@ impl GameSyncApp {
         });
         cx.global_mut::<crate::ui::motion::MotionPreferences>()
             .reduced = settings.reduce_motion;
+        let rules = settings.best_on_rules.clone();
+        let best_on = cx
+            .global::<crate::ui::best_on_state::BestOnGlobal>()
+            .0
+            .clone();
+        best_on.update(cx, |state, cx| state.reload_rules(rules, cx));
         if let Some(view) = &self.settings_view {
             let reduce = settings.reduce_motion;
             view.update(cx, |view, cx| view.set_reduce_motion(reduce, cx));

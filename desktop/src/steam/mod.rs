@@ -193,7 +193,11 @@ fn run_sync(
                 metadata.details_complete,
                 metadata.reviews_complete,
                 metadata.cover_complete,
-                metadata.setup.is_some(),
+                // Evidence from before Workshop was read is fetched again.
+                metadata
+                    .setup
+                    .as_ref()
+                    .is_some_and(|setup| setup.workshop.is_some()),
                 metadata.banner.is_some(),
             ][stage]
             {
