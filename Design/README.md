@@ -2,7 +2,7 @@
 
 Open [index.elyx](index.elyx) for the main references. Folder galleries provide
 Controls, Blocks, Home, Library, Game details, Settings, Review, Tokens, Icons,
-and Images. The [state index](state-index.md) maps all 90 original references.
+and Images. The [state index](state-index.md) maps the 90 original references and later additions.
 
 ## Where to edit
 
@@ -10,7 +10,7 @@ and Images. The [state index](state-index.md) maps all 90 original references.
 | --- | --- |
 | `tokens/` | Semantic colors, dark context, spacing, typography, radii |
 | `design/controls/` | Buttons, icon labels, inputs, navigation rows, checkboxes, ratings, tags, menu items |
-| `design/blocks/` | Sidebar, window shells, shared sample grid, cards, rows, filmstrip, messages, Settings groups |
+| `design/blocks/` | Sidebar, window shells, shared sample grid, cards, rows, filmstrip, Best on, messages, Settings groups |
 | `design/screens/` | Nineteen screen families and their named state variants |
 | `resources/icons-new/` | The only UI icon source; supplied SVG artwork is preserved |
 | `resources/images/` | Bundled sample covers |

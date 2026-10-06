@@ -63,13 +63,18 @@ The page width fits both the window height and two pages across.
 
 | Left page | Right page |
 | --- | --- |
-| Cover crop, title, favorite | Status and rating in one row; actions menu (top right) |
+| Inside cover, title, favorite | Status and rating in one row; actions menu (top right) |
 | Description, year and Steam reviews, genres | Best on: setup and confidence; More details for fit and preference |
 | Hours played | Notes, filling the rest of the page |
 | Collections, tags | |
 
-Wishlist games show the price in place of status and rating. Best on data
-exists only in `--best-on-demo`; see [Best on](best-on.md). Read-only pages
+The inside cover is Steam's landscape header (`header_2x`, then `header`),
+shown uncropped at its 460×215 shape so the logo stays whole. It is saved as
+`steam.metadata.banner` in `media/`, apart from the portrait cover. A game
+without one, or with a personal cover, shows a 150 px strip of its cover.
+
+Wishlist games show the price in place of status and rating. Best on uses
+Steam Deck evidence, or demo values in `--best-on-demo`; see [Best on](best-on.md). Read-only pages
 remain only for preview modes without a store (`--stress`, `--empty`,
 `--missing-covers`).
 A conflict review replaces the right page. The editor builds both pages and

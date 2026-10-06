@@ -107,6 +107,10 @@ pub struct SteamMetadata {
     /// later sync retries it. See `crate::suitability::assessment`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub setup: Option<crate::suitability::SetupEvidence>,
+    /// Landscape store header in media/, shown inside the open book. None
+    /// means not fetched yet, so a later sync retries it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub banner: Option<String>,
     #[serde(flatten)]
     pub extra: ExtraFields,
 }
@@ -186,6 +190,15 @@ impl GameData {
     }
 
     /// Wishlisted games live only in the Wishlist scope, apart from the library.
+    /// Steam's landscape art for the inside cover. A personal cover replaces
+    /// all Steam artwork, so it hides the banner too.
+    pub fn banner(&self) -> Option<&String> {
+        if self.personal.cover.is_some() {
+            return None;
+        }
+        self.steam.as_ref()?.metadata.as_ref()?.banner.as_ref()
+    }
+
     pub fn wishlisted(&self) -> bool {
         self.steam
             .as_ref()
@@ -248,6 +261,7 @@ impl GameRevision {
                         "reviews_complete",
                         "cover_complete",
                         "setup",
+                        "banner",
                     ],
                 )?;
                 ensure!(
@@ -320,13 +334,14 @@ impl GameRevision {
                 && collection_ids.iter().all(|id| !id.is_nil()),
             "Invalid collection membership"
         );
-        for cover in self.game.personal.cover.iter().chain(
-            self.game
-                .steam
-                .as_ref()
-                .and_then(|s| s.metadata.as_ref())
-                .and_then(|m| m.cover.as_ref()),
-        ) {
+        let steam_art = self
+            .game
+            .steam
+            .as_ref()
+            .and_then(|s| s.metadata.as_ref())
+            .into_iter()
+            .flat_map(|m| m.cover.iter().chain(&m.banner));
+        for cover in self.game.personal.cover.iter().chain(steam_art) {
             // Check portable separators, including Windows paths on a Mac.
             ensure!(
                 !cover.contains(['\\', ':'])

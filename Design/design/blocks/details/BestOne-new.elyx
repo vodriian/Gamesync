@@ -1,0 +1,331 @@
+import "tokens/radius.elyx" as radius
+import "tokens/spacing.elyx" as spacing
+import "tokens/typography.elyx" as typography
+import "tokens/colors.elyx" as c
+import "design/blocks/details/BestOn.elyx" as BestOn
+import "design/controls/Button.elyx" as buttons
+import "resources/icons-new/info-stroke-rounded.svg" as info-stroke-rounded
+
+BestOnExpanded = frame {
+  left: 1313px,
+  top: 495px,
+  width: 340px,
+  layout: {direction: .column, item-gap: spacing.gap.regular},
+  children: [heading, result, details],
+
+  heading = frame {
+    width: 100%,
+    layout: {justify-content: .space-between, align-items: .center},
+    children: [label, source]
+  }
+
+  label = text {
+    fill: c.ui.muted,
+    contents: "Best on",
+    font-size: typography.size.caption,
+    font-family: typography.family.interface
+  }
+
+  source = text {
+    fill: c.ui.muted,
+    contents: "Steam · checked today",
+    font-size: typography.size.caption,
+    font-family: typography.family.interface
+  }
+
+  result = frame {
+    width: 100%,
+    layout: {justify-content: .space-between, align-items: .center},
+    children: [GroupedStack, confidence]
+  }
+
+  label_2 = text {
+    fill: c.ui.text,
+    contents: "Steam Deck",
+    font-size: typography.size.heading,
+    font-family: typography.family.interface,
+    font-style: "Bold"
+  }
+
+  confidence = frame {
+    layout: {align-items: .center, item-gap: spacing.gap.small},
+    children: value
+  }
+
+  value = text {
+    fill: c.ui.text,
+    subrange: {range: [3, 6], font-size: 12},
+    contents: "90/100",
+    font-size: typography.size.body,
+    font-family: typography.family.interface,
+    font-style: "Medium"
+  }
+
+  details = frame {
+    width: 100%,
+    layout: {direction: .column, item-gap: spacing.gap.regular},
+    children: [deck_3, preferenceLabel, choices]
+  }
+
+  preferenceLabel = text {
+    fill: c.ui.muted,
+    contents: "Your preference",
+    font-size: typography.size.caption,
+    font-family: typography.family.interface
+  }
+
+  choices = frame {
+    width: 100%,
+    layout: {
+      item-gap: spacing.gap.small,
+      wrap: .true,
+      line-gap: spacing.gap.small
+    },
+    children: [automatic, deck_2, pc_2, both]
+  }
+
+  automatic = frame : buttons.Primary {
+    left: .auto,
+    top: .auto,
+    height: 22px,
+    padding-top: 2px,
+    padding-left: 6px,
+    padding-bottom: 2px,
+    padding-right: 6px,
+
+    label {
+      label {
+        contents: "Automatic",
+        font-size: typography.size.caption
+      }
+    }
+  }
+
+  deck_2 = frame : buttons.Button {
+    height: 22px,
+    padding-top: 2px,
+    padding-left: 6px,
+    padding-bottom: 2px,
+    padding-right: 6px,
+
+    label {
+      label {
+        contents: "Steam Deck",
+        font-size: typography.size.caption
+      }
+    }
+  }
+
+  pc_2 = frame : buttons.Button {
+    height: 22px,
+    padding-top: 2px,
+    padding-left: 6px,
+    padding-bottom: 2px,
+    padding-right: 6px,
+
+    label {
+      label {
+        contents: "PC",
+        font-size: typography.size.caption
+      }
+    }
+  }
+
+  both = frame : buttons.Button {
+    height: 22px,
+    padding-top: 2px,
+    padding-left: 6px,
+    padding-bottom: 2px,
+    padding-right: 6px,
+
+    label {
+      label {
+        contents: "Both",
+        font-size: typography.size.caption
+      }
+    }
+  }
+
+  deck_3 = frame {
+    left: 0px,
+    top: 449px,
+    width: 100%,
+    height: 96px,
+    layout: {direction: .column, justify-content: .center, item-gap: 0px},
+    fill: c.ui.subtle,
+    border: c.ui.border,
+    corner-radius: radius.corner.control,
+    padding: spacing.inset.small,
+    children: [layer1, layer2, blocker],
+
+    blocker = text {
+      width: 100%,
+      display: .none,
+      fill: c.ui.error,
+      contents: "Not supported: anti-cheat.",
+      font-size: typography.size.caption,
+      font-family: typography.family.interface
+    }
+
+    layer1 = frame {
+      left: 0px,
+      top: 8px,
+      width: 100%,
+      height: 43px,
+      layout: {
+        justify-content: .space-between,
+        align-items: .stretch,
+        item-gap: 6px
+      },
+      overflow: .visible,
+      children: [heading, heading_2]
+    }
+
+    heading = frame {
+      left: 0px,
+      top: 0px,
+      width: 100%,
+      height: 63px,
+      layout: {direction: .column, item-gap: spacing.gap.medium},
+      children: [glyph, label],
+
+      glyph = icon {
+        width: 16px,
+        height: 16px,
+        fill: c.ui.violetNew,
+        contents: BestOn.deckIcon
+      }
+
+      label = text {
+        width: 100%,
+        fill: c.ui.text,
+        contents: "Steam Deck",
+        font-size: typography.size.body,
+        font-family: typography.family.interface,
+        font-style: "Medium"
+      }
+    }
+
+    heading_2 = frame {
+      left: 0px,
+      top: 69px,
+      width: 65px,
+      height: 63px,
+      layout: {
+        direction: .column,
+        align-items: .end,
+        item-gap: spacing.gap.medium
+      },
+      children: [glyph_2, label_2],
+
+      glyph_2 = icon {
+        width: 16px,
+        height: 16px,
+        fill: c.ui.greenishNew,
+        contents: BestOn.pcIcon
+      }
+
+      label_2 = text {
+        width: 100%,
+        fill: c.ui.text,
+        contents: "PC",
+        font-size: typography.size.body,
+        font-family: typography.family.interface,
+        font-style: "Medium",
+        align: .right
+      }
+    }
+
+    layer2 = frame {
+      left: 0px,
+      top: 51px,
+      width: 100%,
+      height: 37px,
+      overflow: .visible,
+      children: [bar, shape1, score, score_2]
+    }
+
+    bar = frame {
+      left: 0px,
+      top: 10px,
+      width: 100%,
+      height: 4px,
+      fill: c.ui.border,
+      corner-radius: 2px,
+      children: [value, deck_3.value],
+
+      value = frame {
+        left: 9.4px,
+        top: 0px,
+        width: 152.6px,
+        height: 4px,
+        fill: c.ui.violetNew,
+        corner-radius: 2px
+      }
+    }
+
+    shape1 = shape {
+      left: 160px,
+      top: 6px,
+      width: 4px,
+      height: 12px,
+      fill: c.ui.selected,
+      shadow: {
+        drop-shadow: {
+          color: rgb(0%, 0%, 0%, 10%),
+          offset: point(0px, 5px),
+          blur-radius: 5px,
+          spread: 0px,
+          visible: .false
+        }
+      },
+      type: .rect,
+      corner-radius: 6px
+    }
+
+    score = text {
+      left: -0.47px,
+      top: 22.5166px,
+      width: 38px,
+      height: 14px,
+      fill: c.ui.muted,
+      contents: "90/100",
+      font-size: typography.size.caption,
+      font-family: typography.family.interface
+    }
+
+    score_2 = text {
+      left: 286px,
+      top: 23px,
+      width: 38px,
+      height: 14px,
+      fill: c.ui.muted,
+      contents: "75/100",
+      font-size: typography.size.caption,
+      font-family: typography.family.interface
+    }
+
+    value = frame {
+      left: 162.4px,
+      top: 0px,
+      width: 110.6px,
+      height: 4px,
+      fill: c.ui.greenishNew,
+      corner-radius: 2px
+    }
+  }
+
+  info-stroke-roundedsvg = icon {
+    left: 110.0989px,
+    top: 2.2757px,
+    width: 16px,
+    height: 16px,
+    contents: info-stroke-rounded
+  }
+
+  GroupedStack = frame {
+    layout: {justify-content: .center, align-items: .center, item-gap: 8px},
+    overflow: .visible,
+    children: [label_2, info-stroke-roundedsvg]
+  }
+}

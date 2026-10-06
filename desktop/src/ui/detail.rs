@@ -748,19 +748,26 @@ impl DetailPanel {
         cx: &mut Context<Self>,
     ) -> (gpui::AnyElement, gpui::AnyElement) {
         let muted = cx.theme().muted_foreground;
-        let cover = div()
+        let mut cover = div()
             .mx_3()
             .mt_3()
-            .h(px(150.))
             .flex_shrink_0()
             .rounded(crate::theme::interface_radius(cx, px(10.)))
             .overflow_hidden()
-            .bg(cx.theme().secondary)
-            .child(
+            .bg(cx.theme().secondary);
+        // Steam's landscape header keeps its 460×215 shape, so its logo is
+        // never cropped. Without one, a strip of the portrait cover stands in.
+        let art = match game.banner_path.clone() {
+            Some(path) => {
+                cover.style().aspect_ratio = Some(460. / 215.);
+                img(path)
+            }
+            None => {
+                cover = cover.h(px(150.));
                 img(super::card::cover_image(game))
-                    .size_full()
-                    .object_fit(ObjectFit::Cover),
-            );
+            }
+        };
+        let cover = cover.child(art.size_full().object_fit(ObjectFit::Cover));
         // Only games with Steam Deck evidence or demo values show Best on.
         let assessed = game.record.as_ref().is_some_and(|record| {
             gamesync_desktop::suitability::assessment(&record.game).is_some()

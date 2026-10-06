@@ -35,6 +35,8 @@ pub struct Game {
     pub collections: Vec<String>,
     #[serde(skip)]
     pub cover_path: Option<PathBuf>,
+    /// Landscape Steam header for the open book's left page.
+    pub banner_path: Option<PathBuf>,
     /// Half-star units, from 1 to 10. None means unrated.
     pub rating: Option<u8>,
     pub tags: Vec<String>,
@@ -331,6 +333,7 @@ impl Library {
                     title: record.game.title.clone(),
                     cover: "covers/missing.jpg".into(),
                     cover_path: loaded.covers.get(&record.game_id).cloned(),
+                    banner_path: loaded.banners.get(&record.game_id).cloned(),
                     description: record.game.description().unwrap_or("").into(),
                     status: personal.status.clone(),
                     status_label: loaded

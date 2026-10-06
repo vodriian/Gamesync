@@ -259,7 +259,8 @@ impl SteamClient {
             &[("language", "english")],
         )?)
     }
-    pub fn cover(&self, id: u32) -> Result<Vec<u8>> {
+    /// Store artwork paths for one app, or None when Steam does not list them.
+    fn store_assets(&self, id: u32) -> Option<Value> {
         let request = serde_json::json!({
             "ids": [{"appid": id}],
             "context": {"language": "english", "country_code": "US"},
@@ -270,16 +271,16 @@ impl SteamClient {
                 "https://api.steampowered.com/IStoreBrowseService/GetItems/v1/",
                 &[("input_json", &request.to_string())],
             )
-            .ok();
-        let assets = artwork
-            .as_ref()
-            .and_then(|v| v["response"]["store_items"].as_array())
-            .and_then(|items| {
-                items
-                    .iter()
-                    .find(|item| item["appid"].as_u64() == Some(u64::from(id)))
-            })
-            .map(|item| &item["assets"]);
+            .ok()?;
+        artwork["response"]["store_items"]
+            .as_array()?
+            .iter()
+            .find(|item| item["appid"].as_u64() == Some(u64::from(id)))
+            .map(|item| item["assets"].clone())
+    }
+    pub fn cover(&self, id: u32) -> Result<Vec<u8>> {
+        let assets = self.store_assets(id);
+        let assets = assets.as_ref();
         let mut urls = Vec::new();
         for field in ["library_capsule", "library_capsule_2x"] {
             if let Some(url) = assets
@@ -319,6 +320,34 @@ impl SteamClient {
             }
         }
         bail!("Steam has no usable cover right now. Your previous cover is kept. Try again later.")
+    }
+    /// The landscape store header (920×430, then 460×215) for the inside
+    /// cover. It carries the game logo, so the app shows it uncropped.
+    pub fn banner(&self, id: u32) -> Result<Vec<u8>> {
+        let assets = self.store_assets(id);
+        let mut urls: Vec<String> = ["header_2x", "header"]
+            .into_iter()
+            .filter_map(|field| artwork_url(id, assets.as_ref()?[field].as_str()?))
+            .collect();
+        // Older store responses may expose a header even when artwork metadata is absent.
+        if urls.is_empty() {
+            if let Ok(details) = self.details(id) {
+                urls.extend(
+                    details["header_image"]
+                        .as_str()
+                        .filter(|url| trusted_header(id, url))
+                        .map(str::to_owned),
+                );
+            }
+        }
+        for url in urls {
+            if let Ok(bytes) = self.bytes(&url, &[], 8 * 1024 * 1024) {
+                if validate_banner(&bytes).is_ok() {
+                    return Ok(bytes);
+                }
+            }
+        }
+        bail!("Steam has no landscape artwork right now. Try again later.")
     }
 }
 pub fn parse_owned(data: Value) -> Result<Vec<OwnedGame>> {
@@ -526,6 +555,21 @@ pub fn parse_tag_names(data: &Value) -> Result<BTreeMap<u32, String>> {
 
 /// Decode before recording success; a partial download must remain retryable.
 pub fn validate_cover(bytes: &[u8]) -> Result<()> {
+    artwork_size(bytes).map(|_| ())
+}
+
+/// A banner must be clearly wider than tall; Steam headers are about 2.14:1.
+pub fn validate_banner(bytes: &[u8]) -> Result<()> {
+    let (width, height) = artwork_size(bytes)?;
+    ensure!(
+        width * 2 >= height * 3,
+        "Landscape artwork is not wide enough"
+    );
+    Ok(())
+}
+
+/// Decoded size of a usable JPEG, after the size and placeholder checks.
+fn artwork_size(bytes: &[u8]) -> Result<(u32, u32)> {
     let mut reader =
         image::ImageReader::with_format(std::io::Cursor::new(bytes), image::ImageFormat::Jpeg);
     let mut limits = image::Limits::default();
@@ -556,7 +600,7 @@ pub fn validate_cover(bytes: &[u8]) -> Result<()> {
         (0..3).any(|i| high[i].saturating_sub(low[i]) > 4),
         "Steam returned a blank placeholder"
     );
-    Ok(())
+    Ok((width, height))
 }
 
 fn artwork_url(id: u32, path: &str) -> Option<String> {

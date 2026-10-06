@@ -76,6 +76,7 @@ trait SteamSource {
     fn details(&self, id: u32) -> Result<serde_json::Value>;
     fn reviews(&self, id: u32) -> Result<serde_json::Value>;
     fn cover(&self, id: u32) -> Result<Vec<u8>>;
+    fn banner(&self, id: u32) -> Result<Vec<u8>>;
     fn store_tags(&self, ids: &[u32]) -> Result<BTreeMap<u32, Vec<u32>>>;
     fn tag_names(&self) -> Result<BTreeMap<u32, String>>;
     fn wishlist(&self, account: &str) -> Result<Vec<WishlistItem>>;
@@ -113,6 +114,9 @@ impl SteamSource for SteamClient {
     }
     fn cover(&self, id: u32) -> Result<Vec<u8>> {
         self.cover(id)
+    }
+    fn banner(&self, id: u32) -> Result<Vec<u8>> {
+        self.banner(id)
     }
 }
 fn run_sync(
@@ -181,7 +185,7 @@ fn run_sync(
         };
         let id = steam.app_id;
         let metadata = steam.metadata.clone().unwrap_or_default();
-        for stage in 0..4 {
+        for stage in 0..5 {
             if cancelled(&cancel) {
                 break;
             }
@@ -190,6 +194,7 @@ fn run_sync(
                 metadata.reviews_complete,
                 metadata.cover_complete,
                 metadata.setup.is_some(),
+                metadata.banner.is_some(),
             ][stage]
             {
                 continue;
@@ -209,10 +214,13 @@ fn run_sync(
                     .cover(id)
                     .and_then(|bytes| covers::save(root, record.game_id, id, &bytes).map(|_| ())),
                 // Two store requests; the pause keeps the usual request spacing.
-                _ => client.deck_report(id).and_then(|report| {
+                3 => client.deck_report(id).and_then(|report| {
                     pause(&cancel, delay);
                     let categories = client.store_categories(id)?;
                     apply_setup(&store, record.game_id, id, &report, &categories)
+                }),
+                _ => client.banner(id).and_then(|bytes| {
+                    covers::save_banner(root, record.game_id, id, &bytes).map(|_| ())
                 }),
             };
             if let Err(error) = result {
@@ -221,7 +229,13 @@ fn run_sync(
                     state.issues.push(format!(
                         "{} · {}: {error}",
                         record.game.title,
-                        ["description", "reviews", "cover", "Steam Deck"][stage]
+                        [
+                            "description",
+                            "reviews",
+                            "cover",
+                            "Steam Deck",
+                            "landscape cover"
+                        ][stage]
                     ));
                 }
             }
@@ -393,6 +407,12 @@ pub fn resync_game(root: &Path, game_id: uuid::Uuid) -> Result<Vec<String>> {
     });
     if let Err(error) = setup {
         failures.push(format!("Steam Deck: {error}"));
+    }
+    if let Err(error) = client
+        .banner(app_id)
+        .and_then(|bytes| covers::save_banner(root, game_id, app_id, &bytes))
+    {
+        failures.push(format!("landscape cover: {error}"));
     }
     Ok(failures)
 }

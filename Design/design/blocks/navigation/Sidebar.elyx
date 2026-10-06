@@ -1,6 +1,6 @@
 import "tokens/colors.dark.elyx" as darkTheme
-import "resources/icons-new/eye-off-stroke-rounded.svg" as hiddenIcon
 import "tokens/colors.elyx" as c
+import "resources/icons-new/eye-off-stroke-rounded.svg" as hiddenIcon
 import "tokens/typography.elyx" as typography
 import "tokens/spacing.elyx" as spacing
 import "design/controls/NavigationRow.elyx" as rows
@@ -13,6 +13,7 @@ import "resources/icons-new/bookshelf-03-stroke-rounded.svg" as genresIcon
 import "resources/icons-new/tags-stroke-rounded.svg" as tagsIcon
 import "resources/icons-new/star-square-stroke-rounded.svg" as ratingIcon
 import "resources/icons-new/time-04-stroke-rounded.svg" as hoursIcon
+import "resources/icons-new/computer-stroke-rounded.svg" as bestOnIcon
 import "resources/icons-new/chevron-right-stroke-rounded.svg" as chevronIcon
 import "resources/icons-new/chevron-down-stroke-rounded.svg" as downIcon
 import "resources/icons-new/solid/game-controller-03-stroke-rounded-solid.svg" as allSolid
@@ -41,6 +42,7 @@ export Sidebar = frame {
       collection,
       space2,
       smart,
+      bestOn,
       genres,
       tags,
       rating,
@@ -178,6 +180,121 @@ export Sidebar = frame {
         contents: "Smart collections",
         font-size: typography.size.body,
         font-family: typography.family.interface
+      }
+    }
+
+    bestOn = frame {
+      doc: "Best on starts open. Its bands come from Steam Deck evidence or the user's preference.",
+      width: 100%,
+      layout: {direction: .column, item-gap: spacing.gap.tight},
+      children: [header, bands],
+
+      header = frame {
+        width: 100%,
+        height: 36px,
+        layout: {align-items: .center, item-gap: spacing.gap.icon},
+        padding: [0px, 10px],
+        children: [disclosure, glyph, label],
+
+        disclosure = icon {
+          width: 12px,
+          height: 12px,
+          fill: c.ui.muted,
+          contents: downIcon
+        }
+
+        glyph = icon {
+          width: spacing.size.icon,
+          height: spacing.size.icon,
+          fill: c.ui.muted,
+          contents: bestOnIcon
+        }
+
+        label = text {
+          width: 100%,
+          fill: c.ui.text,
+          contents: "Best on",
+          font-size: typography.size.body,
+          font-family: typography.family.interface
+        }
+      }
+
+      bands = frame {
+        width: 100%,
+        layout: {direction: .column, item-gap: spacing.gap.tight},
+        children: [deck, pc, both, review],
+
+        deck = frame : rows.NavigationRow {
+          padding-left: 40px,
+
+          glyph {
+            display: .none
+          }
+
+          count {
+            contents: "3"
+          }
+
+          labelArea {
+            label {
+              contents: "Steam Deck"
+            }
+          }
+        }
+
+        pc = frame : rows.NavigationRow {
+          padding-left: 40px,
+
+          glyph {
+            display: .none
+          }
+
+          count {
+            contents: "2"
+          }
+
+          labelArea {
+            label {
+              contents: "PC"
+            }
+          }
+        }
+
+        both = frame : rows.NavigationRow {
+          padding-left: 40px,
+
+          glyph {
+            display: .none
+          }
+
+          count {
+            contents: "3"
+          }
+
+          labelArea {
+            label {
+              contents: "Both"
+            }
+          }
+        }
+
+        review = frame : rows.NavigationRow {
+          padding-left: 40px,
+
+          glyph {
+            display: .none
+          }
+
+          count {
+            contents: "1"
+          }
+
+          labelArea {
+            label {
+              contents: "Needs review"
+            }
+          }
+        }
       }
     }
 

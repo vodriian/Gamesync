@@ -15,6 +15,12 @@ launch timed out during implementation. Other native comparisons are not newly
 verified. Linux/Omarchy, live sync, errors, animation, and 3D remain source-derived
 or illustrative. AI Settings remain a simulated preview.
 
+Card details now show the open book from the `details-card-v2` branch: the
+Steam summary on the left page and personal fields on the right. The Best on
+block lives in [BestOn.elyx](design/blocks/details/BestOn.elyx) with collapsed,
+expanded, and blocked states. Two detail states were added after the original
+90. The fold animation and the 3D turn are native only and are not drawn here.
+
 Use the [workspace guide](README.md) for editing and validation commands.
 The [October 1 verification log](../plan/logs/2026-10-01.md#elyx-workspace-cleanup)
 records the completed static checks and remaining native comparison limit.
@@ -81,6 +87,8 @@ records the completed static checks and remaining native comparison limit.
 | DetailsStatusMenu | [CardDetails.elyx](design/screens/details/CardDetails.elyx) | `DetailsStatusMenu` | light |
 | DetailsActionsMenu | [CardDetails.elyx](design/screens/details/CardDetails.elyx) | `DetailsActionsMenu` | light |
 | DetailsTagPicker | [CardDetails.elyx](design/screens/details/CardDetails.elyx) | `DetailsTagPicker` | light |
+| DetailsBestOnExpanded | [CardDetails.elyx](design/screens/details/CardDetails.elyx) | `DetailsBestOnExpanded` | light |
+| DetailsNoBestOn | [CardDetails.elyx](design/screens/details/CardDetails.elyx) | `DetailsNoBestOn` | light |
 | SettingsGeneral | [General.elyx](design/screens/settings/General.elyx) | `SettingsGeneral` | light |
 | SteamConnected | [General.elyx](design/screens/settings/General.elyx) | `SteamConnected` | light |
 | SteamSyncing | [General.elyx](design/screens/settings/General.elyx) | `SteamSyncing` | light |

@@ -1,0 +1,427 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "tokens/radius.elyx" as radius
+import "tokens/spacing.elyx" as spacing
+import "tokens/typography.elyx" as typography
+import "design/controls/Button.elyx" as buttons
+import "resources/icons-new/gameboy-stroke-rounded.svg" as deckIcon
+import "resources/icons-new/computer-stroke-rounded.svg" as pcIcon
+
+export FitRow = frame {
+  doc: "One setup fit. Unknown and blocked fits keep an empty bar, never a zero score.",
+  left: 0px,
+  top: 0px,
+  width: 320px,
+  layout: {direction: .column, item-gap: 6px},
+  fill: c.ui.surface,
+  border: c.ui.border,
+  corner-radius: radius.corner.control,
+  padding: spacing.inset.small,
+  children: [heading, bar, reason, blocker],
+
+  heading = frame {
+    width: 100%,
+    layout: {align-items: .center, item-gap: spacing.gap.medium},
+    children: [glyph, label, score],
+
+    glyph = icon {
+      width: 16px,
+      height: 16px,
+      fill: c.ui.text,
+      contents: deckIcon
+    }
+
+    label = text {
+      width: 100%,
+      fill: c.ui.text,
+      contents: "Steam Deck",
+      font-size: typography.size.body,
+      font-family: typography.family.interface,
+      font-style: "Medium"
+    }
+
+    score = text {
+      fill: c.ui.muted,
+      contents: "90/100",
+      font-size: typography.size.caption,
+      font-family: typography.family.interface
+    }
+  }
+
+  bar = frame {
+    width: 100%,
+    height: 4px,
+    layout: {direction: .row},
+    fill: c.ui.border,
+    corner-radius: 2px,
+    children: value,
+
+    value = frame {
+      width: 90%,
+      height: 100%,
+      fill: c.ui.text,
+      corner-radius: 2px
+    }
+  }
+
+  reason = text {
+    width: 100%,
+    fill: c.ui.muted,
+    contents: "Steam Deck Verified. Full controller support.",
+    font-size: typography.size.caption,
+    font-family: typography.family.interface
+  }
+
+  blocker = text {
+    width: 100%,
+    display: .none,
+    fill: c.ui.error,
+    contents: "Not supported: anti-cheat.",
+    font-size: typography.size.caption,
+    font-family: typography.family.interface
+  }
+}
+
+@variant
+export RecommendedFit = frame : FitRow {
+  top: 120px,
+  fill[0].color: c.ui.subtle
+}
+
+@variant
+export BlockedFit = frame : FitRow {
+  top: 240px,
+
+  heading {
+    score {
+      fill[0].color: c.ui.error,
+      contents: "Blocked"
+    }
+  }
+
+  bar {
+    value {
+      display: .none
+    }
+  }
+
+  blocker {
+    contents: "Steam Deck does not support its anti-cheat.",
+    display: .visible
+  }
+
+  reason {
+    contents: "Valve rates it Unsupported on Steam Deck."
+  }
+}
+
+export BestOn = frame {
+  doc: "Best on, right book page. The result and confidence always show; fits, notes, and the preference start collapsed.",
+  left: 400px,
+  top: 0px,
+  width: 340px,
+  layout: {direction: .column, item-gap: spacing.gap.regular},
+  children: [heading, result, toggle, details],
+
+  heading = frame {
+    width: 100%,
+    layout: {justify-content: .space-between, align-items: .center},
+    children: [label, source],
+
+    label = text {
+      fill: c.ui.muted,
+      contents: "Best on",
+      font-size: typography.size.caption,
+      font-family: typography.family.interface
+    }
+
+    source = text {
+      fill: c.ui.muted,
+      contents: "Steam · checked today",
+      font-size: typography.size.caption,
+      font-family: typography.family.interface
+    }
+  }
+
+  result = frame {
+    width: 100%,
+    layout: {justify-content: .space-between, align-items: .center},
+    children: [label, confidence],
+
+    label = text {
+      fill: c.ui.text,
+      contents: "Steam Deck",
+      font-size: typography.size.heading,
+      font-family: typography.family.interface,
+      font-style: "Bold"
+    }
+
+    confidence = frame {
+      layout: {align-items: .center, item-gap: spacing.gap.small},
+      children: [label, value],
+
+      label = text {
+        fill: c.ui.muted,
+        contents: "Confidence",
+        font-size: typography.size.caption,
+        font-family: typography.family.interface
+      }
+
+      value = text {
+        fill: c.ui.text,
+        contents: "100/100",
+        font-size: typography.size.body,
+        font-family: typography.family.interface,
+        font-style: "Medium"
+      }
+    }
+  }
+
+  toggle = frame {
+    doc: "Ghost button. It stays inside its row so it does not stretch.",
+    layout: {direction: .row},
+    children: button,
+
+    button = frame : buttons.Button {
+      height: 22px,
+      padding-top: 2px,
+      padding-left: 6px,
+      padding-bottom: 2px,
+      padding-right: 6px,
+      border[0].color: c.ui.subtle,
+      fill[0].color: c.ui.subtle,
+
+      label {
+        label {
+          contents: "More details",
+          font-size: typography.size.caption
+        }
+      }
+    }
+  }
+
+  details = frame {
+    width: 100%,
+    display: .none,
+    layout: {direction: .column, item-gap: spacing.gap.regular},
+    children: [deck, pc, explainer, preferenceLabel, choices, preferenceNote],
+
+    deck = frame : RecommendedFit {
+      left: .auto,
+      top: .auto,
+      width: 100%
+    }
+
+    pc = frame : FitRow {
+      left: .auto,
+      top: .auto,
+      width: 100%,
+
+      bar {
+        value {
+          width: 75%,
+          opacity: 0.4
+        }
+      }
+
+      heading {
+        glyph {
+          contents: pcIcon
+        }
+
+        label {
+          contents: "PC"
+        }
+
+        score {
+          contents: "75/100"
+        }
+      }
+
+      reason {
+        contents: "Plays well on a capable Windows PC."
+      }
+    }
+
+    explainer = text {
+      width: 100%,
+      fill: c.ui.muted,
+      contents: "Fit uses Valve's Deck rating, controller support, and where you played. PC assumes a capable Windows PC. Confidence shows how much evidence exists.",
+      font-size: typography.size.caption,
+      font-family: typography.family.interface
+    }
+
+    preferenceLabel = text {
+      fill: c.ui.muted,
+      contents: "Your preference",
+      font-size: typography.size.caption,
+      font-family: typography.family.interface
+    }
+
+    choices = frame {
+      width: 100%,
+      layout: {
+        item-gap: spacing.gap.small,
+        wrap: .true,
+        line-gap: spacing.gap.small
+      },
+      children: [automatic, deck, pc, both],
+
+      automatic = frame : buttons.Primary {
+        left: .auto,
+        top: .auto,
+        height: 22px,
+        padding-top: 2px,
+        padding-left: 6px,
+        padding-bottom: 2px,
+        padding-right: 6px,
+
+        label {
+          label {
+            contents: "Automatic",
+            font-size: typography.size.caption
+          }
+        }
+      }
+
+      deck = frame : buttons.Button {
+        height: 22px,
+        padding-top: 2px,
+        padding-left: 6px,
+        padding-bottom: 2px,
+        padding-right: 6px,
+
+        label {
+          label {
+            contents: "Steam Deck",
+            font-size: typography.size.caption
+          }
+        }
+      }
+
+      pc = frame : buttons.Button {
+        height: 22px,
+        padding-top: 2px,
+        padding-left: 6px,
+        padding-bottom: 2px,
+        padding-right: 6px,
+
+        label {
+          label {
+            contents: "PC",
+            font-size: typography.size.caption
+          }
+        }
+      }
+
+      both = frame : buttons.Button {
+        height: 22px,
+        padding-top: 2px,
+        padding-left: 6px,
+        padding-bottom: 2px,
+        padding-right: 6px,
+
+        label {
+          label {
+            contents: "Both",
+            font-size: typography.size.caption
+          }
+        }
+      }
+    }
+
+    preferenceNote = text {
+      width: 100%,
+      fill: c.ui.muted,
+      contents: "Uses the recommendation.",
+      font-size: typography.size.caption,
+      font-family: typography.family.interface
+    }
+  }
+}
+
+@variant
+export BestOnExpanded = frame : BestOn {
+  left: 800px,
+
+  toggle {
+    button {
+      label {
+        label {
+          contents: "Fewer details"
+        }
+      }
+    }
+  }
+
+  details {
+    display: .visible
+  }
+}
+
+@variant
+export BestOnBlocked = frame : BestOn {
+  left: 1200px,
+
+  details {
+    pc {
+      fill[0].color: c.ui.subtle,
+
+      bar {
+        value {
+          opacity: 1
+        }
+      }
+    }
+
+    deck {
+      fill[0].color: c.ui.surface,
+
+      heading {
+        score {
+          fill[0].color: c.ui.error,
+          contents: "Blocked"
+        }
+      }
+
+      bar {
+        value {
+          display: .none
+        }
+      }
+
+      blocker {
+        contents: "Steam Deck does not support its anti-cheat.",
+        display: .visible
+      }
+
+      reason {
+        contents: "Valve rates it Unsupported on Steam Deck."
+      }
+    }
+
+    display: .visible
+  }
+
+  toggle {
+    button {
+      label {
+        label {
+          contents: "Fewer details"
+        }
+      }
+    }
+  }
+
+  result {
+    confidence {
+      value {
+        contents: "80/100"
+      }
+    }
+
+    label {
+      contents: "PC"
+    }
+  }
+}

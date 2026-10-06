@@ -8,6 +8,7 @@ struct Source {
     details_calls: Cell<usize>,
     review_calls: Cell<usize>,
     cover_calls: Cell<usize>,
+    banner_calls: Cell<usize>,
     tag_calls: Cell<usize>,
     setup_calls: Cell<usize>,
     /// The store omits game 43 from tag results, like a removed app.
@@ -91,6 +92,10 @@ impl SteamSource for Source {
         self.cover_calls.set(self.cover_calls.get() + 1);
         Ok(include_bytes!("../../fixtures/covers/620.jpg").to_vec())
     }
+    fn banner(&self, _: u32) -> Result<Vec<u8>> {
+        self.banner_calls.set(self.banner_calls.get() + 1);
+        Ok(banner_jpeg())
+    }
     fn deck_report(&self, _: u32) -> Result<serde_json::Value> {
         self.setup_calls.set(self.setup_calls.get() + 1);
         Ok(
@@ -101,6 +106,18 @@ impl SteamSource for Source {
     fn store_categories(&self, _: u32) -> Result<serde_json::Value> {
         Ok(json!({"categories": [{"id": 28}]}))
     }
+}
+/// A small landscape JPEG with varied pixels, so it passes the placeholder check.
+fn banner_jpeg() -> Vec<u8> {
+    let image = image::RgbImage::from_fn(92, 43, |x, y| image::Rgb([x as u8 * 2, y as u8 * 5, 90]));
+    let mut bytes = Vec::new();
+    image::DynamicImage::ImageRgb8(image)
+        .write_to(
+            &mut std::io::Cursor::new(&mut bytes),
+            image::ImageFormat::Jpeg,
+        )
+        .unwrap();
+    bytes
 }
 fn library() -> (tempfile::TempDir, LibraryStore) {
     let temp = tempfile::tempdir().unwrap();
@@ -116,6 +133,7 @@ fn source(fail_details: bool) -> Source {
         details_calls: Cell::new(0),
         review_calls: Cell::new(0),
         cover_calls: Cell::new(0),
+        banner_calls: Cell::new(0),
         tag_calls: Cell::new(0),
         setup_calls: Cell::new(0),
         omit_tags_for_43: false,
@@ -325,18 +343,20 @@ fn repeat_sync_does_not_download_cached_metadata_or_covers() {
         (
             source.details_calls.get(),
             source.review_calls.get(),
-            source.cover_calls.get()
+            source.cover_calls.get(),
+            source.banner_calls.get()
         ),
-        (1, 1, 1)
+        (1, 1, 1, 1)
     );
     assert_eq!(run(&library, &source).failures, 0);
     assert_eq!(
         (
             source.details_calls.get(),
             source.review_calls.get(),
-            source.cover_calls.get()
+            source.cover_calls.get(),
+            source.banner_calls.get()
         ),
-        (1, 1, 1)
+        (1, 1, 1, 1)
     );
     source.extra_game = true;
     assert_eq!(run(&library, &source).failures, 0);
@@ -344,9 +364,10 @@ fn repeat_sync_does_not_download_cached_metadata_or_covers() {
         (
             source.details_calls.get(),
             source.review_calls.get(),
-            source.cover_calls.get()
+            source.cover_calls.get(),
+            source.banner_calls.get()
         ),
-        (2, 2, 2)
+        (2, 2, 2, 2)
     );
     // One batched tag request per sync that has games without tags.
     assert_eq!(source.tag_calls.get(), 2);
@@ -544,4 +565,30 @@ fn sync_saves_steam_deck_evidence_once_and_assesses_it() {
         .steam_deck
         .reason
         .contains("Interface text is not legible"));
+}
+
+#[test]
+fn sync_saves_the_landscape_cover_once_and_a_personal_cover_hides_it() {
+    let (_temp, library) = library();
+    let source = source(false);
+    assert_eq!(run(&library, &source).failures, 0);
+    assert_eq!(run(&library, &source).failures, 0);
+    assert_eq!(source.banner_calls.get(), 1);
+    let record = current(&library, 42);
+    let banner = record.game.banner().unwrap().clone();
+    assert!(banner.starts_with("media/steam-42-banner-"));
+    assert!(library.root().join(&banner).is_file());
+    // The portrait cover stays separate from the banner.
+    assert_ne!(record.game.cover(), Some(&banner));
+    let mut game = record.game.clone();
+    game.personal.cover = Some("media/custom.jpg".into());
+    assert_eq!(game.banner(), None);
+}
+
+#[test]
+fn banner_validation_rejects_portrait_artwork() {
+    assert!(client::validate_banner(&banner_jpeg()).is_ok());
+    let portrait = include_bytes!("../../fixtures/covers/620.jpg");
+    assert!(client::validate_cover(portrait).is_ok());
+    assert!(client::validate_banner(portrait).is_err());
 }
