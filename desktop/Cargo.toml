@@ -35,6 +35,16 @@ flate2 = "1"
 # Use system Metal on startup; do not require Apple's separate Metal Toolchain.
 [target.'cfg(target_os = "macos")'.dependencies]
 gpui = { version = "=0.2.2", features = ["runtime_shaders"] }
+# Reads the user's system accent color; already in the lock through gpui.
+objc = "0.2.7"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+# Reads the user's Windows accent color; already in the lock through other crates.
+windows-registry = "0.5"
+
+# objc 0.2 macros (system accent) test a legacy `cargo-clippy` feature in this crate.
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(feature, values("cargo-clippy"))'] }
 
 [profile.dev.package."*"]
 opt-level = 2

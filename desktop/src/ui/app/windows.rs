@@ -36,10 +36,7 @@ impl GameSyncApp {
         match cx.open_window(
             WindowOptions {
                 app_id: Some(crate::APP_ID.into()),
-                titlebar: Some(gpui::TitlebarOptions {
-                    title: Some("Collections".into()),
-                    ..gpui_component::TitleBar::title_bar_options()
-                }),
+                titlebar: Some(crate::ui::chrome::compact_titlebar_options("Collections")),
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 ..Default::default()
             },
@@ -122,10 +119,7 @@ impl GameSyncApp {
         match cx.open_window(
             WindowOptions {
                 app_id: Some(crate::APP_ID.into()),
-                titlebar: Some(gpui::TitlebarOptions {
-                    title: Some("Settings".into()),
-                    ..gpui_component::TitleBar::title_bar_options()
-                }),
+                titlebar: Some(crate::ui::chrome::compact_titlebar_options("Settings")),
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 window_min_size: Some(size(px(700.), px(480.))),
                 ..Default::default()

@@ -301,7 +301,7 @@ impl GameGrid {
                             .track_scroll(&self.board.horizontal)
                             .items_start()
                             .gap(COLUMN_GAP)
-                            .pt(px(80.))
+                            .pt(px(80. + crate::ui::chrome::toolbar_shift(cx)))
                             .pb(px(20.))
                             .px(CONTENT_INSET)
                             .children(columns.into_iter().enumerate().map(|(index, column)| {

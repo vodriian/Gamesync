@@ -944,7 +944,7 @@ impl Render for PlayNowView {
             .child(
                 image_cache(self.cache.clone()).child(
                     v_flex()
-                        .pt(px(92.))
+                        .pt(px(92. + crate::ui::chrome::toolbar_shift(cx)))
                         .px(px(42.))
                         .pb(px(40.))
                         .gap_5()

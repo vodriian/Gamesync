@@ -2469,6 +2469,7 @@ dependencies = [
  "keyring",
  "log",
  "notify",
+ "objc",
  "reqwest",
  "rusqlite",
  "serde",
@@ -2476,6 +2477,7 @@ dependencies = [
  "sha2 0.10.9",
  "tempfile",
  "uuid",
+ "windows-registry 0.5.3",
 ]
 
 [[package]]

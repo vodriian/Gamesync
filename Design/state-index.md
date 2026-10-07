@@ -2,7 +2,7 @@
 
 This is the single coverage map for the 90 original references. Related states
 share one source file. Select the named variant in Elyx or render its symbol.
-The four dark references use the canonical screen with `theme=dark`.
+The five dark references use the canonical screen with `theme=dark`.
 `index.elyx` opens the default Grid, Settings, the canonical Sidebar, and the
 Play now hand.
 
@@ -103,6 +103,8 @@ records the completed static checks and remaining native comparison limit.
 | SettingsProtonDbUpdating | [BestOn.elyx](design/screens/settings/BestOn.elyx) | `SettingsProtonDbUpdating` | light |
 | SettingsProtonDbFailed | [BestOn.elyx](design/screens/settings/BestOn.elyx) | `SettingsProtonDbFailed` | light |
 | SettingsAppearance | [Appearance.elyx](design/screens/settings/Appearance.elyx) | `SettingsAppearance` | light |
+| SettingsMacOS | [Appearance.elyx](design/screens/settings/Appearance.elyx) | `SettingsMacOS` | light |
+| SettingsWindows | [Appearance.elyx](design/screens/settings/Appearance.elyx) | `SettingsWindows` | light |
 | SettingsOmarchy | [Appearance.elyx](design/screens/settings/Appearance.elyx) | `SettingsOmarchy` | light |
 | AiLocal | [AI.elyx](design/screens/settings/AI.elyx) | `AiLocal` | light |
 | AiCloud | [AI.elyx](design/screens/settings/AI.elyx) | `AiCloud` | light |
@@ -127,6 +129,7 @@ records the completed static checks and remaining native comparison limit.
 | CardsDark | [Cards.elyx](design/screens/library/Cards.elyx) | `Cards` | dark |
 | CardDetailsDark | [CardDetails.elyx](design/screens/details/CardDetails.elyx) | `CardDetails` | dark |
 | SettingsAppearanceDark | [Appearance.elyx](design/screens/settings/Appearance.elyx) | `SettingsAppearance` | dark |
+| SettingsMacOSDark | [Appearance.elyx](design/screens/settings/Appearance.elyx) | `SettingsMacOS` | dark |
 
 ## Play now
 

@@ -130,7 +130,8 @@ table for findings. Log platform coverage and any missing visual checks.
 ## Native chrome and themes
 
 Use the [chrome and Baseline theme specification](chrome-themes.md) for shell
-geometry and appearance. It replaces the old palette selection and KDE overrides.
+geometry and appearance, including the [native look](chrome-themes.md#native-look)
+(system colors and accent, kit window geometry, macOS Settings form). It replaces the old palette selection and KDE overrides.
 Keep the sidebar on solid chrome and the toolbar inside the rounded content panel.
 Use semantic native tokens for content and chrome; Vivid must retain separate
 foreground colors for each surface.

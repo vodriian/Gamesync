@@ -248,7 +248,7 @@ impl SettingsView {
             .p_5()
             .gap_4()
             .rounded(cx.theme().radius_lg)
-            .bg(cx.theme().secondary)
+            .bg(crate::ui::controls::group_surface(cx))
             .child(div().font_semibold().child("API keys"));
         match keys {
             KeyState::Off => group
@@ -484,7 +484,7 @@ impl SettingsView {
     }
 
     pub(super) fn sync_section(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
-        let surface = cx.theme().secondary;
+        let surface = crate::ui::controls::group_surface(cx);
         let radius = cx.theme().radius_lg;
         let muted = cx.theme().muted_foreground;
         let group = || v_flex().p_5().gap_4().rounded(radius).bg(surface);
@@ -672,7 +672,7 @@ impl SettingsView {
         own: Option<uuid::Uuid>,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
-        let surface = cx.theme().secondary;
+        let surface = crate::ui::controls::group_surface(cx);
         let radius = cx.theme().radius_lg;
         let muted = cx.theme().muted_foreground;
         let busy = self.sync_busy;

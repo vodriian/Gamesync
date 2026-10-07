@@ -243,14 +243,20 @@ impl CardRenderer {
             card.pose.frosted_top,
             card.scale_factor,
             card.pose.hinge,
-            0.,
+            card.pose.spine_round,
             0.,
             0.,
         ];
         encoder.set_render_pipeline_state(&self.pipeline);
         encoder.set_fragment_texture(0, Some(&face.texture));
+        // A hinged face is one page of a book; the app draws a single table
+        // shadow for the whole book, so the page casts no projected shadow.
         let modes: &[f32] = if card.pose.material && card.pose.frosted_top == 0. {
-            &[2., 1., 0.]
+            if card.pose.hinge != 0. {
+                &[1., 0.]
+            } else {
+                &[2., 1., 0.]
+            }
         } else {
             &[0.]
         };

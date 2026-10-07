@@ -129,7 +129,7 @@ fn group(cx: &App) -> gpui::Div {
         .p_5()
         .gap_3()
         .rounded(cx.theme().radius_lg)
-        .bg(cx.theme().secondary)
+        .bg(crate::ui::controls::group_surface(cx))
 }
 
 fn title(text: &'static str) -> impl IntoElement {

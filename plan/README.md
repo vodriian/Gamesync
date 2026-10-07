@@ -11,7 +11,8 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 | [App plan](app-plan.md) | Scope, architecture, data rules, milestones, and acceptance checks |
 | [Guardrails](guardrails.md) | Code quality, tests, writing, and efficient agent work |
 | [Design](design.md) | Eagle GUI reference and design rules |
-| [Latest log](logs/2026-10-07-play-now-delivery.md) | Play now delivery, Elyx states, and final checks |
+| [Latest log](logs/2026-10-07-native-ui-mode.md) | Native UI mode: macOS look, system accent, Settings form, book turn |
+| [Play now delivery log](logs/2026-10-07-play-now-delivery.md) | Play now delivery, Elyx states, and final checks |
 | [Book details log](logs/2026-10-05.md) | Best on demo prototype and book details prototype |
 | [Sync log](logs/2026-09-29.md) | Sync implementation, initial live check, and library UI fixes |
 | [UI log](logs/2026-09-28.md) | Omarchy theme, 3D card POC, Kanban board, and macOS UI fixes |
@@ -42,6 +43,7 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 - Hugeicons UI merged in PR #5. Book details, Best on, and the shared Elyx workspace merged in PR #6.
 - Use the [Elyx workspace](../Design/README.md) as the design source for the next UI improvements.
 - Native offline Play now is implemented on `vova/play-now-native`; AI enrichment remains deferred.
+- Native UI mode is on `native-ui-mode` (PR to `windows-test-build`): a native macOS look by default, with system colors and accent, kit window geometry, and a tabbed Settings form. See [native look](chrome-themes.md#native-look).
 - Runtime targets: macOS and Linux. Windows follows after sync works between them.
 - Existing React/Express app: retained as a reference.
 
@@ -53,6 +55,10 @@ Linux keeps flat cards outside Omarchy mode. The Omarchy branch has an
 experimental Blade/Vulkan card projection for Cards and focused fronts.
 
 ## Next task
+
+Test `native-ui-mode` with real data (test build `GameSync Native`), then add
+the missing tests (`Look` migration, native palette keys) and the remaining
+items in the [native UI log](logs/2026-10-07-native-ui-mode.md#not-verified--next).
 
 Review and test `vova/play-now-native`. It adds offline recommendations,
 editable game profiles, modal details, timed sessions, and sliding preference

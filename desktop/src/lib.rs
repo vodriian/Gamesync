@@ -21,3 +21,4 @@ pub mod settings;
 pub mod steam;
 
 pub mod appearance;
+pub mod native_palette;

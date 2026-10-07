@@ -552,6 +552,14 @@ impl Render for DetailPanel {
             );
         } else if let Some(game) = &game {
             let (left, right) = self.pages(game, cx);
+            // The book is one object. Its spine corners square off as it
+            // opens, so the turn ends on exactly the settled spread, and one
+            // table shadow follows its footprint instead of each page casting
+            // its own.
+            let open = (1. - angle.cos()) / 2.;
+            let spine_radius = radius * (1. - open);
+            let border = cx.theme().border;
+            let paper = cx.theme().background;
             if spread {
                 stage = stage.child(
                     h_flex()
@@ -559,8 +567,8 @@ impl Render for DetailPanel {
                         .rounded(radius)
                         .overflow_hidden()
                         .border_1()
-                        .border_color(cx.theme().border)
-                        .bg(cx.theme().background)
+                        .border_color(border)
+                        .bg(paper)
                         .shadow(super::card::card_shadow(true))
                         .child(
                             div()
@@ -568,7 +576,7 @@ impl Render for DetailPanel {
                                 .min_w_0()
                                 .h_full()
                                 .border_r_1()
-                                .border_color(cx.theme().border)
+                                .border_color(border)
                                 .child(left),
                         )
                         .child(div().flex_1().min_w_0().h_full().child(right)),
@@ -581,23 +589,42 @@ impl Render for DetailPanel {
                     pitch,
                     yaw: yaw - angle,
                     material: true,
+                    spine_round: 1. - open,
                     ..Default::default()
                 };
+                // The projected footprint on the table: the right page plus
+                // the part of the leaf that has swung past the spine.
+                let footprint = width * angle.cos().min(0.);
                 stage =
                     stage
                         .child(
+                            div()
+                                .absolute()
+                                .left(px(spine + footprint))
+                                .top_0()
+                                .w(px(width - footprint))
+                                .h(dimensions.height)
+                                .rounded(radius)
+                                .shadow(super::card::card_shadow(true)),
+                        )
+                        .child(
+                            // The leaf's back supplies the spine line when open,
+                            // so this page has no left border.
                             div()
                                 .absolute()
                                 .left(px(spine))
                                 .top_0()
                                 .w(dimensions.width)
                                 .h(dimensions.height)
+                                .rounded_tl(spine_radius)
+                                .rounded_bl(spine_radius)
                                 .rounded_r(radius)
                                 .overflow_hidden()
-                                .border_1()
-                                .border_color(cx.theme().border)
-                                .bg(cx.theme().background)
-                                .shadow(super::card::card_shadow(false))
+                                .border_t_1()
+                                .border_r_1()
+                                .border_b_1()
+                                .border_color(border)
+                                .bg(paper)
                                 .child(right),
                         )
                         .child(
@@ -624,14 +651,16 @@ impl Render for DetailPanel {
                                         ..leaf
                                     },
                                     radius,
+                                    // Square on the spine side; the shader
+                                    // mask rounds it by `spine_round`.
                                     div()
                                         .w(dimensions.width)
                                         .h(dimensions.height)
-                                        .rounded(radius)
+                                        .rounded_l(radius)
                                         .overflow_hidden()
                                         .border_1()
-                                        .border_color(cx.theme().border)
-                                        .bg(cx.theme().background)
+                                        .border_color(border)
+                                        .bg(paper)
                                         .child(left),
                                 ),
                             ),
@@ -713,56 +742,64 @@ impl Render for DetailPanel {
                 }
             }))
             .when(!self.overlay, |viewer| {
-                viewer.child(
-                    h_flex()
-                        .h(px(66.))
-                        .px_6()
-                        .gap_2()
-                        .flex_shrink_0()
-                        .child(
-                            Button::new("close-card")
-                                .ghost()
-                                .label(if self.library.read(cx).play_now {
-                                    "Back to Play now"
-                                } else {
-                                    "Back to library"
-                                })
-                                .tooltip("Back (Esc)")
-                                .icon(IconName::ArrowLeft)
-                                .on_click(cx.listener(|this, _, _, cx| this.close(cx))),
-                        )
-                        .child(div().flex_1())
-                        .child(
-                            Button::new("toggle-filmstrip")
-                                .ghost()
-                                .icon(IconName::PanelBottom)
-                                .selected(self.strip_shown)
-                                .tooltip("Toggle thumbnail strip (T)")
-                                .on_click(cx.listener(|this, _, _, cx| this.toggle_strip(cx))),
-                        )
-                        .child(
-                            Button::new("previous-card")
-                                .ghost()
-                                .icon(IconName::ChevronLeft)
-                                .tooltip("Previous game")
-                                .disabled(busy)
-                                .on_click(cx.listener(|this, _, window, cx| {
-                                    window.focus(&this.focus);
-                                    this.step(-1, cx);
-                                })),
-                        )
-                        .child(
-                            Button::new("next-card")
-                                .ghost()
-                                .icon(IconName::ChevronRight)
-                                .tooltip("Next game")
-                                .disabled(busy)
-                                .on_click(cx.listener(|this, _, window, cx| {
-                                    window.focus(&this.focus);
-                                    this.step(1, cx);
-                                })),
-                        ),
-                )
+                let header = h_flex()
+                    .gap_2()
+                    .flex_shrink_0()
+                    .child(
+                        Button::new("close-card")
+                            .ghost()
+                            .label(if self.library.read(cx).play_now {
+                                "Back to Play now"
+                            } else {
+                                "Back to library"
+                            })
+                            .tooltip("Back (Esc)")
+                            .icon(IconName::ArrowLeft)
+                            .on_click(cx.listener(|this, _, _, cx| this.close(cx))),
+                    )
+                    .child(div().flex_1())
+                    .child(
+                        Button::new("toggle-filmstrip")
+                            .ghost()
+                            .icon(IconName::PanelBottom)
+                            .selected(self.strip_shown)
+                            .tooltip("Toggle thumbnail strip (T)")
+                            .on_click(cx.listener(|this, _, _, cx| this.toggle_strip(cx))),
+                    )
+                    .child(
+                        Button::new("previous-card")
+                            .ghost()
+                            .icon(IconName::ChevronLeft)
+                            .tooltip("Previous game")
+                            .disabled(busy)
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                window.focus(&this.focus);
+                                this.step(-1, cx);
+                            })),
+                    )
+                    .child(
+                        Button::new("next-card")
+                            .ghost()
+                            .icon(IconName::ChevronRight)
+                            .tooltip("Next game")
+                            .disabled(busy)
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                window.focus(&this.focus);
+                                this.step(1, cx);
+                            })),
+                    );
+                // Native macOS: the header is the unified toolbar row beside the window controls.
+                viewer.child(if crate::theme::macos_shell(cx) {
+                    super::chrome::titlebar(cx)
+                        .pl(px(super::chrome::TRAFFIC_LIGHTS_END))
+                        .pr(px(12.))
+                        .border_b_1()
+                        .border_color(cx.theme().border)
+                        .child(header.flex_1())
+                        .into_any_element()
+                } else {
+                    header.h(px(66.)).px_6().into_any_element()
+                })
             })
             .when(self.overlay, |viewer| {
                 viewer.child(
