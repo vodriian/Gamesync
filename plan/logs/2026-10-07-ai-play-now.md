@@ -93,6 +93,22 @@ Commit `8f098db`, pushed. Test build `GameSync AI` rebuilt from it (same
 command and output paths as above); the packaged app launched in an isolated
 preview folder.
 
+## Second review round
+
+- Game details no longer show "Your profile was saved." after the profile
+  modal closes.
+- With a current analysis, the energy/session line in game details shows the
+  activity icons (tooltip: activity name).
+- Settings → General uses the AI provider pattern for the Steam key: an add
+  form without a key; with a key, a row with an info button and a dialog
+  (profile, key, Remove key, Save). Save tests first. A test that cannot start
+  clears the save request, so a later manual test never saves by itself.
+
+Checks (macOS): fmt, Clippy, and 208 tests passed. Captured with temporary
+probes (removed): add form and saved row (light), dialog (light and dark),
+and game details with three activity icons. A real Steam test and save
+through the new dialog were not run.
+
 ## Not verified
 
 - No live provider request was made. No key was used, and the local Ollama

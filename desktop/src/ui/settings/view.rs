@@ -5,8 +5,160 @@ use gpui_component::{
     button::{Button, ButtonVariants as _},
     h_flex,
     input::Input,
-    v_flex, ActiveTheme as _, Disableable as _, Selectable as _, StyledExt as _,
+    v_flex, ActiveTheme as _, Disableable as _, IconName, Selectable as _, Sizable as _,
+    StyledExt as _, WindowExt as _,
 };
+
+const STEAM_KEY_HELP: (&str, &str) = (
+    "steamcommunity.com/dev/apikey",
+    "https://steamcommunity.com/dev/apikey",
+);
+
+/// "Get your API key from <link>.", as in the AI provider dialog.
+fn steam_help(cx: &gpui::App) -> gpui::Div {
+    let (label, url) = STEAM_KEY_HELP;
+    h_flex()
+        .flex_wrap()
+        .text_sm()
+        .text_color(cx.theme().muted_foreground)
+        .child("Get your API key from\u{a0}")
+        .child(
+            div()
+                .id("steam-help-link")
+                .text_color(cx.theme().link)
+                .cursor_pointer()
+                .child(label)
+                .on_click(move |_, _, cx| cx.open_url(url)),
+        )
+        .child(".")
+}
+
+/// One labeled input on the group surface, as in the AI provider dialog.
+fn dialog_field(label: &'static str, input: &Entity<InputState>, cx: &gpui::App) -> gpui::Div {
+    h_flex()
+        .gap_3()
+        .pl_3()
+        .rounded(cx.theme().radius_lg)
+        .bg(cx.theme().group_box)
+        .child(div().flex_shrink_0().child(label))
+        .child(div().flex_1().child(Input::new(input).appearance(false)))
+}
+
+impl SettingsView {
+    /// Settings → AI pattern: a saved key is one row with an info button that
+    /// opens the editor; without a key, an add form saves after a passing test.
+    fn steam_key(&self, has_library: bool, cx: &mut Context<Self>) -> gpui::Div {
+        let title = div().font_semibold().child("Steam API key");
+        if self.key_saved {
+            let row = h_flex()
+                .gap_2()
+                .pl_4()
+                .pr_2()
+                .py_1()
+                .rounded(cx.theme().radius_lg)
+                .bg(cx.theme().group_box)
+                .child(div().flex_1().child("Steam"))
+                .child(
+                    div()
+                        .text_sm()
+                        .text_color(cx.theme().muted_foreground)
+                        .child("Key saved"),
+                )
+                .child(
+                    Button::new("steam-info")
+                        .ghost()
+                        .small()
+                        .icon(IconName::Info)
+                        .tooltip("Edit Steam connection")
+                        .disabled(self.busy || !has_library)
+                        .on_click(
+                            cx.listener(|this, _, window, cx| this.open_steam_editor(window, cx)),
+                        ),
+                );
+            return v_flex().gap_2().child(title).child(row);
+        }
+        let tested = self.tested_matches(cx);
+        let form = v_flex()
+            .p_5()
+            .gap_4()
+            .rounded(cx.theme().radius_lg)
+            .bg(cx.theme().group_box)
+            .child("Steam profile or ID")
+            .child(Input::new(&self.profile).disabled(self.busy || !has_library))
+            .child("API key")
+            .child(Input::new(&self.key).disabled(self.busy || !has_library))
+            .child(steam_help(cx))
+            .child(
+                h_flex()
+                    .gap_2()
+                    .child(
+                        Button::new("test-steam")
+                            .label("Test key")
+                            .disabled(self.busy || !has_library)
+                            .on_click(cx.listener(|this, _, _, cx| this.test_key(cx))),
+                    )
+                    .when(tested, |row| {
+                        row.child(
+                            Button::new("save-steam")
+                                .primary()
+                                .label("Save key")
+                                .disabled(self.busy)
+                                .on_click(cx.listener(|this, _, _, cx| this.save_key(cx))),
+                        )
+                    }),
+            );
+        v_flex().gap_2().child(title).child(form)
+    }
+
+    /// Change the profile or key, or remove the key. Save tests first; an
+    /// empty key field tests and keeps the saved key.
+    fn open_steam_editor(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        // The saved key is not read back; an empty field keeps it.
+        self.key.update(cx, |input, cx| {
+            input.set_placeholder("Saved. Paste a new key to replace it.", window, cx)
+        });
+        let view = cx.entity();
+        let profile = self.profile.clone();
+        let key = self.key.clone();
+        window.open_dialog(cx, move |dialog, _, cx| {
+            let remove = view.clone();
+            let save = view.clone();
+            dialog
+                .title("Steam")
+                .w(px(500.))
+                .close_button(false)
+                .button_props(gpui_component::dialog::DialogButtonProps::default().ok_text("Save"))
+                .child(
+                    v_flex()
+                        .gap_3()
+                        .child(dialog_field("Steam profile or ID", &profile, cx))
+                        .child(dialog_field("API key", &key, cx))
+                        .child(steam_help(cx)),
+                )
+                .footer(move |ok, cancel, window, cx| {
+                    let remove = remove.clone();
+                    vec![
+                        Button::new("steam-remove")
+                            .danger()
+                            .label("Remove key")
+                            .on_click(move |_, window, cx| {
+                                window.close_dialog(cx);
+                                remove.update(cx, |this, cx| this.remove_key(cx));
+                            })
+                            .into_any_element(),
+                        div().flex_1().into_any_element(),
+                        cancel(window, cx),
+                        ok(window, cx),
+                    ]
+                })
+                .on_ok(move |_, _, cx| {
+                    save.update(cx, |this, cx| this.test_and_save(cx));
+                    true
+                })
+        });
+    }
+}
+
 impl Render for SettingsView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         if self.clear_key {
@@ -46,50 +198,7 @@ impl Render for SettingsView {
         let radius = cx.theme().radius_lg;
         let group = || v_flex().p_5().gap_4().rounded(radius).bg(surface);
         let appearance = group().child(self.look_and_feel(cx));
-        let connection = group()
-            .child("Steam profile or ID")
-            .child(Input::new(&self.profile).disabled(self.busy || !has_library))
-            .child(if self.key_saved {
-                "Steam API key saved"
-            } else {
-                "Steam API key"
-            })
-            .child(Input::new(&self.key).disabled(self.busy || !has_library))
-            .child(
-                h_flex()
-                    .flex_wrap()
-                    .gap_2()
-                    .child(
-                        Button::new("test-steam")
-                            .label("Test key")
-                            .disabled(self.busy || !has_library)
-                            .on_click(cx.listener(|this, _, _, cx| this.test_key(cx))),
-                    )
-                    .child(
-                        Button::new("save-steam")
-                            .primary()
-                            .label("Save key")
-                            .disabled(self.busy || !self.tested_matches(cx))
-                            .on_click(cx.listener(|this, _, _, cx| this.save_key(cx))),
-                    )
-                    .child(div().flex_1())
-                    .when(self.key_saved, |row| {
-                        row.child(
-                            Button::new("remove-steam")
-                                .label("Remove key")
-                                .disabled(self.busy || !has_library)
-                                .on_click(cx.listener(|this, _, _, cx| this.remove_key(cx))),
-                        )
-                    }),
-            )
-            .child(
-                div()
-                    .text_sm()
-                    .text_color(cx.theme().muted_foreground)
-                    .child(
-                        "Saved keys stay in this device’s secure storage, separate from game data.",
-                    ),
-            );
+        let connection = self.steam_key(has_library, cx);
         let sync = group()
             .child(
                 h_flex()

@@ -28,8 +28,13 @@ flat collections. Do not import its runtime or browser storage.
   marked complete. Resolve current asset paths before legacy portraits and header
   fallback. Reject near-uniform placeholder images; keep old media on failure.
 
-Credentials use Test key followed by Save key. Both fields are masked. Repeating
-a save of the same key does not rewrite secure storage. The Library group was removed from Settings. Open folders from the main toolbar.
+Settings → General follows the AI provider pattern. Without a saved key, a form
+asks for the Steam profile or ID and the API key; Save key appears after Test
+key passes. With a saved key, a **Steam API key** row shows "Key saved" and an
+info button. Its dialog edits the profile or key; Save tests first and saves
+only if the test passes, and an empty key field keeps the saved key. Remove key
+is in the same dialog. Both fields are masked. Repeating a save of the same key
+does not rewrite secure storage. The Library group was removed from Settings. Open folders from the main toolbar.
 Normal startup does not load fixtures; demo data requires an explicit QA flag.
 
 ## Keys

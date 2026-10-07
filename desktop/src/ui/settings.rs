@@ -73,6 +73,8 @@ pub struct SettingsView {
     omarchy_theme_name: Option<String>,
     section: Section,
     tested: Option<TestedKey>,
+    /// The Steam dialog's Save tests first, then saves only if the test passes.
+    save_after_test: bool,
     clear_key: bool,
     reduce_motion: bool,
     saving_appearance_preference: bool,
@@ -157,6 +159,7 @@ impl SettingsView {
                 Section::General
             },
             tested: None,
+            save_after_test: false,
             clear_key: false,
             reduce_motion: super::motion::reduced(cx),
             saving_appearance_preference: false,
@@ -281,6 +284,18 @@ impl SettingsView {
             test.matches(&self.key.read(cx).value(), &self.profile.read(cx).value())
         })
     }
+    /// Test, then save if the test passes. A test that cannot start clears the
+    /// request, so a later manual test never saves by itself.
+    fn test_and_save(&mut self, cx: &mut Context<Self>) {
+        if self.busy {
+            return;
+        }
+        self.save_after_test = true;
+        self.test_key(cx);
+        if !self.busy {
+            self.save_after_test = false;
+        }
+    }
     fn test_key(&mut self, cx: &mut Context<Self>) {
         if self.busy {
             return;
@@ -324,10 +339,15 @@ impl SettingsView {
                 .await;
             let _ = this.update(cx, |this, cx| {
                 this.busy = false;
+                let save = std::mem::take(&mut this.save_after_test);
                 match result {
                     Ok(test) => {
                         this.tested = Some(test);
-                        this.message = "Test passed. Save key to keep this connection.".into();
+                        if save {
+                            this.save_key(cx);
+                        } else {
+                            this.message = "Test passed. Save key to keep this connection.".into();
+                        }
                     }
                     Err(error) => this.message = error.to_string(),
                 }

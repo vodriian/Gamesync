@@ -1,6 +1,6 @@
 //! Recommendation summary within the shared game card, not a separate page.
 use super::*;
-use gpui::{div, px, AnyElement};
+use gpui::{div, px, AnyElement, SharedString};
 use gpui_component::{
     button::{Button, ButtonVariants as _},
     h_flex, v_flex, ActiveTheme as _, Disableable as _, Icon, IconName, Selectable as _,
@@ -36,6 +36,12 @@ impl PlayNowView {
                 "Choose this game when its energy and session length fit your plans.".to_owned()
             });
         let energy = profile.values.energy();
+        let analyzed =
+            gamesync_desktop::recommendations::analysis::current_analysis(&record.game).is_some();
+        let activities = analyzed
+            .then(|| profile.values.activities.clone())
+            .flatten()
+            .unwrap_or_default();
         let duration = match (profile.values.minimum_minutes, profile.values.ideal_minutes) {
             (Some(min), Some(ideal)) if min != ideal => format!("{min}–{ideal} min"),
             (Some(min), _) => format!("{min} min"),
@@ -148,6 +154,21 @@ impl PlayNowView {
                             .child(Icon::new(crate::assets::SidebarIcon::Playtime).size(px(16.)))
                             .child(duration),
                     )
+                    .when(!activities.is_empty(), |row| {
+                        row.child(h_flex().gap_2().children(activities.into_iter().map(
+                            |activity| {
+                                div()
+                                    .id(SharedString::from(format!("section-{activity:?}")))
+                                    .child(
+                                        Icon::new(PlayIcon(activity_icon(activity))).size(px(16.)),
+                                    )
+                                    .tooltip(move |window, cx| {
+                                        gpui_component::tooltip::Tooltip::new(activity.label())
+                                            .build(window, cx)
+                                    })
+                            },
+                        )))
+                    })
                     .when(profile.estimated(), |row| {
                         row.child(if profile.sources.values().any(|s| *s == "AI estimate") {
                             "AI estimated"

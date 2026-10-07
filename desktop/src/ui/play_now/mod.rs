@@ -422,10 +422,12 @@ impl PlayNowView {
                             }
                             Change::Saved(true) => "Saved for later.",
                             Change::Saved(false) => "Removed from saved picks.",
+                            // The modal closes on save; a note would linger in game details.
                             Change::Profile(_) => {
                                 this.draft = None;
                                 this.modal = None;
-                                "Your profile was saved."
+                                this.feedback_game = None;
+                                ""
                             }
                             Change::Choice(choice) => match choice.launch {
                                 LaunchOutcome::Failed => "Launch failed. Your choice was saved; you can retry.",

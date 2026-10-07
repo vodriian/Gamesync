@@ -384,6 +384,9 @@ chose all five providers and two entry points: a batch action and one game.
   for the remaining games, including that batch. Deal never waits for analysis.
 - **Display.** Details show "AI estimated" when any field comes from AI. Outside
   a hand, the AI reason replaces the generic Play now line in game details.
+  With a current analysis, the energy/session line also shows the game's
+  activity icons, each with its name as a tooltip. A saved profile shows no
+  note in game details; the modal closes on save.
 
 Remaining: a live request check for each provider, reviewed calibration
 fixtures, sync of cached analysis (data-sync lists AI results as synced; the
