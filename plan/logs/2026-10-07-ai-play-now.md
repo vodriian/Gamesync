@@ -160,6 +160,12 @@ fixed group. Probe capture with three icons shows the full gap. Checks: fmt,
 Clippy, 210 tests passed; test build rebuilt, `codesign --verify --strict`
 passed, packaged binary opened its window with no new errors.
 
+## Pull request
+
+- Commit `9457ec8` (fourth round and gap fix), pushed to `vova/ai-play-now`.
+- PR #9 opened against `windows-test-build`, the branch this work started from
+  (`origin/main` does not have PR #8 yet), so the PR shows only these commits.
+
 ## Not verified
 
 - No live provider request was made. No key was used, and the local Ollama
