@@ -54,6 +54,24 @@
   model pickers, Add a provider choices, key field, and disabled Test key.
 - Dark mode: Analyze confirm dialog and the profile modal's AI section.
 
+## Commit and test build
+
+- Commit `434e9ef` on `vova/ai-play-now`, on top of `5abb49c`.
+- Push not done: every push with the new commits failed with GitHub
+  "Internal Server Error" (HTTPS and SSH, 15:10–15:14 UTC); githubstatus.com
+  reported no incident. Creating the branch at `5abb49c` through the API
+  worked, so the remote branch exists but lacks these commits.
+- Test build: `python3 desktop/scripts/package_macos.py --output
+  desktop/target/test-builds --name "GameSync AI"` (release, `--locked`).
+- Output: `desktop/target/test-builds/GameSync AI.app` and
+  `GameSync-AI-0.1.0-macos-arm64.zip` (14 MB). Signed with the local
+  certificate; `codesign --verify --strict` passed. Not notarized.
+- The test build uses the normal bundle ID, Keychain entries, and library.
+- Launch check: the packaged binary started with `--play-now-demo` in an
+  isolated `GAMESYNC_PREVIEW_DIR` and showed Play now setup. The log has
+  about 90 `usvg` "Failed to parse color value: 'currentColor'" warnings;
+  debug runs before `5abb49c` logged a similar count, so they are not new.
+
 ## Not verified
 
 - No live provider request was made. No key was used, and the local Ollama
