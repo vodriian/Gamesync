@@ -93,3 +93,22 @@ and colors now; its visual checks come later. Rules are in
 - **Elyx:** the user's uncommitted `SettingsShell.elyx` and `Switch.elyx`
   edits did not parse. These files were restored to `HEAD`, and the edits are
   kept outside Git.
+
+## Icon line weight
+
+- Cause: on 2026-10-01 the app switched to loading the supplied SVGs
+  unchanged, which dropped the 1.75 px line weight decided on 2026-09-30. The
+  bundled icons then mixed 1.5 and 2 px strokes and filled outlines of 1.5 px
+  strokes (smart collections, the selected folder).
+- Fix: `assets.rs` sets the weight when an icon loads, and the Design sources
+  stay byte-identical:
+  - Stroked icons are set to 1.75.
+  - Filled outlines get a 0.25 boundary stroke, so 1.5 + 0.25 = 1.75.
+  - Solid icons are unchanged.
+- The weight applies app-wide, including Play now and the toolbar. Elyx
+  renders still use the supplied weights.
+- Checks:
+  - Asset tests passed: 3, including the new `line_icons_load_at_one_weight`.
+  - Clippy passed with no warnings.
+  - A window capture of the demo sidebar showed matching weights for the
+    heart, folder, Rating, Time played and Genres icons.
