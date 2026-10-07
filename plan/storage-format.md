@@ -1,8 +1,8 @@
 # Game records, version 1
 
 This is the first storage format. The native app can load these files read-only.
-Library manifests and status definitions are implemented. Custom field definitions
-and AI write operations are pending.
+Library manifests and status definitions are implemented. Play now analysis
+writes `game.recommendation_analysis`. Custom field definitions are pending.
 
 ## Identity and data
 
@@ -136,9 +136,11 @@ These optional schema-1 fields do not rewrite older records on read:
   timer after restart and remains finishable if the game disappears.
 - `game.recommendation_analysis` is a separate optional cached estimate with
   game UUID, profile version, provider/model, metadata fingerprint, timestamp,
-  confidence, and profile. Validate identity, version, bounds, and fingerprint
-  before use. Stale metadata does not supply current profile values. Provider
-  requests are deferred; this field defines the cache contract only.
+  confidence, an optional reason (one sentence, at most 300 characters), and
+  profile. Validate identity, version, bounds, and fingerprint before use.
+  Stale metadata does not supply current profile values. The write holds the
+  game lock and is refused when the current fingerprint differs from the one
+  sent; a same-value write adds no revision. See [Play now](play-now.md#ai-profile-analysis--october-7).
 - Resolve each field from a manual correction, then current validated cached
   analysis, then a conservative local estimate, then unknown. Keep these
   sources separate. Credentials and device installation evidence do not enter

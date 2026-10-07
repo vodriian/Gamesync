@@ -77,6 +77,10 @@ pub struct AiProvider {
     pub model: Option<String>,
     /// The server address for a local provider such as Ollama.
     pub endpoint: Option<String>,
+    /// Models found by the last successful test, so Settings can list them
+    /// without reading the key again.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub models: Vec<String>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -218,21 +222,21 @@ impl Default for Settings {
 
 /// Shared footer and Settings wording for the last completed Steam sync.
 pub fn sync_label(time: Option<u64>) -> String {
-    time.map(|time| {
-        let age = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_or(0, |d| d.as_secs().saturating_sub(time));
-        if age < 60 {
-            "Last Steam sync: just now".into()
-        } else if age < 3600 {
-            format!("Last Steam sync: {} min ago", age / 60)
-        } else if age < 86400 {
-            format!("Last Steam sync: {} hours ago", age / 3600)
-        } else {
-            format!("Last Steam sync: {} days ago", age / 86400)
-        }
-    })
-    .unwrap_or_else(|| "No Steam sync time recorded".into())
+    time.map(|time| format!("Last Steam sync: {}", age_label(time)))
+        .unwrap_or_else(|| "No Steam sync time recorded".into())
+}
+
+/// How long ago a Unix time was: "just now", "5 min ago", "3 hours ago", "2 days ago".
+pub fn age_label(time: u64) -> String {
+    let age = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs().saturating_sub(time));
+    match age {
+        0..60 => "just now".into(),
+        60..3600 => format!("{} min ago", age / 60),
+        3600..86400 => format!("{} hours ago", age / 3600),
+        _ => format!("{} days ago", age / 86400),
+    }
 }
 
 impl Settings {
@@ -299,6 +303,7 @@ mod display_tests {
         let ollama = AiProvider {
             model: Some("llama3.2".into()),
             endpoint: Some("http://localhost:11434".into()),
+            models: vec!["llama3.2".into()],
         };
         settings
             .ai_providers

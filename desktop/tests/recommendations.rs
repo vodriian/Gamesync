@@ -169,6 +169,7 @@ fn manual_values_win_and_stale_analysis_is_not_used() {
         fingerprint: fingerprint(&g.game),
         analyzed_at: 1,
         confidence: 50,
+        reason: None,
         profile: ai,
     });
     assert_eq!(resolve(&g.game).values.cognitive, Some(Effort::Low));

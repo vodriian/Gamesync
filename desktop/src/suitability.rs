@@ -312,7 +312,7 @@ pub struct Inputs<'a> {
     /// Total Steam playtime; it includes Deck time.
     pub total_minutes: u32,
     pub deck_minutes: u32,
-    /// Steam store tags.
+    /// Steam store tags and your own tags. Rules match either.
     pub tags: &'a [String],
     pub proton: Option<&'a ProtonDeck>,
 }
@@ -482,12 +482,19 @@ pub fn assessment_in(game: &crate::records::GameData, context: &Context) -> Opti
         .proton
         .as_ref()
         .and_then(|proton| proton.get(&steam.app_id));
+    // Read-only match input; the two lists stay separate in the record.
+    let tags: Vec<String> = metadata
+        .tags
+        .iter()
+        .chain(&game.personal.tags)
+        .cloned()
+        .collect();
     Some(assess(
         &Inputs {
             evidence,
             total_minutes: steam.playtime_minutes,
             deck_minutes: steam.platform_minutes.deck,
-            tags: &metadata.tags,
+            tags: &tags,
             proton,
         },
         &context.rules,
@@ -615,6 +622,47 @@ mod tests {
         assert_eq!(labels[0], "Valve: Steam Deck Verified");
         assert!(labels.contains(&"Your rule: Prefer PC for open world"));
         assert!(ruled.steam_deck.steps[0].start);
+    }
+
+    #[test]
+    fn tag_rules_match_your_tags_as_well_as_steam_tags() {
+        let mut game = crate::records::GameData::new("Couch game");
+        game.steam = Some(crate::records::SteamData {
+            app_id: 1,
+            description: None,
+            playtime_minutes: 0,
+            owned: true,
+            last_played: None,
+            platform_minutes: Default::default(),
+            wishlist: None,
+            metadata: Some(crate::records::SteamMetadata {
+                tags: tags(&["Card Game"]),
+                setup: Some(evidence(DeckRating::Verified, ControllerSupport::Full)),
+                ..Default::default()
+            }),
+            extra: Default::default(),
+        });
+        game.personal.tags = tags(&["Couch"]);
+        let context = |prefer_deck: &[&str]| Context {
+            rules: Rules {
+                prefer_deck: tags(prefer_deck),
+                ..Rules::default()
+            },
+            proton: None,
+        };
+        let deck = |names: &[&str]| {
+            assessment_in(&game, &context(names))
+                .unwrap()
+                .steam_deck
+                .score
+        };
+        let baseline = deck(&[]);
+        assert_ne!(deck(&["couch"]), baseline);
+        assert_eq!(deck(&["couch"]), baseline.map(|s| (s + 15).min(100)));
+        assert_eq!(deck(&["Card Game"]), deck(&["couch"]));
+        // Matching never copies your tags into Steam data.
+        let metadata = game.steam.as_ref().unwrap().metadata.as_ref().unwrap();
+        assert_eq!(metadata.tags, tags(&["Card Game"]));
     }
 
     #[test]

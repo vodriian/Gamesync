@@ -58,6 +58,10 @@ const ICONS: &[(&str, &[u8])] = &[
         include_bytes!("../../Design/resources/icons-new/fast-forward-stroke-rounded.svg"),
     ),
     (
+        "icons/play-now/ai-beautify.svg",
+        include_bytes!("../../Design/resources/icons-new/ai-beautify-stroke-rounded.svg"),
+    ),
+    (
         "icons/play-now/hourglass.svg",
         include_bytes!("../../Design/resources/icons-new/hourglass-stroke-rounded.svg"),
     ),

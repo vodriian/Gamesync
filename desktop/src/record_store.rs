@@ -129,6 +129,33 @@ impl RecordStore {
         files.publish_child(record, snapshot)
     }
 
+    /// Cache a validated AI estimate under the game lock. The game's inputs
+    /// must still match the request; a changed game is analyzed again later.
+    pub fn set_recommendation_analysis(
+        &self,
+        id: Uuid,
+        analysis: crate::recommendations::Analysis,
+    ) -> Result<GameRevision> {
+        let files = self.files(id);
+        let _lock = files.lock()?;
+        let snapshot = self.inspect(id)?;
+        ensure!(snapshot.issues.is_empty(), "Game files need attention");
+        let mut record = snapshot
+            .current()
+            .context("Game has conflicting versions")?
+            .clone();
+        ensure!(!record.deleted, "Game was removed");
+        ensure!(
+            analysis.fingerprint == crate::recommendations::fingerprint(&record.game),
+            "Game details changed during analysis"
+        );
+        if record.game.recommendation_analysis.as_ref() == Some(&analysis) {
+            return Ok(record);
+        }
+        record.game.recommendation_analysis = Some(analysis);
+        files.publish_child(record, snapshot)
+    }
+
     /// Explicitly keep one branch and acknowledge every head the user reviewed.
     /// The unchosen branch stays in history. A newly arrived head rejects the action.
     pub fn resolve(

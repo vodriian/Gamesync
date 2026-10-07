@@ -99,6 +99,53 @@ fn edits_preserve_provider_data_and_reject_stale_parents() {
 }
 
 #[test]
+fn analysis_saves_only_for_unchanged_inputs_and_keeps_personal_data() {
+    use gamesync_desktop::recommendations::{fingerprint, Analysis, Profile, PROFILE_VERSION};
+    let library = Library::new();
+    let first = &library.first;
+    let analysis = |fingerprint: String| Analysis {
+        game_id: first.game_id,
+        version: PROFILE_VERSION,
+        provider: "claude".into(),
+        model: "test".into(),
+        fingerprint,
+        analyzed_at: 1,
+        confidence: 60,
+        reason: Some("Short runs.".into()),
+        profile: Profile::default(),
+    };
+    let mut personal = first.game.personal.clone();
+    personal.notes = "mine".into();
+    let edited = library
+        .store
+        .edit_personal(first.game_id, first.revision_id, personal)
+        .unwrap();
+    let saved = library
+        .store
+        .set_recommendation_analysis(first.game_id, analysis(fingerprint(&first.game)))
+        .unwrap();
+    assert_eq!(saved.parents, vec![edited.revision_id]);
+    assert_eq!(saved.game.personal.notes, "mine");
+    assert_eq!(
+        saved.game.recommendation_analysis,
+        Some(analysis(fingerprint(&first.game)))
+    );
+    // The same result again does not add a revision.
+    let again = library
+        .store
+        .set_recommendation_analysis(first.game_id, analysis(fingerprint(&first.game)))
+        .unwrap();
+    assert_eq!(again.revision_id, saved.revision_id);
+    // A result for other inputs (the game changed during the request) is refused.
+    let before = fs::read(library.current()).unwrap();
+    assert!(library
+        .store
+        .set_recommendation_analysis(first.game_id, analysis("0".repeat(64)))
+        .is_err());
+    assert_eq!(fs::read(library.current()).unwrap(), before);
+}
+
+#[test]
 fn conflict_resolution_retains_both_branches_and_acknowledges_all_heads() {
     let library = Library::new();
     let first = &library.first;

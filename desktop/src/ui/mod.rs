@@ -1,3 +1,4 @@
+pub mod analysis_job;
 pub mod app;
 mod best_on;
 pub mod best_on_state;

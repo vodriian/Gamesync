@@ -15,6 +15,7 @@ pub mod storage;
 pub mod suitability;
 pub mod sync;
 
+pub mod ai;
 pub mod credentials;
 pub mod omarchy;
 pub mod settings;

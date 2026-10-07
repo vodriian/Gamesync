@@ -1,5 +1,6 @@
 //! Offline recommendation contracts. Personal corrections, cached analysis, and
 //! local estimates remain separate; the selector has no disk, network, or clock.
+pub mod analysis;
 pub mod local_steam;
 mod playing;
 mod profile;
@@ -267,7 +268,8 @@ impl PersonalRecommendations {
     }
 }
 
-/// Future enrichment writes a result by stable game ID, never batch position.
+/// A cached AI estimate, attached by stable game ID, never batch position.
+/// See `analysis` for the request and validation rules.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Analysis {
     pub game_id: Uuid,
@@ -277,6 +279,9 @@ pub struct Analysis {
     pub fingerprint: String,
     pub analyzed_at: i64,
     pub confidence: u8,
+    /// One short sentence from the provider. Shown as its claim, not as fact.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
     pub profile: Profile,
 }
 impl Analysis {
@@ -303,6 +308,12 @@ impl Analysis {
         ensure!(
             self.confidence <= 100 && self.analyzed_at >= 0,
             "Invalid analysis confidence or date"
+        );
+        ensure!(
+            self.reason
+                .as_ref()
+                .is_none_or(|r| !r.trim().is_empty() && r.chars().count() <= 300),
+            "Invalid analysis reason"
         );
         self.profile.validate()
     }

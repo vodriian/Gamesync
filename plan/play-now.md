@@ -1,8 +1,9 @@
 # Play now — requirements and native implementation
 
 Status: the user accepted the MVP direction on October 6, 2026. The revised
-HTML remains a demo. The offline native implementation is on
-`vova/play-now-native`; AI provider requests remain deferred.
+HTML remains a demo. The offline native implementation merged in PR #7.
+Opt-in AI profile analysis is on `vova/ai-play-now`; see
+[AI profile analysis](#ai-profile-analysis--october-7).
 
 ## Goal
 
@@ -190,8 +191,8 @@ No account, key, or AI setup is needed to start choosing.
 | Available information | Behavior |
 | --- | --- |
 | Personal ratings or reviewed profiles | Use those values; retain the underlying source values |
-| Cached AI profiles | Use validated fields locally; show AI estimated in Details |
-| No AI analysis | Use versioned rules over existing tags, categories, descriptions where deterministic, and known personal fields; show Estimated |
+| Cached AI profiles | Use validated fields locally; show activity icons in Details |
+| No AI analysis | Use versioned rules over existing tags, categories, descriptions where deterministic, and known personal fields; the profile modal marks them Estimate |
 | Too little evidence for a required field | Keep it unknown; offer manual correction or optional analysis |
 
 Without AI, broad activities can often come from precise tags (racing → Drive,
@@ -345,6 +346,65 @@ No AI call, status change, or claim of verified play follows a recommendation.
   Linux native acceptance, and a live installed-game launch check.
 
 See [native implementation checks](logs/2026-10-06-play-now-native.md).
+
+### AI profile analysis — October 7
+
+Branch `vova/ai-play-now` implements the first AI feature above. The user
+chose all five providers and two entry points: a batch action and one game.
+
+- **Providers.** Claude uses Anthropic Messages with `output_config.format`
+  (JSON schema). OpenAI, Grok, Gemini, and Ollama use OpenAI-compatible chat
+  completions with a strict `json_schema` response format. Claude Fable 5.1,
+  Opus 5.5, Opus 5, and Sonnet 5.5 requests add `fallbacks: "default"` for
+  safety-classifier declines. Refusal and truncated answers fail the batch.
+- **Batch.** Analyze sits in the Play now toolbar, next to Saved and Recent,
+  so it is available on setup as well as the hand. It targets visible,
+  owned, status-eligible, not-excluded games with no current analysis and an
+  incomplete manual profile. A dialog shows the count, request count,
+  provider choice, what is sent, and a possible charge before any request.
+  Demo libraries do not show it.
+- **Analyze games (Settings → AI).** Under the provider list, shown only when
+  a provider has a chosen model and the library is not a demo. It adds Play
+  now data to every library game without a current analysis: all statuses,
+  including games excluded from Play now. Hidden, removed, and unowned games
+  are skipped. The row shows the newest analysis time ("Last: 3 days ago")
+  or live progress, with Analyze, Cancel, or Retry. It uses the same confirm
+  dialog as the toolbar. Play now and Settings share one job (`ui::analysis_job`),
+  so both show the same progress and only one job runs at a time.
+- **Profile modal (user review, October 7).** Order: AI suggestion (provider,
+  model, confidence, reason, and Get suggestion / Refresh suggestion), then
+  Activities, then **Energy and session**, collapsed by default with a
+  one-line summary. Each control selects the effective value and tags its
+  source: AI suggestion, Estimate, Yours, or Unknown. Choosing a value makes
+  it yours; Reset returns the field to the suggestion. Minute fields show the
+  suggestion as a placeholder. Only the user's values are saved, so a later
+  analysis still updates the rest. The click is the request; no extra dialog.
+- **Input.** Title, Steam short description (at most 1,500 characters), tags,
+  and genres: exactly the fingerprinted inputs. No notes, ratings, history,
+  or personal tags.
+- **Validation.** Batches of 8. Malformed JSON fails the batch. Entries attach
+  by game ID; unknown and duplicated IDs are dropped. Out-of-range values and
+  unknown enum values become unknown; minimum above ideal clears both.
+  Confidence outside 0–100 drops the entry.
+- **Writes.** Each result is saved by game ID when its batch returns, under the
+  game lock, only if the game's fingerprint still matches. Cancel stops after
+  the current request. A failed batch keeps earlier results and offers Retry
+  for the remaining games, including that batch. Deal never waits for analysis.
+- **Display.** Game details show no Estimated or AI estimated label (removed
+  October 7); the right-aligned activity icons mark a current analysis. A wand
+  button before Edit game profile requests or refreshes one game's suggestion.
+  It shows only when a provider has a chosen model and the library is not a
+  demo; Settings → AI keeps that flag current, so rendering never reads the
+  settings file. Outside
+  a hand, the AI reason replaces the generic Play now line in game details.
+  With a current analysis, the energy/session line also shows the game's
+  activity icons, each with its name as a tooltip. A saved profile shows no
+  note in game details; the modal closes on save.
+
+Remaining: a live request check for each provider, reviewed calibration
+fixtures, sync of cached analysis (data-sync lists AI results as synced; the
+operation projection does not include them yet), stale/selected scopes, and
+cost estimates.
 
 ## Editable native design references
 

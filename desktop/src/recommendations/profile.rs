@@ -209,10 +209,7 @@ pub fn estimate(game: &GameData) -> (Profile, Vec<String>) {
 
 pub fn resolve(game: &GameData) -> EffectiveProfile {
     let (local, evidence) = estimate(game);
-    let ai = game
-        .recommendation_analysis
-        .as_ref()
-        .filter(|a| a.version == PROFILE_VERSION && a.fingerprint == fingerprint(game));
+    let ai = super::analysis::current_analysis(game);
     let manual = &game.personal.play_now.profile;
     let mut out = EffectiveProfile {
         values: Profile::default(),

@@ -1,5 +1,6 @@
 //! Native Play now state. Ranking and guarded record writes run on workers;
 //! the view retains a draft or retry action when a write fails.
+mod analyze;
 mod controls;
 mod game_section;
 mod modal;
@@ -77,6 +78,8 @@ pub struct PlayNowView {
     session_saving: bool,
     ticker: Option<Task<()>>,
     draft: Option<profile_editor::Draft>,
+    /// The app's one AI analysis job, shared with Settings → AI.
+    analysis: Entity<crate::ui::analysis_job::AnalysisJob>,
 }
 
 fn now() -> i64 {
@@ -131,6 +134,11 @@ impl PlayNowView {
             })
             .detach();
         }
+        let analysis = cx
+            .global::<crate::ui::analysis_job::AnalysisGlobal>()
+            .0
+            .clone();
+        cx.observe(&analysis, |_, _, cx| cx.notify()).detach();
         let context = active_play
             .as_ref()
             .map_or_else(rec::Context::default, |active| active.context.clone());
@@ -166,6 +174,7 @@ impl PlayNowView {
             session_saving: false,
             ticker: None,
             draft: None,
+            analysis,
         };
         view.start_timer(cx);
         view
@@ -177,7 +186,7 @@ impl PlayNowView {
             || self.pending_save.is_some()
             || self.draft.as_ref().is_some_and(|d| d.dirty)
     }
-    fn visible_game(game: &Game) -> bool {
+    pub(crate) fn visible_game(game: &Game) -> bool {
         game.record.as_ref().is_some_and(|record| {
             !record.deleted
                 && !record.game.personal.hidden
@@ -419,10 +428,12 @@ impl PlayNowView {
                             }
                             Change::Saved(true) => "Saved for later.",
                             Change::Saved(false) => "Removed from saved picks.",
+                            // The modal closes on save; a note would linger in game details.
                             Change::Profile(_) => {
                                 this.draft = None;
                                 this.modal = None;
-                                "Your profile was saved."
+                                this.feedback_game = None;
+                                ""
                             }
                             Change::Choice(choice) => match choice.launch {
                                 LaunchOutcome::Failed => "Launch failed. Your choice was saved; you can retry.",

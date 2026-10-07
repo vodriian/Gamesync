@@ -1,6 +1,6 @@
 //! Recommendation summary within the shared game card, not a separate page.
 use super::*;
-use gpui::{div, px, AnyElement};
+use gpui::{div, px, AnyElement, SharedString};
 use gpui_component::{
     button::{Button, ButtonVariants as _},
     h_flex, v_flex, ActiveTheme as _, Disableable as _, Icon, IconName, Selectable as _,
@@ -26,16 +26,30 @@ impl PlayNowView {
             .iter()
             .find(|pick| pick.id == id)
             .filter(|_| self.library.read(cx).play_now)
-            .map_or_else(
-                || "Choose this game when its energy and session length fit your plans.".to_owned(),
-                |pick| pick.reason.clone(),
-            );
+            .map(|pick| pick.reason.clone())
+            // Outside a hand, the AI's reason describes the game better than a generic line.
+            .or_else(|| {
+                gamesync_desktop::recommendations::analysis::current_analysis(&record.game)
+                    .and_then(|a| a.reason.clone())
+            })
+            .unwrap_or_else(|| {
+                "Choose this game when its energy and session length fit your plans.".to_owned()
+            });
         let energy = profile.values.energy();
+        let analyzed =
+            gamesync_desktop::recommendations::analysis::current_analysis(&record.game).is_some();
+        let activities = analyzed
+            .then(|| profile.values.activities.clone())
+            .flatten()
+            .unwrap_or_default();
         let duration = match (profile.values.minimum_minutes, profile.values.ideal_minutes) {
             (Some(min), Some(ideal)) if min != ideal => format!("{min}–{ideal} min"),
             (Some(min), _) => format!("{min} min"),
             _ => "Session unknown".into(),
         };
+        let job = self.analysis.read(cx);
+        let ai_ready = job.ready(cx);
+        let analysis_running = job.running();
         let action = |key, icon: &'static str, label: &'static str| {
             Button::new(key)
                 .small()
@@ -62,6 +76,25 @@ impl PlayNowView {
                             .text_color(cx.theme().muted_foreground)
                             .child("Play now"),
                     )
+                    .when(ai_ready, |row| {
+                        let analysis = self.analysis.clone();
+                        row.child(
+                            action(
+                                "profile-analyze",
+                                "ai-beautify",
+                                if analyzed {
+                                    "Refresh AI suggestion"
+                                } else {
+                                    "Get AI suggestion"
+                                },
+                            )
+                            .loading(analysis_running)
+                            .disabled(disabled || analysis_running)
+                            .on_click(move |_, _, cx| {
+                                analysis.update(cx, |job, cx| job.analyze_one(id, cx))
+                            }),
+                        )
+                    })
                     .child(
                         action("profile-edit", "customize", "Edit game profile").on_click(
                             cx.listener(move |this, _, w, cx| this.edit_profile(id, w, cx)),
@@ -119,31 +152,59 @@ impl PlayNowView {
                 summary
             }))
             .child(
+                // Facts on the left, activity icons at the right end. Items do
+                // not shrink: a shrunk item let its text overflow into the gap.
                 h_flex()
-                    .flex_wrap()
                     .gap_3()
                     .text_xs()
                     .text_color(cx.theme().muted_foreground)
                     .child(
                         h_flex()
-                            .gap_1()
+                            .flex_1()
+                            .min_w_0()
+                            .flex_wrap()
+                            .gap_x_3()
+                            .gap_y_1()
                             .child(
-                                Icon::new(PlayIcon(
-                                    energy.map_or("battery-medium-01", energy_icon),
-                                ))
-                                .size(px(16.)),
+                                h_flex()
+                                    .flex_shrink_0()
+                                    .gap_1()
+                                    .child(
+                                        Icon::new(PlayIcon(
+                                            energy.map_or("battery-medium-01", energy_icon),
+                                        ))
+                                        .size(px(16.)),
+                                    )
+                                    .child(energy.map_or("Energy unknown".into(), |level| {
+                                        format!("{} energy", level.label())
+                                    })),
                             )
-                            .child(energy.map_or("Energy unknown".into(), |level| {
-                                format!("{} energy", level.label())
-                            })),
+                            .child(
+                                h_flex()
+                                    .flex_shrink_0()
+                                    .gap_1()
+                                    .child(
+                                        Icon::new(crate::assets::SidebarIcon::Playtime)
+                                            .size(px(16.)),
+                                    )
+                                    .child(duration),
+                            ),
                     )
-                    .child(
-                        h_flex()
-                            .gap_1()
-                            .child(Icon::new(crate::assets::SidebarIcon::Playtime).size(px(16.)))
-                            .child(duration),
-                    )
-                    .when(profile.estimated(), |row| row.child("Estimated")),
+                    .when(!activities.is_empty(), |row| {
+                        row.child(h_flex().flex_shrink_0().gap_2().children(
+                            activities.into_iter().map(|activity| {
+                                div()
+                                    .id(SharedString::from(format!("section-{activity:?}")))
+                                    .child(
+                                        Icon::new(PlayIcon(activity_icon(activity))).size(px(16.)),
+                                    )
+                                    .tooltip(move |window, cx| {
+                                        gpui_component::tooltip::Tooltip::new(activity.label())
+                                            .build(window, cx)
+                                    })
+                            }),
+                        ))
+                    }),
             )
             .when(self.feedback_game == Some(id), |col| {
                 col.child(self.feedback(cx))

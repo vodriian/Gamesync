@@ -531,7 +531,7 @@ impl InspectorEditor {
 /// Existing library tags that match `query`, most used first, without tags
 /// the game already has. Also the query as a new tag when no tag has that
 /// name. Matching ignores case.
-fn suggest_tags<'a>(
+pub(crate) fn suggest_tags<'a>(
     library: impl Iterator<Item = &'a String>,
     current: &[String],
     query: &str,
