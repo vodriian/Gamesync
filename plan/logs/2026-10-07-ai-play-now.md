@@ -57,10 +57,8 @@
 ## Commit and test build
 
 - Commit `434e9ef` on `vova/ai-play-now`, on top of `5abb49c`.
-- Push not done: every push with the new commits failed with GitHub
-  "Internal Server Error" (HTTPS and SSH, 15:10–15:14 UTC); githubstatus.com
-  reported no incident. Creating the branch at `5abb49c` through the API
-  worked, so the remote branch exists but lacks these commits.
+- Push: first attempts failed with GitHub "Internal Server Error" (HTTPS and
+  SSH, 15:10–15:14 UTC; no incident listed). A later push succeeded.
 - Test build: `python3 desktop/scripts/package_macos.py --output
   desktop/target/test-builds --name "GameSync AI"` (release, `--locked`).
 - Output: `desktop/target/test-builds/GameSync AI.app` and
@@ -90,6 +88,10 @@ Checks (macOS): fmt, Clippy, and 208 tests passed. Captured with a temporary
 probe (in-memory sample suggestion, removed): collapsed and expanded modal
 in light mode, minute placeholders in dark mode, and game details with the
 AI reason. The modal opens at the top with the AI section first.
+
+Commit `8f098db`, pushed. Test build `GameSync AI` rebuilt from it (same
+command and output paths as above); the packaged app launched in an isolated
+preview folder.
 
 ## Not verified
 
