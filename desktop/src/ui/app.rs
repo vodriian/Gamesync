@@ -97,6 +97,8 @@ impl GameSyncApp {
         let library = cx.new(|_| library);
         let best_on = cx.new(|cx| super::best_on_state::BestOnState::new(library.clone(), cx));
         cx.set_global(super::best_on_state::BestOnGlobal(best_on));
+        let analysis = cx.new(|_| super::analysis_job::AnalysisJob::new(library.clone()));
+        cx.set_global(super::analysis_job::AnalysisGlobal(analysis));
         let sync = cx.new(|_| crate::sync_runtime::SyncState {
             folder: settings.sync_folder.clone(),
             ..Default::default()

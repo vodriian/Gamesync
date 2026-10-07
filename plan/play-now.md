@@ -363,6 +363,14 @@ chose all five providers and two entry points: a batch action and one game.
   incomplete manual profile. A dialog shows the count, request count,
   provider choice, what is sent, and a possible charge before any request.
   Demo libraries do not show it.
+- **Analyze games (Settings → AI).** Under the provider list, shown only when
+  a provider has a chosen model and the library is not a demo. It adds Play
+  now data to every library game without a current analysis: all statuses,
+  including games excluded from Play now. Hidden, removed, and unowned games
+  are skipped. The row shows the newest analysis time ("Last: 3 days ago")
+  or live progress, with Analyze, Cancel, or Retry. It uses the same confirm
+  dialog as the toolbar. Play now and Settings share one job (`ui::analysis_job`),
+  so both show the same progress and only one job runs at a time.
 - **Profile modal (user review, October 7).** Order: AI suggestion (provider,
   model, confidence, reason, and Get suggestion / Refresh suggestion), then
   Activities, then **Energy and session**, collapsed by default with a

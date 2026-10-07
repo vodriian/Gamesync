@@ -382,9 +382,11 @@ impl SettingsView {
                     .overflow_y_scroll()
                     .items_center()
                     .child(
+                        // A definite width: with w_full + max_w, wrapped text was
+                        // measured narrower than drawn, so the scroll range was short.
+                        // The window's 700 px minimum keeps this width in view.
                         v_flex()
-                            .w_full()
-                            .max_w(px(640.))
+                            .w(px(640.))
                             .px_8()
                             .py_6()
                             .gap_4()

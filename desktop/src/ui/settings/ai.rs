@@ -39,6 +39,8 @@ pub struct AiSettings {
     clear_key: bool,
     busy: bool,
     message: SharedString,
+    /// The app's shared analysis job; Analyze games starts it for the library.
+    analysis: Entity<crate::ui::analysis_job::AnalysisJob>,
 }
 
 impl AiSettings {
@@ -69,7 +71,13 @@ impl AiSettings {
             .map(|provider| saved.get(provider.id).cloned())
             .collect();
         let draft = added.iter().position(Option::is_none);
+        let analysis = cx
+            .global::<crate::ui::analysis_job::AnalysisGlobal>()
+            .0
+            .clone();
+        cx.observe(&analysis, |_, _, cx| cx.notify()).detach();
         Self {
+            analysis,
             added,
             draft,
             key,
@@ -527,6 +535,70 @@ impl AiSettings {
             )
     }
 
+    /// Analyze games: add Play now data to every game except hidden ones.
+    /// Shown only when a provider has a chosen model.
+    fn analyze_games(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        use crate::ui::analysis_job::Scope;
+        let job = self.analysis.read(cx);
+        let muted = cx.theme().muted_foreground;
+        let detail = if job.running() || !job.status().is_empty() {
+            job.status().to_owned()
+        } else {
+            job.last_run(cx).map_or_else(
+                || "Not run yet".to_owned(),
+                |time| format!("Last: {}", settings::age_label(time.max(0) as u64)),
+            )
+        };
+        let analysis = self.analysis.clone();
+        let action = if job.running() {
+            Button::new("analyze-games-cancel")
+                .small()
+                .label("Cancel")
+                .disabled(job.cancelling())
+                .on_click(move |_, _, cx| analysis.update(cx, |job, cx| job.cancel(cx)))
+        } else if job.can_retry() {
+            Button::new("analyze-games-retry")
+                .small()
+                .label("Retry")
+                .on_click(move |_, _, cx| analysis.update(cx, |job, cx| job.retry(cx)))
+        } else {
+            Button::new("analyze-games")
+                .small()
+                .outline()
+                .label("Analyze")
+                .on_click(move |_, window, cx| {
+                    analysis.update(cx, |job, cx| job.confirm(Scope::Library, window, cx))
+                })
+        };
+        v_flex()
+            .gap_2()
+            .child(
+                h_flex()
+                    .gap_3()
+                    .pl_4()
+                    .pr_2()
+                    .py_2()
+                    .rounded(cx.theme().radius_lg)
+                    .bg(cx.theme().group_box)
+                    .child(
+                        gpui_component::Icon::new(crate::assets::PlayIcon("ai-beautify"))
+                            .size(px(20.))
+                            .text_color(cx.theme().primary),
+                    )
+                    .child(
+                        v_flex()
+                            .flex_1()
+                            .min_w_0()
+                            .child("Analyze games")
+                            .child(div().text_xs().text_color(muted).child(detail)),
+                    )
+                    .child(action),
+            )
+            .child(div().text_sm().text_color(muted).child(
+                "Adds Play now data to every game except hidden ones. Games with a current suggestion are skipped. You pay your provider for usage.",
+            ))
+    }
+
     fn add_form(&self, index: usize, cx: &mut Context<Self>) -> impl IntoElement {
         let local = local(index);
         let input = if local { &self.endpoint } else { &self.key };
@@ -602,6 +674,9 @@ impl Render for AiSettings {
                     .map(|(index, entry)| self.provider_row(*index, entry, cx))
                     .collect::<Vec<_>>(),
             );
+        let ready = rows.iter().any(|(_, entry)| entry.model.is_some())
+            && self.analysis.read(cx).available(cx);
+        let analyze = ready.then(|| self.analyze_games(cx));
         let add = self.draft.map(|draft| {
             let choices: Vec<_> = PROVIDERS
                 .iter()
@@ -623,6 +698,7 @@ impl Render for AiSettings {
         v_flex()
             .gap_6()
             .child(list)
+            .children(analyze)
             .children(add)
             .when(!self.message.is_empty(), |page| {
                 page.child(div().text_sm().child(self.message.clone()))

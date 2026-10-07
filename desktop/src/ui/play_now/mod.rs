@@ -78,7 +78,8 @@ pub struct PlayNowView {
     session_saving: bool,
     ticker: Option<Task<()>>,
     draft: Option<profile_editor::Draft>,
-    analyzer: analyze::Analyzer,
+    /// The app's one AI analysis job, shared with Settings → AI.
+    analysis: Entity<crate::ui::analysis_job::AnalysisJob>,
 }
 
 fn now() -> i64 {
@@ -133,6 +134,11 @@ impl PlayNowView {
             })
             .detach();
         }
+        let analysis = cx
+            .global::<crate::ui::analysis_job::AnalysisGlobal>()
+            .0
+            .clone();
+        cx.observe(&analysis, |_, _, cx| cx.notify()).detach();
         let context = active_play
             .as_ref()
             .map_or_else(rec::Context::default, |active| active.context.clone());
@@ -168,7 +174,7 @@ impl PlayNowView {
             session_saving: false,
             ticker: None,
             draft: None,
-            analyzer: analyze::Analyzer::default(),
+            analysis,
         };
         view.start_timer(cx);
         view
@@ -180,7 +186,7 @@ impl PlayNowView {
             || self.pending_save.is_some()
             || self.draft.as_ref().is_some_and(|d| d.dirty)
     }
-    fn visible_game(game: &Game) -> bool {
+    pub(crate) fn visible_game(game: &Game) -> bool {
         game.record.as_ref().is_some_and(|record| {
             !record.deleted
                 && !record.game.personal.hidden

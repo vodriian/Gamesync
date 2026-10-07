@@ -109,6 +109,24 @@ probes (removed): add form and saved row (light), dialog (light and dark),
 and game details with three activity icons. A real Steam test and save
 through the new dialog were not run.
 
+## Third review round
+
+- Settings scroll fix: the content column used `w_full().max_w(640)`. Wrapped
+  text was measured narrower than drawn, so the scroll range was short and the
+  end of Best on → Enrichment was cut off. A definite 640 px width fixes it
+  (window minimum is 700 px). Probe measured the range at 292 px before and
+  389 px after; the capture shows the full Enrichment group and its padding.
+- Analyze games in Settings → AI (user request): one shared `AnalysisJob`
+  entity now runs analysis for Play now and Settings. Library scope covers
+  every game except hidden, removed, and unowned ones. Bin unit test
+  `library_scope_skips_hidden_but_not_finished_or_excluded_games` added.
+- `settings::age_label` now formats both the Steam sync time and the last
+  analysis time.
+
+Checks (macOS): fmt, Clippy, and 209 tests passed. Captured with temporary
+probes (removed): Settings → AI with two providers, light and dark; Best on
+scrolled to the bottom. A real library run from Settings was not done.
+
 ## Not verified
 
 - No live provider request was made. No key was used, and the local Ollama
