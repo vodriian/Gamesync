@@ -345,6 +345,7 @@ impl GameGrid {
                     material: true,
                     frosted_top: 0.,
                     hinge: 0.,
+                    spine_round: 1.,
                 },
                 crate::theme::interface_radius(cx, px(17.)),
                 face,
@@ -535,11 +536,12 @@ impl GameGrid {
                                     .collect()
                             },
                         )
-                        .pt(px(if self.view == LibraryView::Table {
-                            110.
-                        } else {
-                            80.
-                        }))
+                        .pt(px(crate::ui::chrome::toolbar_shift(cx)
+                            + if self.view == LibraryView::Table {
+                                110.
+                            } else {
+                                80.
+                            }))
                         .pb(px(32.))
                         .track_scroll(&self.scroll),
                     )

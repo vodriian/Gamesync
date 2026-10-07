@@ -18,6 +18,43 @@ blue-gray tabletop. Physical-card rendering remains in place. GPUI clips overflo
 to rectangles, so a native rounded frame and outline finish the rounded edge
 without capturing the full library into a texture.
 
+## Native look
+
+`Appearance.look` is Native (default) or Theme. Native resolves per platform:
+MacOS on macOS, Windows on Windows, and Omarchy on Linux while Omarchy state
+is available. Without Omarchy, Linux falls back to Theme. A missing `look`
+loads as Native. Native hides the scheme, contrast and accent rows. Their
+saved values stay unchanged and return with Theme.
+
+- **Colors:**
+  - macOS uses the Apple macOS 27 UI kit values; Windows uses WinUI Fluent
+    tokens (not yet checked on Windows).
+  - Both live in `native_palette.rs` as Baseline keys. Translucent text and
+    borders are flattened over their surface.
+  - The system accent (`controlAccentColor`, or the DWM `AccentColor`) replaces
+    the scheme accent. It is read again when a window becomes active.
+  - On macOS, labels on the accent are white.
+- **Shape signal:** a `ShellStyle` global (Theme, MacOs, Windows, Omarchy)
+  tells surfaces which design language is active. Do not infer it from colors
+  or radii.
+- **Window geometry (macOS, every look):** GPUI sets the traffic lights only
+  when a window opens.
+  - The main window places them at (18, 19) in a 52 pt row.
+  - Settings and Collections place them at (13, 10) in a 34 pt title row.
+- **Native macOS shell:**
+  - The sidebar and the content are flush, with no inset panel.
+  - The library toolbar and the detail header sit in the 52 pt row, after the
+    window controls.
+  - The Theme look keeps the inset panel described above.
+- **macOS Settings, in both looks:** a centered title, icon tabs on top, and
+  one centered form.
+  - Labels are trailing-aligned.
+  - Mode uses Light, Dark and Auto preview tiles.
+  - Appearance is a segmented control.
+  - The Theme rows are pop-ups with up/down chevrons and accent checkboxes.
+  - Sidebar and Motion are checkboxes.
+  - Other platforms keep the left navigation for now.
+
 ## Appearance
 
 The bundled catalog ports all 25 named Baseline schemes from revision `8c56e831e1abb1d3841c4ffdecbe06b5182fbc68`. There are 45 supported
@@ -47,7 +84,8 @@ settings and game data are retained.
 
 ### Omarchy mode
 
-Linux can opt into **Sync with Omarchy theme** under Look and feel. GameSync reads
+On Linux, the **Omarchy** segment of Appearance (Native look) follows Omarchy.
+It replaces the former **Sync with Omarchy theme** checkbox. GameSync reads
 the active theme name and semantic colors from
 `$XDG_STATE_HOME/omarchy/current`, or `~/.local/state/omarchy/current` when the
 environment variable is unset. It does not install an Omarchy hook or change an
@@ -66,11 +104,11 @@ matching its shell surfaces instead of using a separate dark shade. These change
 apply only while Omarchy mode is on; normal GameSync surfaces return when it is
 turned off.
 
-The checkbox is off by default and appears only when Omarchy state is available,
-or while the mode is already on so the user can still turn it off if that state
-disappears. It is hidden on macOS and other non-Omarchy systems. While it is on,
-bundled palette controls are disabled but their saved values stay unchanged.
-Turning it off restores those values.
+The Omarchy segment is the Native choice on Linux. It is shown only when
+Omarchy state is available, or while Omarchy is already active, so the user
+can still choose Theme if that state disappears. The legacy `omarchy_mode`
+setting is no longer read. While Omarchy is active, the bundled palette rows
+are hidden but their saved values stay unchanged. Theme restores those values.
 
 ## Sources and regeneration
 

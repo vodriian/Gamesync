@@ -63,3 +63,8 @@ October 5 hinge: `CardPose::hinge` moves the vertical rotation axis to a face
 edge (-1 left, 0 center, 1 right). The Metal vertex shader rotates around that
 axis, keeps it at rest position, and draws the thin edge on the free side.
 The uniform block gains one `float4`. Blade ignores the field.
+
+October 7 spine: `CardPose::spine_round` scales the radius of the two
+corners on the hinge edge (uniform `hinge.y`), so a turning page meets its
+neighbor at a square spine. Hinged faces skip the projected shadow pass;
+the app draws one table shadow for the whole book.

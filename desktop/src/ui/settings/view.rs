@@ -3,7 +3,6 @@ use super::*;
 use gpui::{div, px};
 use gpui_component::{
     button::{Button, ButtonVariants as _},
-    checkbox::Checkbox,
     h_flex,
     input::Input,
     v_flex, ActiveTheme as _, Disableable as _, Selectable as _, StyledExt as _,
@@ -43,75 +42,10 @@ impl Render for SettingsView {
             }
         }
         let has_library = source.is_some() && !self.library.read(cx).demo;
-        let surface = cx.theme().secondary;
+        let surface = crate::ui::controls::group_surface(cx);
         let radius = cx.theme().radius_lg;
         let group = || v_flex().p_5().gap_4().rounded(radius).bg(surface);
-        let appearance = group()
-            // Omarchy is a Linux desktop integration, not a generic theme.
-            .when(self.omarchy_available || self.omarchy_mode, |group| {
-                group.child(self.omarchy_controls(cx))
-            })
-            .child(self.appearance_controls(cx))
-            .child(
-                Checkbox::new("reduce-motion")
-                    .label("Reduce motion")
-                    .checked(self.reduce_motion)
-                    .on_click(cx.listener(|this, checked: &bool, _, cx| {
-                        this.reduce_motion = *checked;
-                        cx.global_mut::<super::super::motion::MotionPreferences>()
-                            .reduced = *checked;
-                        let value = *checked;
-                        cx.spawn(async move |this, cx| {
-                            let result = cx
-                                .background_spawn(async move {
-                                    settings::update(|s| s.reduce_motion = value)
-                                })
-                                .await;
-                            if let Err(error) = result {
-                                let _ = this.update(cx, |this, cx| {
-                                    this.message =
-                                        format!("Could not save motion preference: {error}");
-                                    cx.notify();
-                                });
-                            }
-                        })
-                        .detach();
-                        cx.notify();
-                    })),
-            );
-        let appearance = appearance.child(
-            Checkbox::new("show-hidden-games")
-                .label("Show hidden games in sidebar")
-                .checked(self.library.read(cx).show_hidden_games)
-                .disabled(self.saving_hidden_preference)
-                .on_click(cx.listener(|this, checked: &bool, _, cx| {
-                    let value = *checked;
-                    this.saving_hidden_preference = true;
-                    cx.notify();
-                    cx.spawn(async move |this, cx| {
-                        let result = cx
-                            .background_spawn(async move {
-                                settings::update(|s| s.show_hidden_games = value)
-                            })
-                            .await;
-                        let _ = this.update(cx, |this, cx| {
-                            this.saving_hidden_preference = false;
-                            match result {
-                                Ok(()) => this.library.update(cx, |library, cx| {
-                                    library.set_show_hidden_games(value);
-                                    cx.notify();
-                                }),
-                                Err(error) => {
-                                    this.message =
-                                        format!("Could not save sidebar preference: {error}")
-                                }
-                            }
-                            cx.notify();
-                        });
-                    })
-                    .detach();
-                })),
-        );
+        let appearance = group().child(self.look_and_feel(cx));
         let connection = group()
             .child("Steam profile or ID")
             .child(Input::new(&self.profile).disabled(self.busy || !has_library))
@@ -192,27 +126,184 @@ impl Render for SettingsView {
                             .on_click(cx.listener(|this, _, _, cx| this.save_country(cx))),
                     ),
             );
+        // macOS keeps the toolbar-tab form in both looks; Theme changes only colors.
+        let native = crate::ui::controls::MAC_SETTINGS;
+        let feedback = (!self.message.is_empty()).then(|| {
+            div()
+                .id("settings-feedback")
+                .max_h(px(96.))
+                .overflow_y_scroll()
+                .text_sm()
+                .child(self.message.clone())
+        });
+        let body = v_flex()
+            .gap_6()
+            .when(self.section == Section::Appearance, |column| {
+                column.child(if native {
+                    self.look_and_feel_form(cx).into_any_element()
+                } else {
+                    appearance.into_any_element()
+                })
+            })
+            .when(self.section == Section::General, |column| {
+                column.child(connection).child(sync)
+            })
+            .when(self.section == Section::Sync, |column| {
+                column.child(self.sync_section(cx))
+            })
+            .when(self.section == Section::BestOn, |column| {
+                column.child(self.best_on.clone())
+            })
+            .when(self.section == Section::Ai, |column| {
+                column.child(self.ai.clone())
+            });
+        let shell = if native {
+            self.native_shell(feedback, body, cx).into_any_element()
+        } else {
+            self.theme_shell(feedback, body, cx).into_any_element()
+        };
+        div()
+            .size_full()
+            .child(shell)
+            // AI provider details open in a modal.
+            .children(gpui_component::Root::render_dialog_layer(window, cx))
+    }
+}
+
+const SECTIONS: [Section; 5] = [
+    Section::General,
+    Section::Sync,
+    Section::Appearance,
+    Section::BestOn,
+    Section::Ai,
+];
+
+fn section_icon(section: Section) -> gpui_component::Icon {
+    match section {
+        Section::General => gpui_component::Icon::from(gpui_component::IconName::Settings),
+        Section::Sync => gpui_component::Icon::from(gpui_component::IconName::FolderOpen),
+        Section::Appearance => gpui_component::Icon::from(gpui_component::IconName::Palette),
+        Section::BestOn => gpui_component::Icon::new(crate::assets::SetupIcon::Pc),
+        Section::Ai => gpui_component::Icon::from(gpui_component::IconName::Bot),
+    }
+}
+
+impl SettingsView {
+    fn select_section(&mut self, section: Section, cx: &mut Context<Self>) {
+        self.section = section;
+        self.stop_confirm = false;
+        if !self.busy {
+            self.message.clear();
+        }
+        cx.notify();
+    }
+
+    /// macOS Settings window: title row, toolbar tabs, then one centered pane.
+    fn native_shell(
+        &self,
+        feedback: Option<impl IntoElement>,
+        body: impl IntoElement,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
+        let theme = cx.theme();
+        let tabs = h_flex()
+            .justify_center()
+            .gap_1()
+            .pb_2()
+            .border_b_1()
+            .border_color(theme.border)
+            .children(SECTIONS.into_iter().map(|section| {
+                let selected = self.section == section;
+                let tint = if selected {
+                    theme.primary
+                } else {
+                    theme.muted_foreground
+                };
+                div()
+                    .id(section.label())
+                    .flex()
+                    .flex_col()
+                    .items_center()
+                    .gap_0p5()
+                    .min_w(px(68.))
+                    .px_2()
+                    .py_1()
+                    .rounded(px(6.))
+                    .cursor_pointer()
+                    .when(selected, |tab| tab.bg(theme.secondary_hover))
+                    .hover(|tab| tab.bg(theme.secondary_hover))
+                    .child(section_icon(section).size(px(22.)).text_color(tint))
+                    .child(
+                        div()
+                            .text_xs()
+                            .text_color(if selected {
+                                theme.primary
+                            } else {
+                                theme.foreground
+                            })
+                            .child(section.label()),
+                    )
+                    .on_click(cx.listener(move |this, _, _, cx| this.select_section(section, cx)))
+            }));
+        v_flex()
+            .size_full()
+            .bg(theme.background)
+            .text_color(theme.foreground)
+            .text_size(px(13.))
+            .child(
+                // Center the title on the window, not on the space after the controls.
+                crate::ui::chrome::compact_titlebar(cx)
+                    .bg(gpui::transparent_black())
+                    .pl(px(0.))
+                    .justify_center()
+                    .child(
+                        div()
+                            .flex_1()
+                            .text_center()
+                            .font_semibold()
+                            .child(self.section.label()),
+                    ),
+            )
+            .child(tabs)
+            .child(
+                v_flex()
+                    .id("settings-scroll")
+                    .flex_1()
+                    .min_h_0()
+                    .overflow_y_scroll()
+                    .items_center()
+                    .child(
+                        v_flex()
+                            .w_full()
+                            .max_w(px(640.))
+                            .px_8()
+                            .py_6()
+                            .gap_4()
+                            .children(feedback)
+                            .child(body),
+                    ),
+            )
+    }
+
+    /// Theme look: left navigation and grouped panels from the Elyx design.
+    fn theme_shell(
+        &self,
+        feedback: Option<impl IntoElement>,
+        body: impl IntoElement,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
         v_flex()
             .size_full()
             .bg(cx.theme().background)
             .text_color(cx.theme().foreground)
-            .child(gpui_component::TitleBar::new().border_b_0())
+            .child(crate::ui::chrome::compact_titlebar(cx))
             .child(
                 v_flex()
                     .p_6()
                     .gap_2()
                     .flex_shrink_0()
                     .child(div().text_xl().font_semibold().child("Settings"))
-                    .when(!self.message.is_empty(), |header| {
-                        header.child(
-                            div()
-                                .id("settings-feedback")
-                                .max_h(px(96.))
-                                .overflow_y_scroll()
-                                .text_sm()
-                                .child(self.message.clone()),
-                        )
-                    }),
+                    .children(feedback),
             )
             .child(
                 h_flex()
@@ -227,49 +318,18 @@ impl Render for SettingsView {
                             .flex_shrink_0()
                             .border_r_1()
                             .border_color(cx.theme().border)
-                            .children(
-                                [
-                                    Section::General,
-                                    Section::Sync,
-                                    Section::Appearance,
-                                    Section::BestOn,
-                                    Section::Ai,
-                                ]
-                                .into_iter()
-                                .map(|section| {
-                                    Button::new(section.label())
-                                        .ghost()
-                                        .label(section.label())
-                                        .icon(match section {
-                                            Section::General => gpui_component::Icon::from(
-                                                gpui_component::IconName::Settings,
-                                            ),
-                                            Section::Sync => gpui_component::Icon::from(
-                                                gpui_component::IconName::FolderOpen,
-                                            ),
-                                            Section::Appearance => gpui_component::Icon::from(
-                                                gpui_component::IconName::Palette,
-                                            ),
-                                            Section::BestOn => gpui_component::Icon::new(
-                                                crate::assets::SetupIcon::Pc,
-                                            ),
-                                            Section::Ai => gpui_component::Icon::from(
-                                                gpui_component::IconName::Bot,
-                                            ),
-                                        })
-                                        .justify_start()
-                                        .w_full()
-                                        .selected(self.section == section)
-                                        .on_click(cx.listener(move |this, _, _, cx| {
-                                            this.section = section;
-                                            this.stop_confirm = false;
-                                            if !this.busy {
-                                                this.message.clear();
-                                            }
-                                            cx.notify();
-                                        }))
-                                }),
-                            ),
+                            .children(SECTIONS.into_iter().map(|section| {
+                                Button::new(section.label())
+                                    .ghost()
+                                    .label(section.label())
+                                    .icon(section_icon(section))
+                                    .justify_start()
+                                    .w_full()
+                                    .selected(self.section == section)
+                                    .on_click(cx.listener(move |this, _, _, cx| {
+                                        this.select_section(section, cx)
+                                    }))
+                            })),
                     )
                     .child(
                         v_flex()
@@ -283,24 +343,8 @@ impl Render for SettingsView {
                             .pb_6()
                             .gap_6()
                             .child(div().text_lg().font_semibold().child(self.section.label()))
-                            .when(self.section == Section::Appearance, |column| {
-                                column.child(appearance)
-                            })
-                            .when(self.section == Section::General, |column| {
-                                column.child(connection).child(sync)
-                            })
-                            .when(self.section == Section::Sync, |column| {
-                                column.child(self.sync_section(cx))
-                            })
-                            .when(self.section == Section::BestOn, |column| {
-                                column.child(self.best_on.clone())
-                            })
-                            .when(self.section == Section::Ai, |column| {
-                                column.child(self.ai.clone())
-                            }),
+                            .child(body),
                     ),
             )
-            // AI provider details open in a modal.
-            .children(gpui_component::Root::render_dialog_layer(window, cx))
     }
 }

@@ -147,6 +147,9 @@ impl HomeView {
                                     .map(gpui::ImageSource::from)
                                     .unwrap_or_else(|| game.cover.clone().into()))
                                 .size_full()
+                                // GPUI clips children to rectangles; round the image
+                                // inside the 2 pt hover border.
+                                .rounded(crate::theme::interface_radius(cx, px(6.)))
                                 .object_fit(ObjectFit::Cover)
                                 .with_fallback(|| div().size_full().into_any_element()),
                             ),
@@ -289,6 +292,7 @@ impl HomeView {
                         .child(
                             img(source)
                                 .size_full()
+                                .rounded(crate::theme::interface_radius(cx, px(3.)))
                                 .object_fit(ObjectFit::Cover)
                                 .with_fallback(|| div().size_full().into_any_element()),
                         )
@@ -360,7 +364,7 @@ impl Render for HomeView {
         div().id("home").size_full().overflow_y_scroll().child(
             image_cache(self.cache.clone()).child(
                 v_flex()
-                    .pt(px(84.))
+                    .pt(px(84. + crate::ui::chrome::toolbar_shift(cx)))
                     .pb(px(40.))
                     .px(px(28.))
                     .gap(px(32.))

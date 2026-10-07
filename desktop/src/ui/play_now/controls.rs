@@ -131,7 +131,12 @@ impl PlayNowView {
     pub(super) fn selection_group(&self, group: &'static str, cx: &gpui::App) -> gpui::Div {
         let measure = self.controls.groups[group].clone();
         let paint = measure.clone();
-        let color = cx.theme().secondary_active;
+        // Native macOS selects a segment with the accent fill (Apple UI kit).
+        let color = if crate::theme::macos_shell(cx) {
+            cx.theme().primary
+        } else {
+            cx.theme().secondary_active
+        };
         gpui_component::h_flex().relative().child(
             gpui::canvas(
                 move |bounds, _, _| {
@@ -157,11 +162,16 @@ impl PlayNowView {
     ) -> gpui::Div {
         let measure = self.controls.groups[group].clone();
         let theme = cx.theme();
+        let on_accent = crate::theme::macos_shell(cx) && measure.borrow().selected == id;
         // Keep the button surface clear so one pill remains visible in flight.
         // Hover and press are immediate, translucent overlays on that surface.
         let style = ButtonCustomVariant::new(cx)
             .color(theme.transparent)
-            .foreground(theme.foreground)
+            .foreground(if on_accent {
+                theme.primary_foreground
+            } else {
+                theme.foreground
+            })
             .border(if segmented {
                 theme.transparent
             } else {
@@ -194,6 +204,12 @@ impl PlayNowView {
             self.controls.brain.value()
         };
         let theme = cx.theme();
+        let native = crate::theme::macos_shell(cx);
+        let off = if native {
+            crate::ui::controls::switch_off(cx)
+        } else {
+            theme.secondary_active
+        };
         // The pinned Switch has no keyboard or reduced-motion path. Reuse Button
         // input/focus with the same 36 x 20 track and 16 px thumb geometry.
         Button::new("brain-dead")
@@ -208,9 +224,12 @@ impl PlayNowView {
                     .w(px(36.))
                     .h(px(20.))
                     .rounded(px(10.))
-                    .border_1()
-                    .border_color(theme.muted_foreground.opacity(0.4))
-                    .bg(mix(theme.secondary_active, theme.primary, t))
+                    .when(!native, |track| {
+                        track
+                            .border_1()
+                            .border_color(theme.muted_foreground.opacity(0.4))
+                    })
+                    .bg(mix(off, theme.primary, t))
                     .child(
                         div()
                             .absolute()
@@ -218,7 +237,11 @@ impl PlayNowView {
                             .left(px(2. + 16. * t))
                             .size(px(16.))
                             .rounded(px(8.))
-                            .bg(mix(theme.foreground, theme.primary_foreground, t))
+                            .bg(if native {
+                                gpui::white()
+                            } else {
+                                mix(theme.foreground, theme.primary_foreground, t)
+                            })
                             .shadow_sm(),
                     ),
             )

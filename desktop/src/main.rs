@@ -5,6 +5,7 @@ mod managed_storage;
 mod model;
 mod sync_runtime;
 use gamesync_desktop::settings;
+mod system_accent;
 mod theme;
 mod ui;
 mod watcher;
@@ -144,9 +145,13 @@ fn main() -> anyhow::Result<()> {
         library.name = "My games".into();
         library.demo = false;
     }
-    let (initial_theme, omarchy_mode) = settings::load()
-        .map(|settings| (settings.appearance(), settings.omarchy_mode))
+    let initial_theme = settings::load()
+        .map(|settings| settings.appearance())
         .unwrap_or_default();
+    // Omarchy is the native look on Linux when its theme state exists. The
+    // legacy `omarchy_mode` flag is no longer read; Native is the default look.
+    let omarchy_mode = initial_theme.native(gamesync_desktop::omarchy::is_available())
+        == Some(gamesync_desktop::appearance::NativePlatform::Omarchy);
     let initial_omarchy = omarchy_mode
         .then(gamesync_desktop::omarchy::OmarchyTheme::load_active)
         .transpose()
@@ -182,10 +187,7 @@ fn main() -> anyhow::Result<()> {
             let result = cx.open_window(
                 WindowOptions {
                     app_id: Some(APP_ID.into()),
-                    titlebar: Some(gpui::TitlebarOptions {
-                        title: Some(library.name.clone().into()),
-                        ..gpui_component::TitleBar::title_bar_options()
-                    }),
+                    titlebar: Some(ui::chrome::titlebar_options(library.name.clone())),
                     window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
                         None,
                         if small_window {

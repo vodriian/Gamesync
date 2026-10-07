@@ -1,9 +1,9 @@
 //! Baseline colors resolved offline; native controls consume one semantic palette.
 use gamesync_desktop::{
-    appearance::{Appearance, Palette},
+    appearance::{Appearance, NativePlatform, Palette},
     omarchy::OmarchyTheme,
 };
-use gpui::{px, App, Hsla, Pixels, Window, WindowAppearance};
+use gpui::{px, App, Global, Hsla, Pixels, Window, WindowAppearance};
 use gpui_component::{Theme, ThemeColor, ThemeMode};
 use std::collections::BTreeMap;
 
@@ -29,20 +29,88 @@ fn ink(background: Hsla) -> Hsla {
     )
     .into()
 }
+/// The active design language. Surfaces read this instead of inferring the
+/// mode from colors or radii.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum ShellStyle {
+    #[default]
+    Theme,
+    MacOs,
+    Windows,
+    Omarchy,
+}
+impl Global for ShellStyle {}
+
+pub fn shell_style(cx: &App) -> ShellStyle {
+    cx.try_global::<ShellStyle>().copied().unwrap_or_default()
+}
+
+/// True while the platform's own look is active (not Theme).
+pub fn native_shell(cx: &App) -> bool {
+    shell_style(cx) != ShellStyle::Theme
+}
+
+/// The system accent used by the last native apply.
+#[derive(Default)]
+struct AppliedAccent(Option<gamesync_desktop::native_palette::Accent>);
+impl Global for AppliedAccent {}
+
+/// The accent changes only in system settings, so a newly active window checks it.
+pub fn system_accent_changed(cx: &App) -> bool {
+    native_shell(cx)
+        && !omarchy_mode(cx)
+        && cx.try_global::<AppliedAccent>().map(|a| a.0) != Some(crate::system_accent::read())
+}
+
+/// macOS native chrome: flush sidebar and content under a unified toolbar row.
+pub fn macos_shell(cx: &App) -> bool {
+    shell_style(cx) == ShellStyle::MacOs
+}
+
+/// Apply a bundled Theme or the macOS/Windows native look. Omarchy has its own
+/// loader and applies through `apply_omarchy`.
 pub fn apply_choice(choice: &Appearance, window: &mut Window, cx: &mut App) {
     gpui::set_linux_card_compositor_enabled(false);
-    let dark = matches!(
+    let system_dark = matches!(
         window.appearance(),
         WindowAppearance::Dark | WindowAppearance::VibrantDark
     );
-    let palette = choice.palette(dark);
+    let accent = crate::system_accent::read();
+    let native = match choice.native(false) {
+        Some(NativePlatform::MacOs) => Some((
+            ShellStyle::MacOs,
+            gamesync_desktop::native_palette::macos(choice.is_dark(system_dark), accent),
+        )),
+        Some(NativePlatform::Windows) => Some((
+            ShellStyle::Windows,
+            gamesync_desktop::native_palette::windows(choice.is_dark(system_dark), accent),
+        )),
+        Some(NativePlatform::Omarchy) | None => None,
+    };
+    let (style, palette, accented) = match &native {
+        Some((style, palette)) => (*style, palette, true),
+        None => (
+            ShellStyle::Theme,
+            choice.palette(system_dark),
+            choice.interface_accent,
+        ),
+    };
     let mode = if palette.mode == "dark" {
         ThemeMode::Dark
     } else {
         ThemeMode::Light
     };
     Theme::change(mode, Some(window), cx);
-    Theme::global_mut(cx).colors = resolve(palette, choice.interface_accent);
+    let mut colors = resolve(palette, accented);
+    if style == ShellStyle::MacOs {
+        // AppKit draws accent-filled controls with white labels for every
+        // system accent; the luminance rule would pick dark ink for light blue.
+        colors.primary_foreground = gpui::white();
+        colors.sidebar_primary_foreground = gpui::white();
+    }
+    Theme::global_mut(cx).colors = colors;
+    cx.set_global(style);
+    cx.set_global(AppliedAccent(accent));
     cx.refresh_windows();
 }
 
@@ -58,9 +126,9 @@ pub fn apply_omarchy(theme: &OmarchyTheme, window: &mut Window, cx: &mut App) {
     let native = Theme::global_mut(cx);
     native.colors = resolve(&palette, true);
     // Omarchy uses square corners throughout its application design language.
-    // Custom GameSync surfaces use this value as their mode signal too.
     native.radius = px(0.);
     native.radius_lg = px(0.);
+    cx.set_global(ShellStyle::Omarchy);
     cx.refresh_windows();
     log::info!("Applied Omarchy theme: {}", theme.name);
 }
@@ -76,7 +144,7 @@ pub fn interface_radius(cx: &App, normal: Pixels) -> Pixels {
 }
 
 pub fn omarchy_mode(cx: &App) -> bool {
-    Theme::global(cx).radius == px(0.)
+    shell_style(cx) == ShellStyle::Omarchy
 }
 
 pub fn pill_radius(cx: &App) -> Pixels {
