@@ -102,6 +102,14 @@ impl PlayNowView {
         let Some(draft) = &self.draft else {
             return div().into_any_element();
         };
+        // Built first: the row closures below hold `cx` until the layout is assembled.
+        // It goes last, after the user's own corrections.
+        let summary = match self.modal {
+            Some(Modal::Profile(id)) if !self.library.read(cx).demo => {
+                Some(self.analysis_summary(id, cx))
+            }
+            _ => None,
+        };
         let rows = [
             ("Mechanical effort", draft.values.mechanical, 0),
             ("Thinking", draft.values.cognitive, 1),
@@ -225,10 +233,11 @@ impl PlayNowView {
             }));
         v_flex().max_w(px(670.)).gap_5()
             .child(div().text_sm().text_color(cx.theme().muted_foreground)
-                .child("Your corrections take precedence. Automatic uses cached analysis or local estimates, where available."))
+                .child("Your corrections take precedence. Automatic uses the AI estimate or local estimates, where available."))
             .children(effort_rows).child(duration)
             .child(v_flex().gap_2().child("Stopping point").child(stopping))
             .child(v_flex().gap_2().child("Activities (choose all that apply)").child(activities))
+            .children(summary)
             .child(self.feedback(cx)).into_any_element()
     }
     pub(super) fn profile_actions(&self, cx: &mut gpui::Context<Self>) -> AnyElement {

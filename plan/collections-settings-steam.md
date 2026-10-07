@@ -74,7 +74,11 @@ not read back and not tested again; an empty key field keeps it.
 To add a provider, choose OpenAI, Claude, Grok, Gemini, or Ollama, enter the
 key or server address, and test it. A passing test shows the model dropdown
 and the Add button. API keys go to the OS credential store
-(`app.GameSync.AI`, one entry per provider). The chosen model and Ollama's
-address are device settings (`ai_providers`) and do not sync. Key tests and
-model lists are still simulated, because GameSync makes no AI requests yet.
-Real tests, model discovery, and AI analysis remain deferred.
+(`app.GameSync.AI`, one entry per provider). The chosen model, the models
+found by the last test, and Ollama's address are device settings
+(`ai_providers`) and do not sync. A test is a real model-list request.
+Replacing a key or address tests it first; a failed test changes nothing.
+Refresh models reads the saved key again, which can show an OS prompt.
+Claude uses Anthropic Messages. OpenAI, Grok, Gemini, and Ollama use their
+OpenAI-compatible chat endpoints. The first consumer is
+[Play now analysis](play-now.md#ai-profile-analysis--october-7).

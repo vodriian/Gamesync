@@ -11,7 +11,8 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 | [App plan](app-plan.md) | Scope, architecture, data rules, milestones, and acceptance checks |
 | [Guardrails](guardrails.md) | Code quality, tests, writing, and efficient agent work |
 | [Design](design.md) | Eagle GUI reference and design rules |
-| [Latest log](logs/2026-10-07-native-ui-mode.md) | Native UI mode: macOS look, system accent, Settings form, book turn |
+| [Latest log](logs/2026-10-07-ai-play-now.md) | AI profile analysis for Play now: providers, validation, checks |
+| [Native UI log](logs/2026-10-07-native-ui-mode.md) | Native UI mode: macOS look, system accent, Settings form, book turn |
 | [Play now delivery log](logs/2026-10-07-play-now-delivery.md) | Play now delivery, Elyx states, and final checks |
 | [Book details log](logs/2026-10-05.md) | Best on demo prototype and book details prototype |
 | [Sync log](logs/2026-09-29.md) | Sync implementation, initial live check, and library UI fixes |
@@ -42,7 +43,7 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 - Initial macOS/Omarchy Dropbox check is logged; full cross-device acceptance remains pending.
 - Hugeicons UI merged in PR #5. Book details, Best on, and the shared Elyx workspace merged in PR #6.
 - Use the [Elyx workspace](../Design/README.md) as the design source for the next UI improvements.
-- Native offline Play now is implemented on `vova/play-now-native`; AI enrichment remains deferred.
+- Native offline Play now merged in PR #7. Opt-in AI profile analysis is on `vova/ai-play-now`; see [Play now](play-now.md#ai-profile-analysis--october-7).
 - Native UI mode is on `native-ui-mode` (PR to `windows-test-build`): a native macOS look by default, with system colors and accent, kit window geometry, and a tabbed Settings form. See [native look](chrome-themes.md#native-look).
 - Runtime targets: macOS and Linux. Windows follows after sync works between them.
 - Existing React/Express app: retained as a reference.
@@ -55,6 +56,10 @@ Linux keeps flat cards outside Omarchy mode. The Omarchy branch has an
 experimental Blade/Vulkan card projection for Cards and focused fronts.
 
 ## Next task
+
+Run a live check of `vova/ai-play-now` with a real key (or a local Ollama
+model): test each provider in Settings → AI, then analyze a small library
+and review the estimates. See the [AI log](logs/2026-10-07-ai-play-now.md).
 
 Test `native-ui-mode` with real data (test build `GameSync Native`), then add
 the missing tests (`Look` migration, native palette keys) and the remaining
@@ -69,12 +74,12 @@ See [Play now](play-now.md) and the
 
 Complete [data sync](data-sync.md) step 6 acceptance checks across macOS and
 Omarchy, including Dropbox and Google Drive. Windows and compaction remain
-later steps. The offline picker now follows [Play now](play-now.md). AI enrichment remains deferred.
+later steps. The offline picker now follows [Play now](play-now.md). Opt-in AI analysis is on `vova/ai-play-now`.
 
 Collections, core Settings, and Steam sync are implemented. See
 [Collections, Settings, and Steam](collections-settings-steam.md) for use and limits.
 Run an account sync with a key entered in Settings. Verify Linux UI and secure
-storage before cross-platform release. Then validate the offline Play now profiles and add opt-in AI enrichment.
+storage before cross-platform release. Then validate the offline Play now profiles and the AI estimates.
 
 ## Maintain these documents
 

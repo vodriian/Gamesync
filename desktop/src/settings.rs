@@ -77,6 +77,10 @@ pub struct AiProvider {
     pub model: Option<String>,
     /// The server address for a local provider such as Ollama.
     pub endpoint: Option<String>,
+    /// Models found by the last successful test, so Settings can list them
+    /// without reading the key again.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub models: Vec<String>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -299,6 +303,7 @@ mod display_tests {
         let ollama = AiProvider {
             model: Some("llama3.2".into()),
             endpoint: Some("http://localhost:11434".into()),
+            models: vec!["llama3.2".into()],
         };
         settings
             .ai_providers

@@ -1,5 +1,6 @@
 //! Native Play now state. Ranking and guarded record writes run on workers;
 //! the view retains a draft or retry action when a write fails.
+mod analyze;
 mod controls;
 mod game_section;
 mod modal;
@@ -77,6 +78,7 @@ pub struct PlayNowView {
     session_saving: bool,
     ticker: Option<Task<()>>,
     draft: Option<profile_editor::Draft>,
+    analyzer: analyze::Analyzer,
 }
 
 fn now() -> i64 {
@@ -166,6 +168,7 @@ impl PlayNowView {
             session_saving: false,
             ticker: None,
             draft: None,
+            analyzer: analyze::Analyzer::default(),
         };
         view.start_timer(cx);
         view

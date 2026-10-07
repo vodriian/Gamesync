@@ -143,7 +143,13 @@ impl PlayNowView {
                             .child(Icon::new(crate::assets::SidebarIcon::Playtime).size(px(16.)))
                             .child(duration),
                     )
-                    .when(profile.estimated(), |row| row.child("Estimated")),
+                    .when(profile.estimated(), |row| {
+                        row.child(if profile.sources.values().any(|s| *s == "AI estimate") {
+                            "AI estimated"
+                        } else {
+                            "Estimated"
+                        })
+                    }),
             )
             .when(self.feedback_game == Some(id), |col| {
                 col.child(self.feedback(cx))

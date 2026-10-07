@@ -48,11 +48,12 @@ impl PlayNowView {
                         .is_some_and(|r| r.game.personal.play_now.saved)
             })
             .count();
+        let demo = self.library.read(cx).demo;
         h_flex()
             .gap_2()
-            .when(self.library.read(cx).demo, |row| {
-                row.child(note("Demo library", cx))
-            })
+            .when(demo, |row| row.child(note("Demo library", cx)))
+            // Demo records are bundled samples, not a library worth paying to analyze.
+            .when(!demo, |row| row.child(self.analysis_control(cx)))
             .child(
                 Button::new("play-saved")
                     .ghost()

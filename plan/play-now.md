@@ -1,8 +1,9 @@
 # Play now — requirements and native implementation
 
 Status: the user accepted the MVP direction on October 6, 2026. The revised
-HTML remains a demo. The offline native implementation is on
-`vova/play-now-native`; AI provider requests remain deferred.
+HTML remains a demo. The offline native implementation merged in PR #7.
+Opt-in AI profile analysis is on `vova/ai-play-now`; see
+[AI profile analysis](#ai-profile-analysis--october-7).
 
 ## Goal
 
@@ -345,6 +346,43 @@ No AI call, status change, or claim of verified play follows a recommendation.
   Linux native acceptance, and a live installed-game launch check.
 
 See [native implementation checks](logs/2026-10-06-play-now-native.md).
+
+### AI profile analysis — October 7
+
+Branch `vova/ai-play-now` implements the first AI feature above. The user
+chose all five providers and two entry points: a batch action and one game.
+
+- **Providers.** Claude uses Anthropic Messages with `output_config.format`
+  (JSON schema). OpenAI, Grok, Gemini, and Ollama use OpenAI-compatible chat
+  completions with a strict `json_schema` response format. Claude Fable 5.1,
+  Opus 5.5, Opus 5, and Sonnet 5.5 requests add `fallbacks: "default"` for
+  safety-classifier declines. Refusal and truncated answers fail the batch.
+- **Batch.** Analyze sits in the Play now toolbar, next to Saved and Recent,
+  so it is available on setup as well as the hand. It targets visible,
+  owned, status-eligible, not-excluded games with no current analysis and an
+  incomplete manual profile. A dialog shows the count, request count,
+  provider choice, what is sent, and a possible charge before any request.
+  Demo libraries do not show it.
+- **One game.** The profile modal ends with the current AI estimate (provider,
+  model, confidence, reason) or its absence, and Analyze / Analyze again.
+  The click is the request; no extra dialog.
+- **Input.** Title, Steam short description (at most 1,500 characters), tags,
+  and genres: exactly the fingerprinted inputs. No notes, ratings, history,
+  or personal tags.
+- **Validation.** Batches of 8. Malformed JSON fails the batch. Entries attach
+  by game ID; unknown and duplicated IDs are dropped. Out-of-range values and
+  unknown enum values become unknown; minimum above ideal clears both.
+  Confidence outside 0–100 drops the entry.
+- **Writes.** Each result is saved by game ID when its batch returns, under the
+  game lock, only if the game's fingerprint still matches. Cancel stops after
+  the current request. A failed batch keeps earlier results and offers Retry
+  for the remaining games, including that batch. Deal never waits for analysis.
+- **Display.** Details show "AI estimated" when any field comes from AI.
+
+Remaining: a live request check for each provider, reviewed calibration
+fixtures, sync of cached analysis (data-sync lists AI results as synced; the
+operation projection does not include them yet), stale/selected scopes, and
+cost estimates.
 
 ## Editable native design references
 
