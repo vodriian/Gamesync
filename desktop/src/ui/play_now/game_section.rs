@@ -26,10 +26,15 @@ impl PlayNowView {
             .iter()
             .find(|pick| pick.id == id)
             .filter(|_| self.library.read(cx).play_now)
-            .map_or_else(
-                || "Choose this game when its energy and session length fit your plans.".to_owned(),
-                |pick| pick.reason.clone(),
-            );
+            .map(|pick| pick.reason.clone())
+            // Outside a hand, the AI's reason describes the game better than a generic line.
+            .or_else(|| {
+                gamesync_desktop::recommendations::analysis::current_analysis(&record.game)
+                    .and_then(|a| a.reason.clone())
+            })
+            .unwrap_or_else(|| {
+                "Choose this game when its energy and session length fit your plans.".to_owned()
+            });
         let energy = profile.values.energy();
         let duration = match (profile.values.minimum_minutes, profile.values.ideal_minutes) {
             (Some(min), Some(ideal)) if min != ideal => format!("{min}–{ideal} min"),

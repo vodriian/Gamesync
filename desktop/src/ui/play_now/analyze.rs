@@ -427,7 +427,7 @@ impl PlayNowView {
             .into_any_element()
     }
 
-    /// Profile modal: the cached analysis for this game and a one-game request.
+    /// Profile modal: the current AI suggestion for this game and a one-game request.
     pub(super) fn analysis_summary(&self, id: Uuid, cx: &mut gpui::Context<Self>) -> AnyElement {
         let game = self.game(id, cx);
         let record = game.as_ref().and_then(|g| g.record.as_ref());
@@ -435,14 +435,28 @@ impl PlayNowView {
         let stale =
             record.is_some_and(|r| r.game.recommendation_analysis.is_some()) && current.is_none();
         let muted = cx.theme().muted_foreground;
-        let source = current.map(|a| {
-            let name = ai::provider(&a.provider).map_or(a.provider.as_str(), |p| p.name);
-            format!(
-                "AI estimate from {name} ({}), confidence {}%.",
-                a.model, a.confidence
-            )
-        });
+        let heading = match current {
+            Some(a) => {
+                let name = ai::provider(&a.provider).map_or(a.provider.as_str(), |p| p.name);
+                format!(
+                    "AI suggestion from {name} ({}), {}% confident.",
+                    a.model, a.confidence
+                )
+            }
+            None if stale => "The AI suggestion is out of date: the game details changed.".into(),
+            None => "No AI suggestion yet.".into(),
+        };
         let running = self.analyzer.running();
+        let note: Option<SharedString> = if running || !self.analyzer.status.is_empty() {
+            Some(self.analyzer.status.clone().into())
+        } else if current.is_none() {
+            Some(
+                "This sends the title, Steam description, tags, and genres to your AI provider."
+                    .into(),
+            )
+        } else {
+            None
+        };
         v_flex()
             .gap_2()
             .p_3()
@@ -451,23 +465,16 @@ impl PlayNowView {
             .child(
                 h_flex()
                     .gap_2()
-                    .child(div().flex_1().text_sm().child(source.unwrap_or_else(|| {
-                        if stale {
-                            "The AI estimate is out of date because the game details changed."
-                                .into()
-                        } else {
-                            "No AI estimate yet.".into()
-                        }
-                    })))
+                    .child(div().flex_1().text_sm().child(heading))
                     .child(
                         Button::new("analysis-one")
                             .small()
                             .outline()
                             .icon(PlayIcon("ai-beautify"))
                             .label(if current.is_some() {
-                                "Analyze again"
+                                "Refresh suggestion"
                             } else {
-                                "Analyze"
+                                "Get suggestion"
                             })
                             .disabled(running || self.saving)
                             .on_click(cx.listener(move |this, _, _, cx| this.analyze_one(id, cx))),
@@ -478,14 +485,7 @@ impl PlayNowView {
                     .and_then(|a| a.reason.clone())
                     .map(|reason| div().text_sm().child(SharedString::from(reason))),
             )
-            .child(div().text_xs().text_color(muted).child(if running {
-                SharedString::from(self.analyzer.status.clone())
-            } else if self.analyzer.status.is_empty() {
-                "Analyze sends the title, Steam description, tags, and genres to your AI provider."
-                    .into()
-            } else {
-                SharedString::from(self.analyzer.status.clone())
-            }))
+            .children(note.map(|note| div().text_xs().text_color(muted).child(note)))
             .into_any_element()
     }
 }

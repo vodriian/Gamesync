@@ -363,9 +363,14 @@ chose all five providers and two entry points: a batch action and one game.
   incomplete manual profile. A dialog shows the count, request count,
   provider choice, what is sent, and a possible charge before any request.
   Demo libraries do not show it.
-- **One game.** The profile modal ends with the current AI estimate (provider,
-  model, confidence, reason) or its absence, and Analyze / Analyze again.
-  The click is the request; no extra dialog.
+- **Profile modal (user review, October 7).** Order: AI suggestion (provider,
+  model, confidence, reason, and Get suggestion / Refresh suggestion), then
+  Activities, then **Energy and session**, collapsed by default with a
+  one-line summary. Each control selects the effective value and tags its
+  source: AI suggestion, Estimate, Yours, or Unknown. Choosing a value makes
+  it yours; Reset returns the field to the suggestion. Minute fields show the
+  suggestion as a placeholder. Only the user's values are saved, so a later
+  analysis still updates the rest. The click is the request; no extra dialog.
 - **Input.** Title, Steam short description (at most 1,500 characters), tags,
   and genres: exactly the fingerprinted inputs. No notes, ratings, history,
   or personal tags.
@@ -377,7 +382,8 @@ chose all five providers and two entry points: a batch action and one game.
   game lock, only if the game's fingerprint still matches. Cancel stops after
   the current request. A failed batch keeps earlier results and offers Retry
   for the remaining games, including that batch. Deal never waits for analysis.
-- **Display.** Details show "AI estimated" when any field comes from AI.
+- **Display.** Details show "AI estimated" when any field comes from AI. Outside
+  a hand, the AI reason replaces the generic Play now line in game details.
 
 Remaining: a live request check for each provider, reviewed calibration
 fixtures, sync of cached analysis (data-sync lists AI results as synced; the

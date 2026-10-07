@@ -10,10 +10,13 @@ struct EditorModal {
     _subscription: Subscription,
 }
 impl Render for EditorModal {
-    fn render(&mut self, _: &mut Window, cx: &mut gpui::Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut gpui::Context<Self>) -> impl IntoElement {
         self.view.update(cx, |view, cx| match self.kind {
             Modal::Context => view.setup(true, cx),
-            Modal::Profile(_) => view.profile_view(cx),
+            Modal::Profile(_) => {
+                view.sync_profile_placeholders(window, cx);
+                view.profile_view(cx)
+            }
         })
     }
 }

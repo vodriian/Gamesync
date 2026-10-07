@@ -72,6 +72,25 @@
   about 90 `usvg` "Failed to parse color value: 'currentColor'" warnings;
   debug runs before `5abb49c` logged a similar count, so they are not new.
 
+## Review fixes after the first live run
+
+The user ran a live OpenAI analysis (`gpt-5.6-luna`) and asked for:
+
+- The AI section first, with controls set to the suggested values. Chosen
+  model: show suggestions, not copies. Controls select the effective value
+  with a source tag; choosing a value makes it yours; Reset returns to the
+  suggestion. "Automatic" buttons are removed. Minute fields show the
+  suggestion as a placeholder.
+- Activities directly after the AI section. Effort, session, and stopping
+  controls collapsed under **Energy and session**, with a summary line.
+- Clearer naming: **Get suggestion** / **Refresh suggestion**.
+- The AI reason in game details in place of the generic Play now line.
+
+Checks (macOS): fmt, Clippy, and 208 tests passed. Captured with a temporary
+probe (in-memory sample suggestion, removed): collapsed and expanded modal
+in light mode, minute placeholders in dark mode, and game details with the
+AI reason. The modal opens at the top with the AI section first.
+
 ## Not verified
 
 - No live provider request was made. No key was used, and the local Ollama
