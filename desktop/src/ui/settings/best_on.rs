@@ -51,18 +51,33 @@ impl BestOnSettings {
         let input = |placeholder: &'static str, window: &mut Window, cx: &mut Context<Self>| {
             cx.new(|cx| InputState::new(window, cx).placeholder(placeholder))
         };
-        let prefer_pc = input("Add a Steam tag, then press Return", window, cx);
-        let prefer_deck = input("Add a Steam tag, then press Return", window, cx);
+        let prefer_pc = input("Type a tag, then press Return", window, cx);
+        let prefer_deck = input("Type a tag, then press Return", window, cx);
         for (entity, list) in [(&prefer_pc, TagList::Pc), (&prefer_deck, TagList::Deck)] {
-            cx.subscribe_in(entity, window, move |this, input, event, window, cx| {
-                if matches!(event, InputEvent::PressEnter { .. }) {
-                    let tag = input.read(cx).value().trim().to_owned();
-                    if !tag.is_empty() {
+            cx.subscribe_in(
+                entity,
+                window,
+                move |this, input, event, window, cx| match event {
+                    // Return adds the exact or first match, else the typed text.
+                    InputEvent::PressEnter { .. } => {
+                        let typed = input.read(cx).value().trim().to_owned();
+                        if typed.is_empty() {
+                            return;
+                        }
+                        let matches = this.matches(list, &typed, cx);
+                        let tag = matches
+                            .iter()
+                            .find(|tag| tag.eq_ignore_ascii_case(&typed))
+                            .or(matches.first())
+                            .cloned()
+                            .unwrap_or(typed);
                         this.add_tag(list, &tag, cx);
                         input.update(cx, |input, cx| input.set_value("", window, cx));
                     }
-                }
-            })
+                    InputEvent::Change => cx.notify(),
+                    _ => {}
+                },
+            )
             .detach();
         }
         Self {
@@ -71,7 +86,7 @@ impl BestOnSettings {
             prefer_pc,
             prefer_deck,
             equipment_name: input("Name, for example Moza R5 wheel", window, cx),
-            equipment_tags: input("Steam tags, separated by commas", window, cx),
+            equipment_tags: input("Tags, separated by commas", window, cx),
             adding_equipment: false,
         }
     }
@@ -85,6 +100,49 @@ impl BestOnSettings {
         edit(&mut rules);
         self.state
             .update(cx, |state, cx| state.set_rules(rules, cx));
+    }
+
+    fn list(&self, list: TagList, cx: &App) -> Vec<String> {
+        let rules = self.rules(cx);
+        match list {
+            TagList::Pc => rules.prefer_pc,
+            TagList::Deck => rules.prefer_deck,
+        }
+    }
+
+    /// Library tags, Steam and yours, that contain `query` and are not in
+    /// the list yet. Most used first.
+    fn matches(&self, list: TagList, query: &str, cx: &App) -> Vec<String> {
+        let library = self.library.read(cx);
+        let tags = library.games.iter().flat_map(|game| {
+            let steam = game
+                .record
+                .as_ref()
+                .and_then(|r| r.game.steam.as_ref()?.metadata.as_ref())
+                .map_or(&[][..], |metadata| metadata.tags.as_slice());
+            game.tags.iter().chain(steam)
+        });
+        crate::ui::editor::suggest_tags(tags, &self.list(list, cx), query).0
+    }
+
+    /// Where a suggested tag comes from, for its tooltip.
+    fn source(&self, tag: &str, cx: &App) -> &'static str {
+        let library = self.library.read(cx);
+        let mine = library
+            .games
+            .iter()
+            .any(|game| game.tags.iter().any(|t| t.eq_ignore_ascii_case(tag)));
+        let steam = library.games.iter().any(|game| {
+            game.record
+                .as_ref()
+                .and_then(|r| r.game.steam.as_ref()?.metadata.as_ref())
+                .is_some_and(|m| m.tags.iter().any(|t| t.eq_ignore_ascii_case(tag)))
+        });
+        match (mine, steam) {
+            (true, true) => "Your tag and a Steam tag",
+            (true, false) => "Your tag",
+            _ => "Steam tag",
+        }
     }
 
     fn add_tag(&self, list: TagList, tag: &str, cx: &mut Context<Self>) {
@@ -225,7 +283,7 @@ impl BestOnSettings {
         let (heading, explain, tags, input, suggestions, id) = match list {
             TagList::Pc => (
                 "Prefer PC for",
-                "Games with any of these Steam tags get +15 on PC and −15 on Steam Deck.",
+                "Games with any of these tags get +15 on PC and −15 on Steam Deck. Steam tags and your tags both count.",
                 rules.prefer_pc.clone(),
                 self.prefer_pc.clone(),
                 PC_SUGGESTIONS,
@@ -233,17 +291,33 @@ impl BestOnSettings {
             ),
             TagList::Deck => (
                 "Prefer Steam Deck for",
-                "Games with any of these Steam tags get +15 on Steam Deck and −15 on PC. A game in both lists keeps its Steam fit.",
+                "Games with any of these tags get +15 on Steam Deck and −15 on PC. A game in both lists keeps its Steam fit.",
                 rules.prefer_deck.clone(),
                 self.prefer_deck.clone(),
                 DECK_SUGGESTIONS,
                 "deck",
             ),
         };
-        let open: Vec<_> = suggestions
-            .into_iter()
-            .filter(|tag| !tags.iter().any(|known| known.eq_ignore_ascii_case(tag)))
-            .collect();
+        // Typing lists matching library tags; an empty field shows starters.
+        let query = input.read(cx).value().trim().to_owned();
+        let open: Vec<(String, Option<&'static str>)> = if query.is_empty() {
+            suggestions
+                .into_iter()
+                .filter(|tag| !tags.iter().any(|known| known.eq_ignore_ascii_case(tag)))
+                .map(|tag| (tag.to_owned(), None))
+                .collect()
+        } else {
+            self.matches(list, &query, cx)
+                .into_iter()
+                .map(|tag| {
+                    let source = self.source(&tag, cx);
+                    (tag, Some(source))
+                })
+                .collect()
+        };
+        let unknown = !query.is_empty()
+            && open.is_empty()
+            && !tags.iter().any(|known| known.eq_ignore_ascii_case(&query));
         group(cx)
             .child(title(heading))
             .child(hint(explain, cx))
@@ -276,21 +350,27 @@ impl BestOnSettings {
             })
             .child(Input::new(&input).small())
             .when(!open.is_empty(), |group| {
-                group.child(
-                    h_flex()
-                        .flex_wrap()
-                        .gap_1()
-                        .children(open.into_iter().map(|tag| {
-                            Button::new(SharedString::from(format!("{id}-suggest-{tag}")))
-                                .xsmall()
-                                .outline()
-                                .icon(IconName::Plus)
-                                .label(tag)
-                                .on_click(
-                                    cx.listener(move |this, _, _, cx| this.add_tag(list, tag, cx)),
-                                )
-                        })),
-                )
+                group.child(h_flex().flex_wrap().gap_1().children(open.into_iter().map(
+                    |(tag, source)| {
+                        let input = input.clone();
+                        Button::new(SharedString::from(format!("{id}-suggest-{tag}")))
+                            .xsmall()
+                            .outline()
+                            .icon(IconName::Plus)
+                            .label(tag.clone())
+                            .when_some(source, |button, source| button.tooltip(source))
+                            .on_click(cx.listener(move |this, _, window, cx| {
+                                this.add_tag(list, &tag, cx);
+                                input.update(cx, |input, cx| input.set_value("", window, cx));
+                            }))
+                    },
+                )))
+            })
+            .when(unknown, |group| {
+                group.child(hint(
+                    "No game in your library has this tag. Press Return to add it anyway.",
+                    cx,
+                ))
             })
             .when(list == TagList::Pc, |group| {
                 group.child(

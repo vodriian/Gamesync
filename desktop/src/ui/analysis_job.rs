@@ -68,6 +68,9 @@ pub struct AnalysisJob {
     /// A stopped job's remaining games, for Retry.
     retry: Option<Job>,
     status: String,
+    /// Some provider has a chosen model. Settings → AI keeps it current, so
+    /// rendering never reads the settings file.
+    ready: bool,
 }
 
 fn ready_providers() -> Vec<Ready> {
@@ -122,6 +125,7 @@ impl AnalysisJob {
             job: None,
             retry: None,
             status: String::new(),
+            ready: !ready_providers().is_empty(),
         }
     }
     pub fn running(&self) -> bool {
@@ -156,6 +160,18 @@ impl AnalysisJob {
         !self.library.read(cx).demo
     }
 
+    /// A request can start now: not a demo, and a provider has a model.
+    pub fn ready(&self, cx: &gpui::App) -> bool {
+        self.ready && self.available(cx)
+    }
+
+    pub fn set_ready(&mut self, ready: bool, cx: &mut Context<Self>) {
+        if self.ready != ready {
+            self.ready = ready;
+            cx.notify();
+        }
+    }
+
     /// Games without a current analysis in `scope`, in library order.
     pub fn targets(&self, scope: Scope, cx: &gpui::App) -> Vec<Uuid> {
         let library = self.library.read(cx);
@@ -179,6 +195,7 @@ impl AnalysisJob {
 
     fn load_providers(&mut self) -> bool {
         self.providers = ready_providers();
+        self.ready = !self.providers.is_empty();
         if self.choice >= self.providers.len() {
             self.choice = 0;
         }

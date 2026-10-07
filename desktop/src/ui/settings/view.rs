@@ -370,7 +370,7 @@ impl SettingsView {
                             .flex_1()
                             .text_center()
                             .font_semibold()
-                            .child(self.section.label()),
+                            .child("Settings"),
                     ),
             )
             .child(tabs)

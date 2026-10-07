@@ -127,6 +127,39 @@ Checks (macOS): fmt, Clippy, and 209 tests passed. Captured with temporary
 probes (removed): Settings → AI with two providers, light and dark; Best on
 scrolled to the bottom. A real library run from Settings was not done.
 
+## Fourth review round
+
+- Game details: the Estimated / AI estimated label is gone; activity icons sit
+  at the right end of the energy/session line. A wand button before Edit game
+  profile runs a one-game analysis. It shows only with a ready provider
+  (`AnalysisJob::ready`, kept current by Settings → AI) outside demos.
+- Settings title row reads "Settings" instead of the section name.
+- Best on tag rules and equipment now match your tags as well as Steam tags
+  (`suitability::assessment_in` joins both, read-only). Typing in Prefer PC or
+  Prefer Steam Deck suggests matching library tags from both sources
+  (`editor::suggest_tags`, now crate-visible), with a source tooltip; an
+  unknown tag shows a short hint. Lib test
+  `tag_rules_match_your_tags_as_well_as_steam_tags` added.
+
+Checks (macOS): fmt, Clippy, and 210 tests passed. Captured with temporary
+probes (removed): game details with the wand and right-aligned icons; Best on
+with "ca" (your "Cards" and Steam "Card Game" listed), with an unknown tag, and
+empty. Tooltips and a real one-game run from the wand were not checked.
+
+Test build rebuilt from this round's working tree: `GameSync AI.app` and
+`GameSync-AI-0.1.0-macos-arm64.zip` (14 MB). `codesign --verify --strict`
+passed; not notarized. The packaged binary opened a window with
+`--play-now-demo` in an isolated preview folder and logged no errors besides
+the known `usvg` currentColor warnings.
+
+Gap fix: with activity icons, "energy" ran into the clock icon. The row was one
+wrapping flex row with `ml_auto` on the icons, and its items could shrink, so
+the energy text overflowed into the gap. Now the facts sit in their own
+wrapping group (`flex_1`, items `flex_shrink_0`) and the icons follow as a
+fixed group. Probe capture with three icons shows the full gap. Checks: fmt,
+Clippy, 210 tests passed; test build rebuilt, `codesign --verify --strict`
+passed, packaged binary opened its window with no new errors.
+
 ## Not verified
 
 - No live provider request was made. No key was used, and the local Ollama

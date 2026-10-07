@@ -19,6 +19,7 @@ flat collections. Do not import its runtime or browser storage.
   collection IDs from the chosen version remain archived. Other status keys stay
   available. Every branch stays in history.
 - Settings: one native window, sidebar entry, and Command/Control-comma.
+  The title row always reads "Settings"; the toolbar tabs name the section.
   General, Look and feel, and AI sections; all themes; Steam account and key;
   sync, cancel, last success, and device disconnect.
 - Steam: validate account and key before saving, then import owned games and

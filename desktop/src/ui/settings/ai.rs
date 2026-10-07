@@ -195,6 +195,7 @@ impl AiSettings {
                         this.draft_model = None;
                         this.clear_key = true;
                         this.draft = this.added.iter().position(Option::is_none);
+                        this.sync_ready(cx);
                     }
                     Err(error) => this.message = error.to_string().into(),
                 }
@@ -205,11 +206,18 @@ impl AiSettings {
         cx.notify();
     }
 
+    /// Tell the shared job whether AI actions can show elsewhere in the app.
+    fn sync_ready(&self, cx: &mut Context<Self>) {
+        let ready = self.added.iter().flatten().any(|p| p.model.is_some());
+        self.analysis.update(cx, |job, cx| job.set_ready(ready, cx));
+    }
+
     fn set_model(&mut self, index: usize, model: String, cx: &mut Context<Self>) {
         let Some(entry) = self.added[index].as_mut() else {
             return;
         };
         entry.model = Some(model.clone());
+        self.sync_ready(cx);
         let id = PROVIDERS[index].id;
         cx.spawn(async move |this, cx| {
             let result = cx
@@ -341,6 +349,7 @@ impl AiSettings {
                         if this.draft.is_none() {
                             this.draft = Some(index);
                         }
+                        this.sync_ready(cx);
                     }
                     Err(error) => this.message = error.to_string().into(),
                 }

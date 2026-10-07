@@ -191,8 +191,8 @@ No account, key, or AI setup is needed to start choosing.
 | Available information | Behavior |
 | --- | --- |
 | Personal ratings or reviewed profiles | Use those values; retain the underlying source values |
-| Cached AI profiles | Use validated fields locally; show AI estimated in Details |
-| No AI analysis | Use versioned rules over existing tags, categories, descriptions where deterministic, and known personal fields; show Estimated |
+| Cached AI profiles | Use validated fields locally; show activity icons in Details |
+| No AI analysis | Use versioned rules over existing tags, categories, descriptions where deterministic, and known personal fields; the profile modal marks them Estimate |
 | Too little evidence for a required field | Keep it unknown; offer manual correction or optional analysis |
 
 Without AI, broad activities can often come from precise tags (racing → Drive,
@@ -390,7 +390,12 @@ chose all five providers and two entry points: a batch action and one game.
   game lock, only if the game's fingerprint still matches. Cancel stops after
   the current request. A failed batch keeps earlier results and offers Retry
   for the remaining games, including that batch. Deal never waits for analysis.
-- **Display.** Details show "AI estimated" when any field comes from AI. Outside
+- **Display.** Game details show no Estimated or AI estimated label (removed
+  October 7); the right-aligned activity icons mark a current analysis. A wand
+  button before Edit game profile requests or refreshes one game's suggestion.
+  It shows only when a provider has a chosen model and the library is not a
+  demo; Settings → AI keeps that flag current, so rendering never reads the
+  settings file. Outside
   a hand, the AI reason replaces the generic Play now line in game details.
   With a current analysis, the energy/session line also shows the game's
   activity icons, each with its name as a tooltip. A saved profile shows no
