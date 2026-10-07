@@ -77,7 +77,8 @@ The user requested a step-by-step implementation: prototype first, tests next.
 - Best on uses the supplied `computer-stroke-rounded.svg` directly from
   `Design/resources/icons-new/`; the SVG is unchanged.
 - Keep new sidebar expansion state out of persisted settings until compatibility
-  is tested. Existing view keys remain strings.
+  is tested. Best on starts collapsed on launch and can be expanded for the
+  current session. Existing view keys remain strings.
 
 ## Steam evidence
 

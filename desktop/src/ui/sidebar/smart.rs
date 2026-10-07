@@ -17,11 +17,9 @@ pub(super) struct SmartState {
 
 impl SmartState {
     pub fn new() -> Self {
-        let mut groups_open: BTreeSet<_> = crate::settings::load()
+        let groups_open: BTreeSet<_> = crate::settings::load()
             .map(|settings| settings.smart_groups_open.into_iter().collect())
             .unwrap_or_default();
-        // Best on is not saved in settings yet, so it starts open everywhere.
-        groups_open.insert(SmartKind::BestOn);
         Self {
             open: true,
             tags_open: false,
