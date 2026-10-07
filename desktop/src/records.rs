@@ -33,6 +33,8 @@ pub struct GameData {
     /// Saved demo assessment. Real games calculate theirs from Steam evidence.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub suitability: Option<crate::suitability::Assessment>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recommendation_analysis: Option<crate::recommendations::Analysis>,
     #[serde(flatten)]
     pub extra: ExtraFields,
 }
@@ -117,6 +119,11 @@ pub struct SteamMetadata {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PersonalData {
+    #[serde(
+        default,
+        skip_serializing_if = "crate::recommendations::PersonalRecommendations::is_default"
+    )]
+    pub play_now: crate::recommendations::PersonalRecommendations,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub setup_preference: Option<crate::suitability::SetupPreference>,
     /// Stable status key; a label can change without changing this value.
@@ -145,6 +152,7 @@ pub struct PersonalData {
 impl Default for PersonalData {
     fn default() -> Self {
         Self {
+            play_now: Default::default(),
             setup_preference: None,
             status: "backlog".into(),
             rating: None,
@@ -176,6 +184,7 @@ impl GameData {
         Self {
             title: title.into(),
             suitability: None,
+            recommendation_analysis: None,
             steam: None,
             personal: PersonalData::default(),
             extra: ExtraFields::new(),
@@ -229,11 +238,18 @@ impl GameRevision {
         )?;
         check_extra(
             &self.game.extra,
-            &["title", "steam", "personal", "suitability"],
+            &[
+                "title",
+                "steam",
+                "personal",
+                "suitability",
+                "recommendation_analysis",
+            ],
         )?;
         check_extra(
             &self.game.personal.extra,
             &[
+                "play_now",
                 "setup_preference",
                 "status",
                 "rating",
@@ -247,6 +263,10 @@ impl GameRevision {
                 "board_rank",
             ],
         )?;
+        self.game.personal.play_now.validate()?;
+        if let Some(analysis) = &self.game.recommendation_analysis {
+            analysis.validate(self.game_id)?;
+        }
         if let Some(steam) = &self.game.steam {
             if let Some(metadata) = &steam.metadata {
                 check_extra(

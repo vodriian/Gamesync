@@ -26,9 +26,21 @@ personal edits and Steam credentials keep their identity.
 Use `--demo` for a separate persistent sample store. You can edit sample cards
 and create collections without affecting your Steam library.
 
+Use `--play-now-demo` for the recommendation preview. On macOS it creates
+`desktop/target/PlayNowDemo.app`, which always opens isolated sample data even
+when opened without arguments. Settings, cache, and the editable demo library
+live under the system temporary directory in `gamesync-play-now-demo/`.
+No game is launched and no account sync runs from this preview.
+
 ## This milestone
 
 - Normal startup prepares your Steam store. Sample games require `--demo`.
+- **Play now**, below Home, deals up to three games using time, energy, activity,
+  Brain dead, and optional device/scope filters. Hidden and unowned games are
+  excluded. One reshuffle is available per app session. You can correct game
+  profiles, save picks, exclude recommendations, and review recent choices.
+  It works offline with estimates and personal corrections. AI enrichment is
+  not connected yet. See [Play now](../plan/play-now.md).
 - Refresh automatically after file changes, or use Command-R / Control-R.
 - Filter by title, tag, status, or favorite.
 - Use Grid (the default), Cards, Table, or Board. Click a game to open its card. Right-click for
@@ -217,6 +229,15 @@ ad-hoc signature identifies only one exact build. With a certificate, choose
 checkout or development executable. Its minimum macOS version comes from the
 linked binary. This is a local test build, not a universal or notarized release.
 Developer ID signing and notarization remain required for public distribution.
+
+To keep a named test build beside the existing app:
+
+```sh
+python3 desktop/scripts/package_macos.py --output desktop/target/test-builds --name "GameSync Now"
+```
+
+This creates `GameSync Now.app` and a `GameSync-Now` ZIP. It uses the normal
+library, settings, and Keychain identity. It does not enable demo mode.
 
 ### Appearance
 

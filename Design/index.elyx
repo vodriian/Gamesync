@@ -1,6 +1,7 @@
 import "tokens/colors.dark.elyx" as darkTheme
-import "design/screens/library/Grid.elyx" as library
+import "design/screens/play-now/PlayNow.elyx" as playNow
 import "design/blocks/navigation/Sidebar.elyx" as navigation
+import "design/screens/library/Grid.elyx" as library
 import "design/screens/settings/General.elyx" as settings
 
 // Entry canvas only. Edit the imported screen or component source.
@@ -16,5 +17,10 @@ Settings = frame : settings.SettingsGeneral {
 
 Sidebar = frame : navigation.Sidebar {
   left: 2260px,
+  top: 0px
+}
+
+PlayNow = frame : playNow.PlayNowHand {
+  left: 2800px,
   top: 0px
 }

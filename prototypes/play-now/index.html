@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Play now · GameSync</title>
+  <link rel="icon" href="../../Design/resources/icons-new/cards-02-stroke-rounded.svg">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a href="#content" class="skip-link">Skip to Play now</a>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="GameSync navigation">
+      <div class="window-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+      <nav>
+        <div class="nav-row reference"><span class="icon" data-icon="home-07"></span><span>Home</span></div>
+        <button class="nav-row selected" id="play-nav" aria-current="page"><span class="icon" data-icon="cards-02"></span><span>Play now</span></button>
+        <div class="nav-gap"></div>
+        <div class="nav-row reference"><span class="icon" data-icon="game-controller-03"></span><span>All games</span><small id="library-count">11</small></div>
+        <div class="nav-row reference"><span class="icon" data-icon="heart"></span><span>Favorites</span><small>4</small></div>
+        <div class="nav-row reference"><span class="icon" data-icon="star"></span><span>Wishlist</span><small>0</small></div>
+        <div class="nav-label">Collections</div>
+        <div class="nav-row reference"><span class="icon" data-icon="folder-01"></span><span>Cozy evenings</span><small>3</small></div>
+        <div class="nav-row reference"><span class="icon" data-icon="folder-01"></span><span>One more run</span><small>4</small></div>
+        <div class="nav-label">Smart collections</div>
+        <div class="nav-row reference"><span class="icon" data-icon="computer"></span><span>Best on</span><span class="icon small" data-icon="chevron-right"></span></div>
+        <div class="nav-row reference"><span class="icon" data-icon="bookshelf-03"></span><span>Genres</span></div>
+        <div class="nav-row reference"><span class="icon" data-icon="tags"></span><span>Tags</span></div>
+      </nav>
+      <div class="sidebar-footer"><span>GameSync</span><span class="icon" data-icon="settings-04" aria-hidden="true"></span></div>
+    </aside>
+    <main class="content-panel" id="content" tabindex="-1">
+      <header class="toolbar">
+        <div class="breadcrumb">Home <span class="icon small" data-icon="chevron-right"></span><strong>Play now</strong></div>
+        <div class="toolbar-actions">
+          <span class="demo-label">Demo library</span>
+          <button class="quiet small-button" id="saved-button">Saved <span id="saved-count">0</span></button>
+          <button class="quiet small-button" id="recent-button">Recent picks</button>
+        </div>
+      </header>
+      <div class="workspace" id="workspace"></div>
+      <footer class="prototype-bar">
+        <span>HTML prototype <span class="bar-dot">·</span> Sample data</span>
+        <div>
+          <label class="sr-only" for="scenario">Review state</label>
+          <select id="scenario"><option value="normal">Review states</option><option value="loading">Loading</option><option value="empty">No matches</option><option value="unknown">Missing profiles</option><option value="missing">Missing cover</option><option value="launch-error">Launch error</option></select>
+          <button class="quiet small-button" id="theme-button" aria-label="Switch to dark appearance">Dark</button>
+          <button class="quiet small-button" id="reset-button">Reset demo</button>
+        </div>
+      </footer>
+    </main>
+  </div>
+  <dialog id="detail-dialog" aria-labelledby="dialog-title"><div id="dialog-content"></div></dialog>
+  <div class="toast" role="status" aria-live="polite" id="toast" hidden></div>
+</body>
+</html>

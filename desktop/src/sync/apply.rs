@@ -358,6 +358,7 @@ fn apply_personal(
             );
             personal.rating = rating;
         }
+        "play_now" => personal.play_now = parse(value)?,
         "favorite" => personal.favorite = parse(value)?,
         "hidden" => personal.hidden = parse(value)?,
         "tags" => personal.tags = parse(value)?,

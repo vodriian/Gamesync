@@ -1,7 +1,7 @@
 # GameSync design workspace
 
 Open [index.elyx](index.elyx) for the main references. Folder galleries provide
-Controls, Blocks, Home, Library, Game details, Settings, Review, Tokens, Icons,
+Controls, Blocks, Home, Play now, Library, Game details, Settings, Review, Tokens, Icons,
 and Images. The [state index](state-index.md) maps the 90 original references and later additions.
 
 ## Where to edit
@@ -11,14 +11,16 @@ and Images. The [state index](state-index.md) maps the 90 original references an
 | `tokens/` | Semantic colors, dark context, spacing, typography, radii |
 | `design/controls/` | Buttons, icon labels, inputs, navigation rows, checkboxes, ratings, tags, menu items |
 | `design/blocks/` | Sidebar, window shells, shared sample grid, cards, rows, filmstrip, Best on, messages, Settings groups |
-| `design/screens/` | Nineteen screen families and their named state variants |
+| `design/screens/` | Twenty screen families and their named state variants |
 | `resources/icons-new/` | The only UI icon source; supplied SVG artwork is preserved |
 | `resources/images/` | Bundled sample covers |
 
 Imports flow from tokens/assets to controls, blocks, screens, then the index.
 Edit a shared source to update its instances. Variants contain only intentional
 state differences. Screen-local content remains in its family file. Menu and
-dialog references reuse the shared library behind their overlay. No alternate
+dialog references reuse the shared library behind their overlay. The Play now family includes preferences, game/profile overlays, a running session,
+and saved/recent states. Its book reuses the existing CardDetails source directly.
+No alternate
 sidebar or copied overview atlas is retained. Add `flows/` only for a real
 connected journey, not another gallery.
 

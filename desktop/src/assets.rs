@@ -54,6 +54,94 @@ const COVERS: &[(&str, &[u8])] = &[
 /// Embed the shared design artwork; virtual keys keep component icon overrides stable.
 const ICONS: &[(&str, &[u8])] = &[
     (
+        "icons/play-now/fast-forward.svg",
+        include_bytes!("../../Design/resources/icons-new/fast-forward-stroke-rounded.svg"),
+    ),
+    (
+        "icons/play-now/hourglass.svg",
+        include_bytes!("../../Design/resources/icons-new/hourglass-stroke-rounded.svg"),
+    ),
+    (
+        "icons/play-now/customize.svg",
+        include_bytes!("../../Design/resources/icons-new/customize-stroke-rounded.svg"),
+    ),
+    (
+        "icons/play-now/bookmark-02.svg",
+        include_bytes!("../../Design/resources/icons-new/bookmark-02-stroke-rounded.svg"),
+    ),
+    (
+        "icons/play-now/transaction-history.svg",
+        include_bytes!("../../Design/resources/icons-new/transaction-history-stroke-rounded.svg"),
+    ),
+    (
+        "icons/play-now/cards-02.svg",
+        include_bytes!("../../Design/resources/icons-new/cards-02-stroke-rounded.svg"),
+    ),
+    (
+        "icons/play-now/clock-fading.svg",
+        include_bytes!("../../Design/resources/icons-new/clock-fading-stroke-rounded.svg"),
+    ),
+    (
+        "icons/play-now/infinity-01.svg",
+        include_bytes!("../../Design/resources/icons-new/infinity-01-stroke-rounded.svg"),
+    ),
+    (
+        "icons/play-now/battery-low.svg",
+        include_bytes!("../../Design/resources/icons-new/battery-low-stroke-rounded.svg"),
+    ),
+    (
+        "icons/play-now/battery-medium-01.svg",
+        include_bytes!("../../Design/resources/icons-new/battery-medium-01-stroke-rounded.svg"),
+    ),
+    (
+        "icons/play-now/battery-full.svg",
+        include_bytes!("../../Design/resources/icons-new/battery-full-stroke-rounded.svg"),
+    ),
+    (
+        "icons/play-now/brain-02.svg",
+        include_bytes!("../../Design/resources/icons-new/brain-02-stroke-rounded.svg"),
+    ),
+    (
+        "icons/play-now/gun.svg",
+        include_bytes!("../../Design/resources/icons-new/gun-stroke-rounded.svg"),
+    ),
+    (
+        "icons/play-now/airplane-02.svg",
+        include_bytes!("../../Design/resources/icons-new/airplane-02-stroke-rounded.svg"),
+    ),
+    (
+        "icons/play-now/car-04.svg",
+        include_bytes!("../../Design/resources/icons-new/car-04-stroke-rounded.svg"),
+    ),
+    (
+        "icons/play-now/maps-search.svg",
+        include_bytes!("../../Design/resources/icons-new/maps-search-stroke-rounded.svg"),
+    ),
+    (
+        "icons/play-now/horse-saddle.svg",
+        include_bytes!("../../Design/resources/icons-new/horse-saddle-stroke-rounded.svg"),
+    ),
+    (
+        "icons/play-now/spades.svg",
+        include_bytes!("../../Design/resources/icons-new/spades-stroke-rounded.svg"),
+    ),
+    (
+        "icons/play-now/user-group-03.svg",
+        include_bytes!("../../Design/resources/icons-new/user-group-03-stroke-rounded.svg"),
+    ),
+    (
+        "icons/play-now/infinity-square.svg",
+        include_bytes!("../../Design/resources/icons-new/infinity-square-stroke-rounded.svg"),
+    ),
+    (
+        "icons/play-now/alien-02.svg",
+        include_bytes!("../../Design/resources/icons-new/alien-02-stroke-rounded.svg"),
+    ),
+    (
+        "icons/play-now/refresh-04.svg",
+        include_bytes!("../../Design/resources/icons-new/refresh-04-stroke-rounded.svg"),
+    ),
+    (
         "icons/hugeicons/gameboy-stroke-rounded.svg",
         include_bytes!("../../Design/resources/icons-new/gameboy-stroke-rounded.svg"),
     ),
@@ -393,5 +481,14 @@ mod tests {
             let bytes = Assets.load(&game.cover).unwrap().unwrap();
             assert!(bytes.starts_with(&[0xff, 0xd8]));
         }
+    }
+}
+
+/// Approved recommendation icons from the canonical design source.
+#[derive(Clone, Copy)]
+pub struct PlayIcon(pub &'static str);
+impl gpui_component::IconNamed for PlayIcon {
+    fn path(self) -> SharedString {
+        format!("icons/play-now/{}.svg", self.0).into()
     }
 }
