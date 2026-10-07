@@ -1,0 +1,1574 @@
+import "tokens/colors.dark.elyx" as darkTheme
+// Static native references; all game values are sample data.
+// Overlays intentionally fill the window. The book reuses CardDetails directly.
+// Tall More options / save failure variants expose content normally reached by scrolling.
+import "tokens/colors.elyx" as c
+import "resources/images/1055540.jpg" as hike
+import "tokens/typography.elyx" as typography
+import "design/controls/Button.elyx" as buttons
+import "design/controls/IconLabel.elyx" as labels
+import "resources/icons-new/check-stroke-rounded.svg" as checkIcon
+import "design/controls/IconButton.elyx" as icons
+import "resources/icons-new/cards-02-stroke-rounded.svg" as cardsIcon
+import "resources/icons-new/customize-stroke-rounded.svg" as customizeIcon
+import "resources/icons-new/bookmark-02-stroke-rounded.svg" as bookmarkIcon
+import "resources/icons-new/transaction-history-stroke-rounded.svg" as historyIcon
+import "resources/icons-new/hourglass-stroke-rounded.svg" as hourglassIcon
+import "resources/icons-new/refresh-04-stroke-rounded.svg" as refreshIcon
+import "resources/icons-new/cancel-01-stroke-rounded.svg" as closeIcon
+import "resources/icons-new/arrow-left-02-stroke-rounded.svg" as backIcon
+import "resources/icons-new/eye-off-stroke-rounded.svg" as eyeOffIcon
+import "resources/icons-new/clock-fading-stroke-rounded.svg" as saveIcon
+import "design/blocks/shell/LibraryShell.elyx" as shell
+import "design/blocks/play-now/Preferences.elyx" as preferences
+import "design/blocks/play-now/RecommendationCard.elyx" as cards
+import "design/screens/details/CardDetails.elyx" as details
+import "resources/images/646570.jpg" as spire
+import "resources/images/620.jpg" as portal
+import "design/controls/TextField.elyx" as fields
+
+export PlayNow = frame : shell.Library {
+  left: 0px,
+  top: 0px,
+
+  overlay {
+    overrides: [
+      insert(preferencesModal, after = .nil),
+      insert(gameModal, after = preferencesModal),
+      insert(profileModal, after = gameModal)
+    ]
+  }
+
+  panel {
+    count {
+      display: .none
+    }
+
+    body {
+      overrides: [insert(content, after = .nil)],
+      padding-top: 64px,
+      padding-left: 42px,
+      padding-bottom: 40px,
+      padding-right: 42px
+    }
+
+    toolbar {
+      overrides: [
+        insert(saved, after = shell.Library.panel.toolbar.title),
+        insert(recent, after = saved)
+      ],
+
+      search {
+        display: .none
+      }
+
+      display {
+        display: .none
+      }
+
+      views {
+        display: .none
+      }
+
+      title {
+        contents: "Play now"
+      }
+    }
+  }
+
+  sidebar {
+    navigation {
+      all {
+        fill[0]: .nil
+      }
+
+      playNow {
+        fill[0].color: c.ui.selected
+      }
+    }
+  }
+
+  preferencesModal = frame {
+    doc: "Intentional full-window shaded modal plane. Native dialog is scrollable; no background blur is claimed.",
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    height: 100%,
+    display: .none,
+    layout: {direction: .column, align-items: .center},
+    fill: rgb(0%, 0%, 0%, 45%),
+    padding-top: 40px,
+    padding-bottom: 40px,
+    children: dialog,
+
+    dialog = frame {
+      width: 590px,
+      height: 760px,
+      max-height: 100%,
+      layout: {direction: .column, item-gap: 20px},
+      fill: c.ui.surface,
+      border: c.ui.border,
+      shadow: {
+        drop-shadow: {
+          color: rgb(0%, 0%, 0%, 24%),
+          offset: point(0px, 16px),
+          blur-radius: 40px
+        }
+      },
+      corner-radius: 12px,
+      padding: [20px, 30px],
+      children: [header, body],
+
+      header = frame {
+        width: 100%,
+        layout: {align-items: .center},
+        children: [title, close],
+
+        title = text {
+          width: 100%,
+          fill: c.ui.text,
+          contents: "Your preferences",
+          font-size: 20,
+          font-family: typography.family.interface,
+          font-style: "Semibold"
+        }
+
+        close = frame : icons.IconButton {
+          width: 40px,
+          height: 40px,
+
+          glyph {
+            contents: closeIcon
+          }
+        }
+      }
+
+      body = frame {
+        width: 100%,
+        height: 100%,
+        layout: {direction: .column},
+        overflow: .scroll,
+        children: form,
+
+        form = frame : preferences.Preferences {}
+      }
+    }
+  }
+
+  gameModal = frame {
+    doc: "Reuse the existing book directly; no filmstrip or Back bar. The dim plane and shadow add depth.",
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    height: 100%,
+    display: .none,
+    layout: {direction: .column, align-items: .center, item-gap: 8px},
+    fill: rgb(0%, 0%, 0%, 45%),
+    padding: 40px,
+    children: [closeRow, book],
+
+    closeRow = frame {
+      width: 100%,
+      max-width: 900px,
+      layout: {justify-content: .end},
+      children: close,
+
+      close = frame : icons.IconButton {
+        width: 40px,
+        height: 40px,
+        fill[0].color: c.ui.surface,
+
+        glyph {
+          contents: closeIcon
+        }
+      }
+    }
+
+    book = frame : details.CardDetails.content.book {
+      width: 100%,
+      height: 690px,
+      max-width: 900px,
+      max-height: 100%,
+
+      left {
+        cover {
+          art {
+            fill[0].image.ref: hike
+          }
+        }
+
+        summary {
+          genres {
+            simulation {
+              display: .none
+            }
+
+            rpg {
+              label {
+                label {
+                  contents: "Adventure"
+                }
+              }
+            }
+          }
+
+          collections {
+            roguelike {
+              display: .none
+            }
+          }
+
+          tags {
+            farming {
+              display: .none
+            }
+          }
+
+          titleRow {
+            title {
+              contents: "A Short Hike"
+            }
+          }
+
+          description {
+            contents: "Hike, climb, and glide through the peaceful mountainside of Hawk Peak Provincial Park."
+          }
+
+          facts {
+            contents: "Sample library"
+          }
+
+          hours {
+            contents: "0.4 hours played"
+          }
+        }
+      }
+
+      right {
+        overrides: [
+          insert(playNow, after = details.CardDetails.content.book.right.bestOn)
+        ]
+      }
+
+      playNow = frame {
+        width: 100%,
+        layout: {direction: .column, item-gap: 12px},
+        border: {color: c.ui.border, sides: [.top, .bottom]},
+        padding: [16px, 0px],
+        children: [header, reason, facts],
+
+        header = frame {
+          width: 100%,
+          layout: {align-items: .center, item-gap: 4px},
+          children: [title, edit, save, exclude],
+
+          title = text {
+            width: 100%,
+            fill: c.ui.muted,
+            contents: "Play now",
+            font-size: 12,
+            font-family: typography.family.interface
+          }
+
+          edit = frame : icons.IconButton {
+            width: 40px,
+            height: 40px,
+
+            glyph {
+              contents: customizeIcon
+            }
+          }
+
+          save = frame : icons.IconButton {
+            width: 40px,
+            height: 40px,
+
+            glyph {
+              contents: saveIcon
+            }
+          }
+
+          exclude = frame : icons.IconButton {
+            width: 40px,
+            height: 40px,
+
+            glyph {
+              contents: eyeOffIcon
+            }
+          }
+        }
+
+        reason = text {
+          width: 100%,
+          fill: c.ui.text,
+          contents: "Fits your low energy budget.",
+          font-size: 14,
+          font-family: typography.family.interface
+        }
+
+        facts = text {
+          fill: c.ui.muted,
+          contents: "Low energy · 15–30 min · Estimated",
+          font-size: 12,
+          font-family: typography.family.interface
+        }
+      }
+    }
+  }
+
+  profileModal = frame {
+    left: 0px,
+    top: 0px,
+    width: 100%,
+    height: 100%,
+    display: .none,
+    layout: {direction: .column, align-items: .center},
+    fill: rgb(0%, 0%, 0%, 45%),
+    padding-top: 40px,
+    padding-bottom: 40px,
+    children: dialog,
+
+    dialog = frame {
+      width: 720px,
+      height: 760px,
+      max-height: 100%,
+      layout: {direction: .column, item-gap: 20px},
+      fill: c.ui.surface,
+      border: c.ui.border,
+      corner-radius: 12px,
+      padding: 24px,
+      children: [header, body, actions],
+
+      header = frame {
+        width: 100%,
+        layout: {align-items: .center},
+        children: [title, close],
+
+        title = text {
+          width: 100%,
+          fill: c.ui.text,
+          contents: "Your game profile",
+          font-size: 20,
+          font-family: typography.family.interface,
+          font-style: "Semibold"
+        }
+
+        close = frame : icons.IconButton {
+          width: 40px,
+          height: 40px,
+
+          glyph {
+            contents: closeIcon
+          }
+        }
+      }
+
+      body = frame {
+        width: 100%,
+        height: 100%,
+        layout: {direction: .column, item-gap: 20px},
+        overflow: .scroll,
+        children: [
+          note,
+          mechanical,
+          thinking,
+          narrative,
+          onboarding,
+          duration,
+          stopping,
+          activities
+        ],
+
+        note = text {
+          width: 100%,
+          fill: c.ui.muted,
+          contents: "Your corrections take precedence. Automatic uses cached analysis or local estimates, where available.",
+          font-size: 12,
+          font-family: typography.family.interface
+        }
+
+        mechanical = frame {
+          width: 100%,
+          layout: {direction: .column, item-gap: 8px},
+          children: [title, choices],
+
+          title = text {
+            fill: c.ui.text,
+            contents: "Mechanical effort",
+            font-size: 14,
+            font-family: typography.family.interface
+          }
+
+          choices = frame {
+            layout: {item-gap: 8px},
+            children: [automatic, low, medium, high],
+
+            automatic = frame : buttons.Button {
+              fill[0].color: c.ui.subtle,
+
+              label {
+                label {
+                  contents: "Automatic"
+                }
+              }
+            }
+
+            low = frame : buttons.Button {
+              height: 30px,
+
+              label {
+                label {
+                  contents: "Low"
+                }
+              }
+            }
+
+            medium = frame : buttons.Button {
+              height: 30px,
+
+              label {
+                label {
+                  contents: "Medium"
+                }
+              }
+            }
+
+            high = frame : buttons.Button {
+              height: 30px,
+
+              label {
+                label {
+                  contents: "High"
+                }
+              }
+            }
+          }
+        }
+
+        thinking = frame {
+          width: 100%,
+          layout: {direction: .column, item-gap: 8px},
+          children: [title, choices],
+
+          title = text {
+            fill: c.ui.text,
+            contents: "Thinking",
+            font-size: 14,
+            font-family: typography.family.interface
+          }
+
+          choices = frame {
+            layout: {item-gap: 8px},
+            children: [automatic, low, medium, high],
+
+            automatic = frame : buttons.Button {
+              fill[0].color: c.ui.subtle,
+
+              label {
+                label {
+                  contents: "Automatic"
+                }
+              }
+            }
+
+            low = frame : buttons.Button {
+              height: 30px,
+
+              label {
+                label {
+                  contents: "Low"
+                }
+              }
+            }
+
+            medium = frame : buttons.Button {
+              height: 30px,
+
+              label {
+                label {
+                  contents: "Medium"
+                }
+              }
+            }
+
+            high = frame : buttons.Button {
+              height: 30px,
+
+              label {
+                label {
+                  contents: "High"
+                }
+              }
+            }
+          }
+        }
+
+        narrative = frame {
+          width: 100%,
+          layout: {direction: .column, item-gap: 8px},
+          children: [title, choices],
+
+          title = text {
+            fill: c.ui.text,
+            contents: "Story to remember",
+            font-size: 14,
+            font-family: typography.family.interface
+          }
+
+          choices = frame {
+            layout: {item-gap: 8px},
+            children: [automatic, low, medium, high],
+
+            automatic = frame : buttons.Button {
+              fill[0].color: c.ui.subtle,
+
+              label {
+                label {
+                  contents: "Automatic"
+                }
+              }
+            }
+
+            low = frame : buttons.Button {
+              height: 30px,
+
+              label {
+                label {
+                  contents: "Low"
+                }
+              }
+            }
+
+            medium = frame : buttons.Button {
+              height: 30px,
+
+              label {
+                label {
+                  contents: "Medium"
+                }
+              }
+            }
+
+            high = frame : buttons.Button {
+              height: 30px,
+
+              label {
+                label {
+                  contents: "High"
+                }
+              }
+            }
+          }
+        }
+
+        onboarding = frame {
+          width: 100%,
+          layout: {direction: .column, item-gap: 8px},
+          children: [title, choices],
+
+          title = text {
+            fill: c.ui.text,
+            contents: "Onboarding",
+            font-size: 14,
+            font-family: typography.family.interface
+          }
+
+          choices = frame {
+            layout: {item-gap: 8px},
+            children: [automatic, low, medium, high],
+
+            automatic = frame : buttons.Button {
+              fill[0].color: c.ui.subtle,
+
+              label {
+                label {
+                  contents: "Automatic"
+                }
+              }
+            }
+
+            low = frame : buttons.Button {
+              height: 30px,
+
+              label {
+                label {
+                  contents: "Low"
+                }
+              }
+            }
+
+            medium = frame : buttons.Button {
+              height: 30px,
+
+              label {
+                label {
+                  contents: "Medium"
+                }
+              }
+            }
+
+            high = frame : buttons.Button {
+              height: 30px,
+
+              label {
+                label {
+                  contents: "High"
+                }
+              }
+            }
+          }
+        }
+
+        duration = frame {
+          width: 100%,
+          layout: {item-gap: 16px},
+          children: [minimum, ideal, startup],
+
+          minimum = frame {
+            width: 100%,
+            layout: {direction: .column, item-gap: 8px},
+            children: [title, input],
+
+            title = text {
+              fill: c.ui.text,
+              contents: "Minimum session (min)",
+              font-size: 12,
+              font-family: typography.family.interface
+            }
+
+            input = frame : fields.TextField {
+              width: 100%,
+
+              value {
+                label {
+                  contents: "Automatic"
+                }
+              }
+            }
+          }
+
+          ideal = frame {
+            width: 100%,
+            layout: {direction: .column, item-gap: 8px},
+            children: [title, input],
+
+            title = text {
+              fill: c.ui.text,
+              contents: "Ideal session (min)",
+              font-size: 12,
+              font-family: typography.family.interface
+            }
+
+            input = frame : fields.TextField {
+              width: 100%,
+
+              value {
+                label {
+                  contents: "Automatic"
+                }
+              }
+            }
+          }
+
+          startup = frame {
+            width: 100%,
+            layout: {direction: .column, item-gap: 8px},
+            children: [title, input],
+
+            title = text {
+              fill: c.ui.text,
+              contents: "Startup (min)",
+              font-size: 12,
+              font-family: typography.family.interface
+            }
+
+            input = frame : fields.TextField {
+              width: 100%,
+
+              value {
+                label {
+                  contents: "Automatic"
+                }
+              }
+            }
+          }
+        }
+
+        stopping = frame {
+          width: 100%,
+          layout: {direction: .column, item-gap: 8px},
+          children: [title, choices],
+
+          title = text {
+            fill: c.ui.text,
+            contents: "Stopping point",
+            font-size: 14,
+            font-family: typography.family.interface
+          }
+
+          choices = frame {
+            layout: {item-gap: 8px},
+            children: [automatic, flexible, checkpoints, long],
+
+            automatic = frame : buttons.Button {
+              height: 30px,
+
+              label {
+                label {
+                  contents: "Automatic"
+                }
+              }
+            }
+
+            flexible = frame : buttons.Button {
+              height: 30px,
+
+              label {
+                label {
+                  contents: "Any time"
+                }
+              }
+            }
+
+            checkpoints = frame : buttons.Button {
+              height: 30px,
+
+              label {
+                label {
+                  contents: "Checkpoints"
+                }
+              }
+            }
+
+            long = frame : buttons.Button {
+              height: 30px,
+
+              label {
+                label {
+                  contents: "Long session"
+                }
+              }
+            }
+          }
+        }
+
+        activities = frame : preferences.Preferences.activities {
+          width: 100%,
+
+          heading {
+            number {
+              display: .none
+            }
+
+            label {
+              contents: "Activities (choose all that apply)"
+            }
+          }
+
+          choices {
+            anything {
+              label {
+                label {
+                  contents: "Automatic"
+                }
+              }
+            }
+          }
+        }
+      }
+
+      actions = frame {
+        width: 100%,
+        layout: {item-gap: 12px},
+        children: [save, discard],
+
+        save = frame : buttons.Primary {
+          height: 40px,
+
+          label {
+            label {
+              contents: "Save profile"
+            }
+          }
+        }
+
+        discard = frame : buttons.Button {
+          height: 40px,
+
+          label {
+            label {
+              contents: "Discard"
+            }
+          }
+        }
+      }
+    }
+  }
+
+  content = frame {
+    width: 100%,
+    layout: {direction: .column, item-gap: 24px},
+    children: [setup, hand, playing, list, empty, failure],
+
+    setup = frame {
+      width: 100%,
+      layout: {direction: .column, item-gap: 24px},
+      children: [title, form],
+
+      title = text {
+        fill: c.ui.text,
+        contents: "Let's choose a game for you",
+        font-size: 28,
+        font-family: typography.family.interface,
+        font-style: "Bold"
+      }
+
+      form = frame : preferences.Preferences {}
+    }
+
+    hand = frame {
+      width: 100%,
+      display: .none,
+      layout: {direction: .column, item-gap: 24px},
+      children: [heading, context, choices],
+
+      context = frame {
+        width: 100%,
+        layout: {align-items: .center, item-gap: 8px},
+        border: {color: c.ui.border, sides: .bottom},
+        padding-bottom: 16px,
+        children: [time, energy, activity, device, edit, spacer, reshuffle],
+
+        time = frame : labels.IconLabel {
+          corner-radius: 5px,
+          padding-top: 6px,
+          padding-left: 8px,
+          padding-bottom: 6px,
+          padding-right: 8px,
+          fill[0].color: c.ui.subtle,
+
+          label {
+            contents: "30 min"
+          }
+        }
+
+        energy = frame : labels.IconLabel {
+          corner-radius: 5px,
+          padding-top: 6px,
+          padding-left: 8px,
+          padding-bottom: 6px,
+          padding-right: 8px,
+          fill[0].color: c.ui.subtle,
+
+          label {
+            contents: "Low energy"
+          }
+        }
+
+        activity = frame : labels.IconLabel {
+          corner-radius: 5px,
+          padding-top: 6px,
+          padding-left: 8px,
+          padding-bottom: 6px,
+          padding-right: 8px,
+          fill[0].color: c.ui.subtle,
+
+          label {
+            contents: "Anything"
+          }
+        }
+
+        device = frame : labels.IconLabel {
+          corner-radius: 5px,
+          padding-top: 6px,
+          padding-left: 8px,
+          padding-bottom: 6px,
+          padding-right: 8px,
+          fill[0].color: c.ui.subtle,
+
+          label {
+            contents: "PC"
+          }
+        }
+
+        edit = frame : icons.IconButton {
+          width: 40px,
+          height: 40px,
+
+          glyph {
+            contents: customizeIcon
+          }
+        }
+
+        spacer = frame {
+          width: 100%,
+          height: 1px
+        }
+
+        reshuffle = frame : buttons.Button {
+          height: 40px,
+
+          label {
+            leading {
+              contents: refreshIcon,
+              display: .visible
+            }
+
+            label {
+              contents: "Reshuffle"
+            }
+          }
+        }
+      }
+
+      heading = frame {
+        width: 100%,
+        layout: {direction: .column, item-gap: 8px},
+        children: [title, subtitle],
+
+        title = text {
+          fill: c.ui.text,
+          contents: "Your hand for right now.",
+          font-size: 28,
+          font-family: typography.family.interface,
+          font-style: "Bold"
+        }
+
+        subtitle = text {
+          fill: c.ui.muted,
+          contents: "Up to three choices. Start with the one that catches your eye.",
+          font-size: 14,
+          font-family: typography.family.interface
+        }
+      }
+
+      choices = frame {
+        width: 100%,
+        layout: {
+          justify-content: .center,
+          item-gap: 24px,
+          wrap: .true,
+          line-gap: 24px
+        },
+        children: [first, second, third],
+
+        first = frame : cards.RecommendationCard {}
+
+        second = frame : cards.RecommendationCard {
+          cover {
+            art {
+              fill[0].image.ref: spire
+            }
+          }
+
+          role {
+            number {
+              value {
+                contents: "02"
+              }
+            }
+
+            label {
+              contents: "Worth another look"
+            }
+          }
+
+          title {
+            contents: "Slay the Spire"
+          }
+
+          metadata {
+            contents: "10–45 min · Install unknown"
+          }
+
+          reason {
+            contents: "A game you have not played for a while, within these limits."
+          }
+        }
+
+        third = frame : cards.RecommendationCard {
+          cover {
+            art {
+              fill[0].image.ref: portal
+            }
+          }
+
+          role {
+            number {
+              value {
+                contents: "03"
+              }
+            }
+
+            label {
+              contents: "Another good fit"
+            }
+          }
+
+          title {
+            contents: "Portal 2"
+          }
+
+          metadata {
+            contents: "15–30 min · Install unknown"
+          }
+
+          reason {
+            contents: "A different direction from the same library."
+          }
+        }
+      }
+    }
+
+    playing = frame {
+      width: 100%,
+      display: .none,
+      layout: {direction: .column, align-items: .center, item-gap: 20px},
+      children: [status, cover, title, timer, note, done],
+
+      status = frame : labels.IconLabel {
+        corner-radius: 20px,
+        padding-top: 8px,
+        padding-left: 16px,
+        padding-bottom: 8px,
+        padding-right: 16px,
+        fill[0].color: c.ui.subtle,
+
+        leading {
+          contents: hourglassIcon,
+          display: .visible
+        }
+
+        label {
+          contents: "Now playing"
+        }
+      }
+
+      cover = frame : cards.RecommendationCard.cover {
+        width: 250px,
+        height: 330px
+      }
+
+      title = text {
+        fill: c.ui.text,
+        contents: "A Short Hike",
+        font-size: 28,
+        font-family: typography.family.interface,
+        font-style: "Semibold"
+      }
+
+      timer = text {
+        fill: c.ui.text,
+        contents: "12:34",
+        font-size: 32,
+        font-family: typography.family.interface
+      }
+
+      note = text {
+        fill: c.ui.muted,
+        contents: "Session on PC",
+        font-size: 12,
+        font-family: typography.family.interface
+      }
+
+      done = frame : buttons.Primary {
+        width: 300px,
+        height: 48px,
+
+        label {
+          leading {
+            contents: checkIcon,
+            display: .visible
+          }
+
+          label {
+            contents: "Done playing"
+          }
+        }
+      }
+    }
+
+    list = frame {
+      width: 100%,
+      display: .none,
+      layout: {direction: .column, item-gap: 16px},
+      children: [back, title, first, second],
+
+      first = frame {
+        width: 100%,
+        layout: {align-items: .center, item-gap: 16px},
+        border: {color: c.ui.border, sides: .bottom},
+        padding: [12px, 0px],
+        children: [copy, details],
+
+        copy = frame {
+          width: 100%,
+          layout: {direction: .column, item-gap: 4px},
+          children: [title, state],
+
+          title = text {
+            fill: c.ui.text,
+            contents: "A Short Hike",
+            font-size: 15,
+            font-family: typography.family.interface,
+            font-style: "Semibold"
+          }
+
+          state = text {
+            fill: c.ui.muted,
+            contents: "Saved for later",
+            font-size: 12,
+            font-family: typography.family.interface
+          }
+        }
+
+        details = frame : buttons.Button {
+          height: 40px,
+
+          label {
+            label {
+              contents: "Review"
+            }
+          }
+        }
+      }
+
+      back = frame : buttons.Button {
+        height: 40px,
+        border[0]: .nil,
+
+        label {
+          leading {
+            contents: backIcon,
+            display: .visible
+          }
+
+          label {
+            contents: "Back"
+          }
+        }
+      }
+
+      title = text {
+        fill: c.ui.text,
+        contents: "Saved and excluded",
+        font-size: 24,
+        font-family: typography.family.interface,
+        font-style: "Semibold"
+      }
+
+      second = frame : first {
+        copy {
+          title {
+            contents: "Slay the Spire"
+          }
+
+          state {
+            contents: "Not interested"
+          }
+        }
+      }
+    }
+
+    empty = frame {
+      width: 100%,
+      display: .none,
+      layout: {direction: .column, align-items: .center, item-gap: 20px},
+      children: [context, glyph, title, note, edit],
+
+      context = frame : hand.context {}
+
+      glyph = icon {
+        width: 44px,
+        height: 44px,
+        fill: c.ui.text,
+        contents: cardsIcon
+      }
+
+      title = text {
+        fill: c.ui.text,
+        contents: "No games fit this hand yet.",
+        font-size: 24,
+        font-family: typography.family.interface,
+        font-style: "Semibold"
+      }
+
+      note = text {
+        fill: c.ui.muted,
+        contents: "Adjust your preferences or review incomplete game profiles.",
+        font-size: 12,
+        font-family: typography.family.interface
+      }
+
+      edit = frame : buttons.Primary {
+        height: 40px,
+
+        label {
+          label {
+            contents: "Edit preferences"
+          }
+        }
+      }
+    }
+
+    failure = frame {
+      width: 100%,
+      display: .none,
+      layout: {align-items: .center, item-gap: 12px},
+      fill: c.ui.subtle,
+      corner-radius: 8px,
+      padding: 16px,
+      children: [message, retry, discard],
+
+      message = text {
+        width: 100%,
+        fill: c.ui.muted,
+        contents: "Could not save this change. Your library folder is unavailable.",
+        font-size: 12,
+        font-family: typography.family.interface
+      }
+
+      retry = frame : buttons.Primary {
+        height: 40px,
+
+        label {
+          label {
+            contents: "Retry"
+          }
+        }
+      }
+
+      discard = frame : buttons.Button {
+        height: 40px,
+
+        label {
+          label {
+            contents: "Discard"
+          }
+        }
+      }
+    }
+  }
+
+  saved = frame : buttons.Button {
+    height: 40px,
+    border[0]: .nil,
+
+    label {
+      leading {
+        contents: bookmarkIcon,
+        display: .visible
+      }
+
+      label {
+        contents: "Saved 2"
+      }
+    }
+  }
+
+  recent = frame : buttons.Button {
+    height: 40px,
+    border[0]: .nil,
+
+    label {
+      leading {
+        contents: historyIcon,
+        display: .visible
+      }
+
+      label {
+        contents: "Recent"
+      }
+    }
+  }
+}
+
+@variant
+export PlayNowBrainDead = frame : PlayNow {
+  left: 1600px,
+  top: 0px,
+
+  panel {
+    body {
+      content {
+        setup {
+          @with-variant(preferences.BrainDead)
+          form {
+            left: .nil
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export PlayNowOptions = frame : PlayNow {
+  left: 3200px,
+  top: 0px,
+  height: 1140px,
+
+  panel {
+    body {
+      content {
+        setup {
+          @with-variant(preferences.MoreOptions)
+          form {
+            left: .nil
+          }
+        }
+      }
+    }
+  }
+}
+
+@variant
+export PlayNowHand = frame : PlayNow {
+  left: 0px,
+  top: 1400px,
+
+  panel {
+    body {
+      content {
+        setup {
+          display: .none
+        }
+
+        hand {
+          display: .visible
+        }
+      }
+    }
+  }
+}
+
+@variant
+export PlayNowPreferences = frame : PlayNow {
+  left: 1600px,
+  top: 1400px,
+
+  panel {
+    body {
+      content {
+        setup {
+          display: .none
+        }
+
+        hand {
+          display: .visible
+        }
+      }
+    }
+  }
+
+  overlay {
+    preferencesModal {
+      display: .visible
+    }
+  }
+}
+
+@variant
+export PlayNowGame = frame : PlayNow {
+  left: 3200px,
+  top: 1400px,
+
+  panel {
+    body {
+      content {
+        setup {
+          display: .none
+        }
+
+        hand {
+          display: .visible
+        }
+      }
+    }
+  }
+
+  overlay {
+    gameModal {
+      display: .visible
+    }
+  }
+}
+
+@variant
+export PlayNowProfile = frame : PlayNow {
+  left: 0px,
+  top: 2800px,
+
+  panel {
+    body {
+      content {
+        setup {
+          display: .none
+        }
+
+        hand {
+          display: .visible
+        }
+      }
+    }
+  }
+
+  overlay {
+    gameModal {
+      display: .visible
+    }
+
+    profileModal {
+      display: .visible
+    }
+  }
+}
+
+@variant
+export PlayNowPlaying = frame : PlayNow {
+  left: 1600px,
+  top: 2800px,
+
+  panel {
+    body {
+      content {
+        setup {
+          display: .none
+        }
+
+        playing {
+          display: .visible
+        }
+      }
+    }
+
+    toolbar {
+      saved {
+        opacity: 0.4
+      }
+
+      recent {
+        opacity: 0.4
+      }
+    }
+  }
+
+  sidebar {
+    navigation {
+      playNow {
+        glyph {
+          contents: hourglassIcon
+        }
+
+        count {
+          contents: "12:34"
+        }
+      }
+    }
+  }
+}
+
+@variant
+export PlayNowSaved = frame : PlayNow {
+  left: 3200px,
+  top: 2800px,
+
+  panel {
+    body {
+      content {
+        setup {
+          display: .none
+        }
+
+        list {
+          display: .visible
+        }
+      }
+    }
+  }
+}
+
+@variant
+export PlayNowRecent = frame : PlayNow {
+  left: 0px,
+  top: 4200px,
+
+  panel {
+    body {
+      content {
+        setup {
+          display: .none
+        }
+
+        list {
+          title {
+            contents: "Recent"
+          }
+
+          first {
+            copy {
+              state {
+                contents: "Session finished · 12 min"
+              }
+            }
+          }
+
+          second {
+            copy {
+              state {
+                contents: "Chosen · no launch requested"
+              }
+            }
+          }
+
+          display: .visible
+        }
+      }
+    }
+  }
+}
+
+@variant
+export PlayNowEmpty = frame : PlayNow {
+  left: 1600px,
+  top: 4200px,
+
+  panel {
+    body {
+      content {
+        setup {
+          display: .none
+        }
+
+        empty {
+          display: .visible
+        }
+      }
+    }
+  }
+}
+
+@variant
+export PlayNowSaveFailed = frame : PlayNow {
+  left: 3200px,
+  top: 4200px,
+  height: 1000px,
+
+  panel {
+    body {
+      content {
+        setup {
+          display: .none
+        }
+
+        hand {
+          display: .visible
+        }
+
+        failure {
+          display: .visible
+        }
+      }
+    }
+  }
+}

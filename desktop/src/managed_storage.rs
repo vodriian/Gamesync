@@ -34,8 +34,12 @@ pub fn path(sample: bool) -> Result<PathBuf> {
     }))
 }
 
-/// The Best on demo gets a fresh store at each launch, so the full editor works
-/// and every change resets on restart. Only this dedicated folder is removed.
+/// Persistent, isolated sample storage for native recommendation review.
+pub fn play_now_demo_path() -> Result<PathBuf> {
+    Ok(data_dir()?.join("PlayNowDemo.library"))
+}
+
+/// Only the dedicated Best on demo resets when opened.
 pub fn best_on_demo_path() -> Result<PathBuf> {
     let root = data_dir()?.join("BestOnDemo.library");
     if root.exists() {
@@ -45,6 +49,9 @@ pub fn best_on_demo_path() -> Result<PathBuf> {
 }
 
 fn data_dir() -> Result<PathBuf> {
+    if let Some(root) = crate::settings::preview_dir() {
+        return Ok(root);
+    }
     let dirs = directories::ProjectDirs::from("app", "GameSync", "GameSync")
         .context("App storage is unavailable")?;
     Ok(dirs.data_dir().to_owned())
@@ -75,7 +82,11 @@ pub fn prepare(root: &Path, samples: &[Game]) -> Result<()> {
             app_id: u32::try_from(sample.id.as_u128()).context("Invalid sample app ID")?,
             description: Some(sample.description.clone()),
             playtime_minutes: sample.playtime_minutes,
-            owned: false,
+            owned: sample
+                .record
+                .as_ref()
+                .and_then(|record| record.game.steam.as_ref())
+                .is_some_and(|steam| steam.owned),
             last_played: None,
             platform_minutes: Default::default(),
             wishlist: None,
@@ -86,6 +97,10 @@ pub fn prepare(root: &Path, samples: &[Game]) -> Result<()> {
         game.personal.rating = sample.rating;
         game.personal.favorite = sample.favorite;
         game.personal.tags = sample.tags.clone();
+        if let Some(record) = &sample.record {
+            game.personal.play_now = record.game.personal.play_now.clone();
+            game.personal.hidden = record.game.personal.hidden;
+        }
         // Best on demo samples carry a fixture assessment; other samples have none.
         game.suitability = sample
             .record
@@ -233,6 +248,52 @@ pub fn fill_samples(root: &Path, loaded: &LoadedLibrary) -> Result<bool> {
 mod tests {
     use super::*;
     use gamesync_desktop::library_reader::LibraryReader;
+
+    #[test]
+    fn play_now_samples_are_recommendable_after_storage_loading() -> Result<()> {
+        use gamesync_desktop::recommendations::*;
+        let temporary = tempfile::tempdir()?;
+        let root = temporary.path().join("PlayNow.library");
+        let cache = temporary.path().join("cache");
+        std::fs::create_dir(&cache)?;
+        prepare(&root, &crate::fixtures::play_now_games()?)?;
+        let mut reader = LibraryReader::open(&root, &cache)?;
+        let mut loaded = reader.refresh()?;
+        fill_samples(&root, &loaded)?;
+        loaded = reader.refresh()?;
+        let candidates: Vec<_> = loaded
+            .games
+            .iter()
+            .map(|record| Candidate {
+                record,
+                status_eligible: loaded
+                    .manifest
+                    .definitions
+                    .status(&record.game.personal.status)
+                    .is_some_and(|status| status.recommendation_eligible),
+                installed: None,
+                blocked: false,
+            })
+            .collect();
+        let context = Context {
+            energy: Effort::Medium,
+            ..Default::default()
+        };
+        let selection = rank(&candidates, &context, 1_000);
+        assert!(selection.ranked.len() >= 3);
+        assert_eq!(selection.rejected.get(&Rejection::Hidden), Some(&1));
+        assert!(selection.ranked.iter().all(|pick| loaded
+            .games
+            .iter()
+            .find(|game| game.game_id == pick.id)
+            .unwrap()
+            .game
+            .steam
+            .as_ref()
+            .unwrap()
+            .owned));
+        Ok(())
+    }
 
     #[test]
     fn sample_storage_is_separate_and_reopening_preserves_edits() -> Result<()> {

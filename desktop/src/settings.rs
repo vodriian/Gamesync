@@ -87,6 +87,9 @@ pub struct Settings {
     #[serde(default)]
     pub section_views: BTreeMap<String, LibraryView>,
     pub library_path: Option<PathBuf>,
+    /// One device-local timer; never synchronized as Steam playtime.
+    #[serde(default)]
+    pub active_play: Option<crate::recommendations::ActivePlay>,
     #[serde(default = "system_theme")]
     pub theme: String,
     #[serde(default)]
@@ -134,7 +137,17 @@ fn system_theme() -> String {
 }
 static SETTINGS_LOCK: Mutex<()> = Mutex::new(());
 
+/// Optional isolated storage for native demo checks; normal launches ignore it.
+pub fn preview_dir() -> Option<PathBuf> {
+    std::env::var_os("GAMESYNC_PREVIEW_DIR")
+        .map(PathBuf::from)
+        .filter(|p| p.is_absolute())
+}
+
 fn path() -> Result<PathBuf> {
+    if let Some(root) = preview_dir() {
+        return Ok(root.join("settings.json"));
+    }
     Ok(
         directories::ProjectDirs::from("app", "GameSync", "GameSync")
             .context("Settings directory is unavailable")?
@@ -183,6 +196,7 @@ impl Default for Settings {
             library_display: LibraryDisplay::default(),
             section_views: Default::default(),
             library_path: None,
+            active_play: None,
             theme: system_theme(),
             appearance: None,
             omarchy_mode: false,

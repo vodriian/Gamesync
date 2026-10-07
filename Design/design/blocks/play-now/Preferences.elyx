@@ -1,0 +1,705 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "resources/icons-new/chevron-down-stroke-rounded.svg" as downIcon
+import "tokens/colors.elyx" as c
+import "tokens/typography.elyx" as typography
+import "design/controls/Button.elyx" as buttons
+import "resources/icons-new/brain-02-stroke-rounded.svg" as brainIcon
+import "resources/icons-new/battery-low-stroke-rounded.svg" as batteryLowIcon
+import "resources/icons-new/battery-medium-01-stroke-rounded.svg" as batteryMediumIcon
+import "resources/icons-new/battery-full-stroke-rounded.svg" as batteryHighIcon
+import "resources/icons-new/infinity-01-stroke-rounded.svg" as infinityIcon
+import "resources/icons-new/cards-02-stroke-rounded.svg" as cardsIcon
+import "resources/icons-new/chevron-right-stroke-rounded.svg" as chevronIcon
+import "resources/icons-new/gun-stroke-rounded.svg" as shootIcon
+import "resources/icons-new/airplane-02-stroke-rounded.svg" as flyIcon
+import "resources/icons-new/car-04-stroke-rounded.svg" as driveIcon
+import "resources/icons-new/maps-search-stroke-rounded.svg" as exploreIcon
+import "resources/icons-new/horse-saddle-stroke-rounded.svg" as horseIcon
+import "resources/icons-new/spades-stroke-rounded.svg" as cardsPlayIcon
+import "resources/icons-new/user-group-03-stroke-rounded.svg" as multiplayerIcon
+import "resources/icons-new/infinity-square-stroke-rounded.svg" as endlessIcon
+import "resources/icons-new/alien-02-stroke-rounded.svg" as weirdIcon
+import "design/controls/Switch.elyx" as switches
+import "design/controls/Checkbox.elyx" as checks
+
+export Preferences = frame {
+  doc: "Native controls: a single 200 ms sliding/resizing selection pill per group. This static reference shows the settled position; normal content uses stacks.",
+  width: 530px,
+  layout: {direction: .column, item-gap: 20px},
+  children: [time, energy, activities, more, options, deal, hint],
+
+  time = frame {
+    width: 100%,
+    layout: {direction: .column, item-gap: 12px},
+    children: [heading, choices],
+
+    heading = frame {
+      layout: {align-items: .center, item-gap: 12px},
+      children: [number, label],
+
+      number = text {
+        fill: c.ui.muted,
+        contents: "01",
+        font-size: 12,
+        font-family: typography.family.interface
+      }
+
+      label = text {
+        fill: c.ui.text,
+        contents: "How much time do you have?",
+        font-size: 15,
+        font-family: typography.family.interface,
+        font-style: "Bold"
+      }
+    }
+
+    choices = frame {
+      width: 100%,
+      layout: {item-gap: 4px},
+      fill: c.ui.subtle,
+      corner-radius: 8px,
+      padding: 4px,
+      children: [m15, m30, m45, m60, m120, unlimited],
+
+      m15 = frame : buttons.Button {
+        width: 100%,
+        height: 40px,
+        padding-top: 0px,
+        padding-left: 8px,
+        padding-bottom: 0px,
+        padding-right: 8px,
+        border[0]: .nil,
+        fill[0].color: c.ui.subtle,
+
+        label {
+          label {
+            contents: "15 min"
+          }
+        }
+      }
+
+      m30 = frame : buttons.Button {
+        width: 100%,
+        height: 40px,
+        padding-top: 0px,
+        padding-left: 8px,
+        padding-bottom: 0px,
+        padding-right: 8px,
+        border[0]: .nil,
+
+        label {
+          label {
+            contents: "30 min"
+          }
+        }
+      }
+
+      m45 = frame : buttons.Button {
+        width: 100%,
+        height: 40px,
+        padding-top: 0px,
+        padding-left: 8px,
+        padding-bottom: 0px,
+        padding-right: 8px,
+        border[0]: .nil,
+        fill[0].color: c.ui.subtle,
+
+        label {
+          label {
+            contents: "45 min"
+          }
+        }
+      }
+
+      m60 = frame : buttons.Button {
+        width: 100%,
+        height: 40px,
+        padding-top: 0px,
+        padding-left: 8px,
+        padding-bottom: 0px,
+        padding-right: 8px,
+        border[0]: .nil,
+        fill[0].color: c.ui.subtle,
+
+        label {
+          label {
+            contents: "1 hour"
+          }
+        }
+      }
+
+      m120 = frame : buttons.Button {
+        width: 100%,
+        height: 40px,
+        padding-top: 0px,
+        padding-left: 8px,
+        padding-bottom: 0px,
+        padding-right: 8px,
+        border[0]: .nil,
+        fill[0].color: c.ui.subtle,
+
+        label {
+          label {
+            contents: "2 hours"
+          }
+        }
+      }
+
+      unlimited = frame : buttons.Button {
+        width: 100%,
+        height: 40px,
+        padding-top: 0px,
+        padding-left: 8px,
+        padding-bottom: 0px,
+        padding-right: 8px,
+        border[0]: .nil,
+        fill[0].color: c.ui.subtle,
+
+        label {
+          leading {
+            contents: infinityIcon,
+            display: .visible
+          }
+
+          label {
+            contents: ""
+          }
+        }
+      }
+    }
+  }
+
+  energy = frame {
+    width: 100%,
+    layout: {direction: .column, item-gap: 12px},
+    children: [heading, choices, brain],
+
+    heading = frame {
+      layout: {align-items: .center, item-gap: 12px},
+      children: [number, label],
+
+      number = text {
+        fill: c.ui.muted,
+        contents: "02",
+        font-size: 12,
+        font-family: typography.family.interface
+      }
+
+      label = text {
+        fill: c.ui.text,
+        contents: "How much energy do you have?",
+        font-size: 15,
+        font-family: typography.family.interface,
+        font-style: "Bold"
+      }
+    }
+
+    choices = frame {
+      width: 100%,
+      layout: {item-gap: 4px},
+      fill: c.ui.subtle,
+      corner-radius: 8px,
+      padding: 4px,
+      children: [low, medium, high],
+
+      low = frame : buttons.Button {
+        width: 100%,
+        height: 40px,
+        padding-top: 0px,
+        padding-left: 8px,
+        padding-bottom: 0px,
+        padding-right: 8px,
+        border[0]: .nil,
+
+        label {
+          leading {
+            contents: batteryLowIcon,
+            display: .visible
+          }
+
+          label {
+            contents: "Low"
+          }
+        }
+      }
+
+      medium = frame : buttons.Button {
+        width: 100%,
+        height: 40px,
+        padding-top: 0px,
+        padding-left: 8px,
+        padding-bottom: 0px,
+        padding-right: 8px,
+        border[0]: .nil,
+        fill[0].color: c.ui.subtle,
+
+        label {
+          leading {
+            contents: batteryMediumIcon,
+            display: .visible
+          }
+
+          label {
+            contents: "Medium"
+          }
+        }
+      }
+
+      high = frame : buttons.Button {
+        width: 100%,
+        height: 40px,
+        padding-top: 0px,
+        padding-left: 8px,
+        padding-bottom: 0px,
+        padding-right: 8px,
+        border[0]: .nil,
+        fill[0].color: c.ui.subtle,
+
+        label {
+          leading {
+            contents: batteryHighIcon,
+            display: .visible
+          }
+
+          label {
+            contents: "High"
+          }
+        }
+      }
+    }
+
+    brain = frame {
+      width: 100%,
+      layout: {align-items: .center, item-gap: 16px},
+      fill: c.ui.subtle,
+      corner-radius: 9px,
+      padding: 16px,
+      children: [glyph, copy, toggle],
+
+      glyph = icon {
+        width: 44px,
+        height: 44px,
+        fill: c.ui.text,
+        contents: brainIcon
+      }
+
+      copy = frame {
+        width: 100%,
+        layout: {direction: .column, item-gap: 4px},
+        children: [title, note],
+
+        title = text {
+          fill: c.ui.text,
+          contents: "Brain dead",
+          font-size: 15,
+          font-family: typography.family.interface,
+          font-style: "Semibold"
+        }
+
+        note = text {
+          fill: c.ui.muted,
+          contents: "Less thinking, less remembering.",
+          font-size: 12,
+          font-family: typography.family.interface
+        }
+      }
+
+      toggle = frame : switches.Switch {}
+    }
+  }
+
+  activities = frame {
+    width: 100%,
+    layout: {direction: .column, item-gap: 12px},
+    children: [heading, choices],
+
+    heading = frame {
+      layout: {align-items: .center, item-gap: 12px},
+      children: [number, label],
+
+      number = text {
+        fill: c.ui.muted,
+        contents: "03",
+        font-size: 12,
+        font-family: typography.family.interface
+      }
+
+      label = text {
+        fill: c.ui.text,
+        contents: "What do you feel like doing?",
+        font-size: 15,
+        font-family: typography.family.interface,
+        font-style: "Bold"
+      }
+    }
+
+    choices = frame {
+      width: 100%,
+      layout: {item-gap: 7px, wrap: .true, line-gap: 7px},
+      children: [
+        anything,
+        shoot,
+        fly,
+        drive,
+        explore,
+        horse,
+        cardsPlay,
+        multiplayer,
+        endless,
+        weird
+      ],
+
+      anything = frame : buttons.Button {
+        height: 40px,
+        padding-top: 0px,
+        padding-left: 16px,
+        padding-bottom: 0px,
+        padding-right: 16px,
+        fill[0].color: c.ui.subtle,
+
+        label {
+          label {
+            contents: "Anything"
+          }
+        }
+      }
+
+      shoot = frame : buttons.Button {
+        height: 40px,
+        padding-top: 0px,
+        padding-left: 16px,
+        padding-bottom: 0px,
+        padding-right: 16px,
+
+        label {
+          leading {
+            contents: shootIcon,
+            display: .visible
+          }
+
+          label {
+            contents: "Shoot"
+          }
+        }
+      }
+
+      fly = frame : buttons.Button {
+        height: 40px,
+        padding-top: 0px,
+        padding-left: 16px,
+        padding-bottom: 0px,
+        padding-right: 16px,
+
+        label {
+          leading {
+            contents: flyIcon,
+            display: .visible
+          }
+
+          label {
+            contents: "Fly"
+          }
+        }
+      }
+
+      drive = frame : buttons.Button {
+        height: 40px,
+        padding-top: 0px,
+        padding-left: 16px,
+        padding-bottom: 0px,
+        padding-right: 16px,
+
+        label {
+          leading {
+            contents: driveIcon,
+            display: .visible
+          }
+
+          label {
+            contents: "Drive"
+          }
+        }
+      }
+
+      explore = frame : buttons.Button {
+        height: 40px,
+        padding-top: 0px,
+        padding-left: 16px,
+        padding-bottom: 0px,
+        padding-right: 16px,
+
+        label {
+          leading {
+            contents: exploreIcon,
+            display: .visible
+          }
+
+          label {
+            contents: "Explore"
+          }
+        }
+      }
+
+      horse = frame : buttons.Button {
+        height: 40px,
+        padding-top: 0px,
+        padding-left: 16px,
+        padding-bottom: 0px,
+        padding-right: 16px,
+
+        label {
+          leading {
+            contents: horseIcon,
+            display: .visible
+          }
+
+          label {
+            contents: "Ride a horse"
+          }
+        }
+      }
+
+      cardsPlay = frame : buttons.Button {
+        height: 40px,
+        padding-top: 0px,
+        padding-left: 16px,
+        padding-bottom: 0px,
+        padding-right: 16px,
+
+        label {
+          leading {
+            contents: cardsPlayIcon,
+            display: .visible
+          }
+
+          label {
+            contents: "Play cards"
+          }
+        }
+      }
+
+      multiplayer = frame : buttons.Button {
+        height: 40px,
+        padding-top: 0px,
+        padding-left: 16px,
+        padding-bottom: 0px,
+        padding-right: 16px,
+
+        label {
+          leading {
+            contents: multiplayerIcon,
+            display: .visible
+          }
+
+          label {
+            contents: "Multiplayer"
+          }
+        }
+      }
+
+      endless = frame : buttons.Button {
+        height: 40px,
+        padding-top: 0px,
+        padding-left: 16px,
+        padding-bottom: 0px,
+        padding-right: 16px,
+
+        label {
+          leading {
+            contents: endlessIcon,
+            display: .visible
+          }
+
+          label {
+            contents: "Never-ending"
+          }
+        }
+      }
+
+      weird = frame : buttons.Button {
+        height: 40px,
+        padding-top: 0px,
+        padding-left: 16px,
+        padding-bottom: 0px,
+        padding-right: 16px,
+
+        label {
+          leading {
+            contents: weirdIcon,
+            display: .visible
+          }
+
+          label {
+            contents: "Weird"
+          }
+        }
+      }
+    }
+  }
+
+  more = frame : buttons.Button {
+    height: 40px,
+    border[0]: .nil,
+
+    label {
+      leading {
+        contents: chevronIcon,
+        display: .visible
+      }
+
+      label {
+        contents: "More options"
+      }
+    }
+  }
+
+  options = frame {
+    width: 100%,
+    display: .none,
+    layout: {direction: .column, item-gap: 16px},
+    children: [devices, scope, installed, favorites, note],
+
+    devices = frame {
+      layout: {align-items: .center, item-gap: 8px},
+      children: [label, pc, deck],
+
+      label = text {
+        fill: c.ui.muted,
+        contents: "Playing on",
+        font-size: 12,
+        font-family: typography.family.interface
+      }
+
+      pc = frame : buttons.Button {
+        height: 40px,
+        fill[0].color: c.ui.subtle,
+
+        label {
+          label {
+            contents: "PC"
+          }
+        }
+      }
+
+      deck = frame : buttons.Button {
+        height: 40px,
+
+        label {
+          label {
+            contents: "Steam Deck"
+          }
+        }
+      }
+    }
+
+    scope = frame {
+      layout: {item-gap: 8px},
+      children: [any, unplayed, playing],
+
+      any = frame : buttons.Button {
+        height: 40px,
+        fill[0].color: c.ui.subtle,
+
+        label {
+          label {
+            contents: "All eligible games"
+          }
+        }
+      }
+
+      unplayed = frame : buttons.Button {
+        height: 40px,
+
+        label {
+          label {
+            contents: "Unplayed"
+          }
+        }
+      }
+
+      playing = frame : buttons.Button {
+        height: 40px,
+
+        label {
+          label {
+            contents: "Playing"
+          }
+        }
+      }
+    }
+
+    installed = frame : checks.Checkbox {
+      label {
+        contents: "Installed on this setup only"
+      }
+    }
+
+    favorites = frame : checks.Checkbox {
+      label {
+        contents: "Favorites only"
+      }
+    }
+
+    note = text {
+      width: 100%,
+      fill: c.ui.muted,
+      contents: "Installation checks apply to this computer. Remote setup installs stay unknown.",
+      font-size: 12,
+      font-family: typography.family.interface
+    }
+  }
+
+  deal = frame : buttons.Primary {
+    width: 100%,
+    height: 40px,
+
+    label {
+      leading {
+        contents: cardsIcon,
+        display: .visible
+      }
+
+      label {
+        contents: "Deal me 3"
+      }
+    }
+  }
+
+  hint = text {
+    fill: c.ui.muted,
+    contents: "Up to three choices. One optional reshuffle.",
+    font-size: 12,
+    font-family: typography.family.interface
+  }
+}
+
+@variant
+export BrainDead = frame : Preferences {
+  left: 660px,
+
+  energy {
+    brain {
+      @with-variant(switches.On)
+      toggle {
+        left: .nil
+      }
+    }
+  }
+}
+
+@variant
+export MoreOptions = frame : Preferences {
+  left: 1320px,
+
+  more {
+    label {
+      leading {
+        contents: downIcon
+      }
+    }
+  }
+
+  options {
+    display: .visible
+  }
+}

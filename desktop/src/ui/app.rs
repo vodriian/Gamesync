@@ -38,6 +38,7 @@ pub struct GameSyncApp {
     settings_view: Option<Entity<super::settings::SettingsView>>,
     grid: Entity<GameGrid>,
     home: Entity<HomeView>,
+    play_now: Entity<super::play_now::PlayNowView>,
     sidebar: Entity<LibrarySidebar>,
     sidebar_shown: bool,
     sidebar_motion: super::motion::Motion,
@@ -103,8 +104,18 @@ impl GameSyncApp {
         let cache = LruImageCache::new(DEFAULT_BUDGET_BYTES, cx);
         let grid = cx.new(|cx| GameGrid::new(library.clone(), cache.clone(), cx));
         let home = cx.new(|cx| HomeView::new(library.clone(), cache.clone(), cx));
-        let sidebar = cx.new(|cx| LibrarySidebar::new(library.clone(), sync.clone(), cx));
-        let detail = cx.new(|cx| DetailPanel::new(library.clone(), cache.clone(), cx));
+        let play_now = cx.new(|cx| {
+            super::play_now::PlayNowView::new(
+                library.clone(),
+                cache.clone(),
+                settings.active_play.clone(),
+                cx,
+            )
+        });
+        let sidebar =
+            cx.new(|cx| LibrarySidebar::new(library.clone(), sync.clone(), play_now.clone(), cx));
+        let detail =
+            cx.new(|cx| DetailPanel::new(library.clone(), cache.clone(), play_now.clone(), cx));
         let search = cx.new(|cx| InputState::new(window, cx).placeholder("Search games or tags…"));
         let search_subscription = cx.subscribe(&search, |this, search, event, cx| {
             if matches!(event, InputEvent::Change) {
@@ -120,7 +131,11 @@ impl GameSyncApp {
                 this.detail_shown = false;
                 this.grid
                     .update(cx, |grid, _| grid.preserve_viewport(false));
-                this.restore_grid_focus = true;
+                if this.library.read(cx).play_now {
+                    this.play_now.update(cx, |view, cx| view.restore_focus(cx));
+                } else {
+                    this.restore_grid_focus = true;
+                }
                 cx.notify();
             }
             if let super::editor::EditorEvent::ShowScope(scope) = event {
@@ -152,6 +167,17 @@ impl GameSyncApp {
             this.detail.update(cx, |detail, cx| detail.present(cx));
             cx.notify();
         });
+        let play_subscription = cx.subscribe(
+            &play_now,
+            |this, _, event: &super::play_now::OpenGame, cx| {
+                this.library
+                    .update(cx, |lib, _| lib.select_from_home(event.0));
+                this.clear_search = true;
+                this.detail_shown = true;
+                this.detail.update(cx, |detail, cx| detail.present_open(cx));
+                cx.notify();
+            },
+        );
         let bulk_subscription =
             cx.subscribe(&grid, |this, _, event: &super::grid::BulkSaved, cx| {
                 this.sidebar
@@ -161,8 +187,8 @@ impl GameSyncApp {
             let (section, in_wishlist) = {
                 let lib = library.read(cx);
                 (
-                    (!lib.home).then(|| lib.scope.view_key()),
-                    !lib.home && lib.scope == crate::model::Scope::Wishlist,
+                    (!lib.home && !lib.play_now).then(|| lib.scope.view_key()),
+                    !lib.home && !lib.play_now && lib.scope == crate::model::Scope::Wishlist,
                 )
             };
             if section != this.active_section {
@@ -197,6 +223,7 @@ impl GameSyncApp {
             settings_view: None,
             grid,
             home,
+            play_now,
             sidebar,
             sidebar_shown: true,
             sidebar_motion: super::motion::Motion::new(1.),
@@ -216,6 +243,7 @@ impl GameSyncApp {
             _subscriptions: vec![
                 grid_subscription,
                 home_subscription,
+                play_subscription,
                 bulk_subscription,
                 search_subscription,
                 library_subscription,
@@ -297,6 +325,16 @@ impl GameSyncApp {
             cx.notify();
             return false;
         }
+        if self.play_now.read(cx).busy() {
+            self.library.update(cx, |lib, cx| {
+                lib.show_play_now();
+                cx.notify();
+            });
+            self.notice =
+                "Finish saving or discard your Play now profile changes before closing.".into();
+            cx.notify();
+            return false;
+        }
         if self.detail.read(cx).busy(cx) {
             self.detail_shown = true;
             self.grid.update(cx, |grid, _| grid.preserve_viewport(true));
@@ -321,7 +359,10 @@ impl GameSyncApp {
 
     fn toolbar(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let home = self.library.read(cx).home;
-        let mut title = if home {
+        let play_now = self.library.read(cx).play_now;
+        let mut title = if play_now {
+            "Play now".into()
+        } else if home {
             "Home".into()
         } else {
             self.library
@@ -357,7 +398,12 @@ impl GameSyncApp {
                     .child(title),
             )
             // Home is not a list of games, so views, filters, and search do not apply.
-            .when(!home, |toolbar| toolbar.child(self.library_controls(cx)))
+            .when(play_now, |toolbar| {
+                toolbar.child(self.play_now.update(cx, |view, cx| view.toolbar(cx)))
+            })
+            .when(!home && !play_now, |toolbar| {
+                toolbar.child(self.library_controls(cx))
+            })
     }
 
     fn apply_view(&mut self, view: LibraryView, cx: &mut Context<Self>) {
@@ -483,7 +529,7 @@ impl Render for GameSyncApp {
             window.set_window_title(&title);
             self.window_title = title;
         }
-        if self.detail_shown {
+        if self.detail_shown && !self.detail.read(cx).is_overlay() {
             return v_flex()
                 .size_full()
                 .bg(cx.theme().sidebar)
@@ -510,8 +556,11 @@ impl Render for GameSyncApp {
         };
         let sidebar_width = px(255. * sidebar_progress);
         let home = self.library.read(cx).home;
+        let play_now = self.library.read(cx).play_now;
         let library_surface = div().size_full().map(|surface| {
-            if home {
+            if play_now {
+                surface.child(self.play_now.clone())
+            } else if home {
                 surface.child(self.home.clone())
             } else {
                 surface.child(self.grid.clone())
@@ -579,7 +628,7 @@ impl Render for GameSyncApp {
                         )
                     }),
             )
-            .when(!home, |content| {
+            .when(!home && !play_now, |content| {
                 content.child(
                     div()
                         .absolute()
@@ -669,6 +718,10 @@ impl Render for GameSyncApp {
                     })
                     .child(gpui_component::TitleBar::new().border_b_0()),
             )
+            .when(self.detail_shown, |shell| {
+                shell.child(div().absolute().inset_0().child(self.detail.clone()))
+            })
+            .children(gpui_component::Root::render_dialog_layer(window, cx))
             .into_any_element()
     }
 }

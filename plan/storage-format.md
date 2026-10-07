@@ -60,7 +60,8 @@ library definitions share the same file publication and conflict checks.
 Definitions contain the library name, default status key, and ordered statuses.
 Each status has a stable key, label, and recommendation eligibility. Start with
 Backlog, Want to play, Playing, Paused, Completed, and Dropped. The first three
-are eligible for recommendations; ownership filtering comes later.
+are eligible for recommendations. Play now also requires ownership and excludes
+hidden, deleted, and personally excluded games before ranking.
 
 Edits can add statuses, change labels, reorder them, change eligibility, and choose
 a defined default. Keys use 1–64 lowercase ASCII letters, digits, underscores,
@@ -106,6 +107,44 @@ Keys use macOS Keychain or Linux Secret Service. They never enter library files.
 ## Hidden games
 
 Personal `hidden` is an additive boolean with a default of false. It controls
-browsing only; it is separate from the `deleted` tombstone. Steam sync preserves
+browsing and recommendation eligibility; it is separate from the `deleted` tombstone. Steam sync preserves
 it with other personal fields. Hidden games remain loaded so the Hidden games
 scope can show and unhide them. The sidebar visibility preference is device-local.
+
+## Play now
+
+These optional schema-1 fields do not rewrite older records on read:
+
+- `game.personal.play_now` holds a manual `profile`, separate `saved` and
+  `excluded` flags, and up to 20 explicit `recent` choices per game. Default
+  values are omitted. Saved picks do not change status or favorites. Exclusion
+  affects recommendations without hiding the game from the library.
+- A profile holds optional cognitive, mechanical, narrative, and onboarding
+  effort; minimum/ideal session minutes; startup minutes; stopping flexibility;
+  and activities. Unknown personal fields use automatic values. An empty
+  activity list is an intentional correction. Session values must be 1–1440
+  minutes, startup 0–120 minutes, and minimum cannot exceed ideal.
+- A recent choice stores a timestamp, session UUID, input context, and launch
+  outcome: `not_requested`, `accepted`, or `failed`. Accepted means that the
+  OS accepted a Steam URI request, not that a game ran. Choices never change
+  Steam playtime or personal status. Generated hands and temporary dismissals
+  stay in memory. An optional `finished_at` timestamp records Done playing;
+  it must be at or after the start. Retries and completion replace the matching
+  session UUID, preserving the original start time and the 20-entry bound.
+- Device settings hold an optional `active_play` (session/library/game IDs,
+  title snapshot, start time, and context). It does not sync. It restores the
+  timer after restart and remains finishable if the game disappears.
+- `game.recommendation_analysis` is a separate optional cached estimate with
+  game UUID, profile version, provider/model, metadata fingerprint, timestamp,
+  confidence, and profile. Validate identity, version, bounds, and fingerprint
+  before use. Stale metadata does not supply current profile values. Provider
+  requests are deferred; this field defines the cache contract only.
+- Resolve each field from a manual correction, then current validated cached
+  analysis, then a conservative local estimate, then unknown. Keep these
+  sources separate. Credentials and device installation evidence do not enter
+  the profile.
+
+Personal edits use the existing guarded game revision and recoverable write
+path. Operation sync projects `personal.play_now` as one validated field, so
+concurrent edits to different recommendation values can require conflict
+review. Cached analysis is not projected into operation sync.

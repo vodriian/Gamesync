@@ -1,0 +1,38 @@
+// Native thumb slides in 120 ms. Keyboard and Reduce motion snap.
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+
+export Switch = frame {
+  doc: "36 x 20 track in a 44 x 40 target. Thumb slides in 120 ms in native UI; keyboard and Reduce motion snap.",
+  width: 44px,
+  height: 40px,
+  layout: {justify-content: .center, align-items: .center},
+  children: track,
+
+  track = frame {
+    width: 36px,
+    height: 20px,
+    layout: {align-items: .center},
+    fill: c.ui.border,
+    corner-radius: 10px,
+    padding: 2px,
+    children: thumb,
+
+    thumb = frame {
+      width: 16px,
+      height: 16px,
+      fill: c.ui.text,
+      corner-radius: 8px
+    }
+  }
+}
+
+@variant
+export On = frame : Switch {
+  left: 100px,
+
+  track {
+    fill[0].color: c.ui.accent,
+    layout.justify-content: .end
+  }
+}

@@ -11,7 +11,7 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 | [App plan](app-plan.md) | Scope, architecture, data rules, milestones, and acceptance checks |
 | [Guardrails](guardrails.md) | Code quality, tests, writing, and efficient agent work |
 | [Design](design.md) | Eagle GUI reference and design rules |
-| [Latest log](logs/2026-10-06.md) | Landscape covers, Best on rules, ProtonDB enrichment, and Elyx designs |
+| [Latest log](logs/2026-10-07-play-now-delivery.md) | Play now delivery, Elyx states, and final checks |
 | [Book details log](logs/2026-10-05.md) | Best on demo prototype and book details prototype |
 | [Sync log](logs/2026-09-29.md) | Sync implementation, initial live check, and library UI fixes |
 | [UI log](logs/2026-09-28.md) | Omarchy theme, 3D card POC, Kanban board, and macOS UI fixes |
@@ -22,6 +22,11 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 | [Kanban board](kanban-board.md) | Status board, manual order, and status editing |
 | [Dashboard and smart collections](dashboard-tags.md) | Steam data, Smart collections, Home dashboard, and wishlist prices |
 | [Best on](best-on.md) | Fit from Steam evidence, your rules, and optional ProtonDB data |
+| [Play now](play-now.md) | Recommendation requirements, native offline implementation, and HTML reference |
+| [Play now native log](logs/2026-10-06-play-now-native.md) | Native implementation, persistence, and validation |
+| [Play now session log](logs/2026-10-07-play-now-sessions.md) | Timed sessions, card overlay, and updated test package |
+| [Play now controls log](logs/2026-10-07-play-now-controls.md) | Preference motion and the Brain dead switch |
+| [Play now prototype log](logs/2026-10-06-play-now.md) | Source findings, browser checks, and prototype limits |
 | [Data sync](data-sync.md) | Personal data, settings, and encrypted keys across devices |
 
 ## Current state
@@ -34,8 +39,9 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 - Cross-platform view, board, settings, and wishlist fixes merged in PR #3.
 - Prior branch: `data-sync-mode` (merged into `main` in PR #4) includes [data sync](data-sync.md) steps 1–5, library UI fixes, and the Elyx design workspace.
 - Initial macOS/Omarchy Dropbox check is logged; full cross-device acceptance remains pending.
-- Hugeicons UI merged in PR #5. Working branch: `vova/elyx-workspace-cleanup` consolidates the design workspace and shared icon source.
+- Hugeicons UI merged in PR #5. Book details, Best on, and the shared Elyx workspace merged in PR #6.
 - Use the [Elyx workspace](../Design/README.md) as the design source for the next UI improvements.
+- Native offline Play now is implemented on `vova/play-now-native`; AI enrichment remains deferred.
 - Runtime targets: macOS and Linux. Windows follows after sync works between them.
 - Existing React/Express app: retained as a reference.
 
@@ -48,26 +54,21 @@ experimental Blade/Vulkan card projection for Cards and focused fronts.
 
 ## Next task
 
-Branch `details-card-v2` (pull request open) opens focused cards like a
-book with landscape covers, and includes all Best on work: Steam evidence,
-rules, and ProtonDB enrichment. See
-[physical cards](physical-cards.md#book-details-prototype) and
-[Best on](best-on.md#rules-and-enrichment). It replaces the
-`best-on-smart-collection` branch.
-
-Use Elyx to replace the UI icons, polish cards, and polish Settings. Record
-accepted design changes before implementing them in GPUI.
+Review and test `vova/play-now-native`. It adds offline recommendations,
+editable game profiles, modal details, timed sessions, and sliding preference
+controls. The PR targets `windows-test-build`, which supplies the earlier
+Windows and AI Settings work. AI recommendation enrichment is a later step.
+See [Play now](play-now.md) and the
+[Elyx states](../Design/design/screens/play-now/PlayNow.elyx).
 
 Complete [data sync](data-sync.md) step 6 acceptance checks across macOS and
 Omarchy, including Dropbox and Google Drive. Windows and compaction remain
-later steps. Tuning fields and the offline feeling/time picker remain deferred
-in [Dashboard and smart collections](dashboard-tags.md).
+later steps. The offline picker now follows [Play now](play-now.md). AI enrichment remains deferred.
 
 Collections, core Settings, and Steam sync are implemented. See
 [Collections, Settings, and Steam](collections-settings-steam.md) for use and limits.
 Run an account sync with a key entered in Settings. Verify Linux UI and secure
-storage before cross-platform release. Then add tuning fields and the offline
-feeling/time picker. The user moved collections and Steam ahead of that work.
+storage before cross-platform release. Then validate the offline Play now profiles and add opt-in AI enrichment.
 
 ## Maintain these documents
 

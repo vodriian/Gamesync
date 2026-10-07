@@ -6,6 +6,7 @@ pub mod library;
 pub mod library_reader;
 pub mod prices;
 pub mod protondb;
+pub mod recommendations;
 pub mod record_store;
 pub mod records;
 mod revision_store;

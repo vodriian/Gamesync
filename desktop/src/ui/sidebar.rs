@@ -17,6 +17,7 @@ mod smart;
 pub struct LibrarySidebar {
     library: Entity<Library>,
     sync: Entity<crate::sync_runtime::SyncState>,
+    play_now: Entity<super::play_now::PlayNowView>,
     collections_open: bool,
     collections_motion: super::motion::Motion,
     focus: gpui::FocusHandle,
@@ -33,13 +34,16 @@ impl LibrarySidebar {
     pub fn new(
         library: Entity<Library>,
         sync: Entity<crate::sync_runtime::SyncState>,
+        play_now: Entity<super::play_now::PlayNowView>,
         cx: &mut Context<Self>,
     ) -> Self {
         cx.observe(&library, |_, _, cx| cx.notify()).detach();
         cx.observe(&sync, |_, _, cx| cx.notify()).detach();
+        cx.observe(&play_now, |_, _, cx| cx.notify()).detach();
         Self {
             library,
             sync,
+            play_now,
             collections_open: true,
             collections_motion: super::motion::Motion::new(1.),
             focus: cx.focus_handle(),
@@ -71,7 +75,9 @@ impl LibrarySidebar {
 
     fn row(&self, scope: Scope, icon: SidebarIcon, cx: &mut Context<Self>) -> impl IntoElement {
         let count = self.library.read(cx).count(&scope);
-        let selected = !self.library.read(cx).home && self.library.read(cx).scope == scope;
+        let selected = !self.library.read(cx).home
+            && !self.library.read(cx).play_now
+            && self.library.read(cx).scope == scope;
         self.scope_row(scope, Some(Icon::new(icon.selected(selected))), count, cx)
     }
 
@@ -83,7 +89,9 @@ impl LibrarySidebar {
         count: usize,
         cx: &mut Context<Self>,
     ) -> gpui::Stateful<gpui::Div> {
-        let active = !self.library.read(cx).home && self.library.read(cx).scope == scope;
+        let active = !self.library.read(cx).home
+            && !self.library.read(cx).play_now
+            && self.library.read(cx).scope == scope;
         let label = match &scope {
             Scope::Smart(gamesync_desktop::smart::SmartRule::Rating(band)) => {
                 smart::rating_label(*band)
@@ -126,6 +134,27 @@ impl LibrarySidebar {
             }))
             .child(Icon::new(SidebarIcon::Home.selected(active)).size(px(18.)))
             .child(div().flex_1().child("Home"))
+    }
+
+    fn play_now_row(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let active = self.library.read(cx).play_now;
+        self.row_base("play-now".into(), active, cx)
+            .on_click(cx.listener(|this, _, _, cx| {
+                this.library.update(cx, |lib, cx| {
+                    lib.show_play_now();
+                    cx.notify();
+                });
+            }))
+            .child(Icon::new(crate::assets::PlayIcon("cards-02")).size(px(18.)))
+            .child(div().flex_1().child("Play now"))
+            .when_some(self.play_now.read(cx).timer_label(), |row, timer| {
+                row.child(
+                    h_flex()
+                        .gap_1()
+                        .child(Icon::new(crate::assets::PlayIcon("hourglass")).size(px(14.)))
+                        .child(div().text_xs().font_family("monospace").child(timer)),
+                )
+            })
     }
 
     fn row_base(
@@ -176,6 +205,7 @@ impl Render for LibrarySidebar {
                     .pt_4()
                     .gap(px(2.))
                     .child(self.home_row(cx))
+                    .child(self.play_now_row(cx))
                     .child(self.row(Scope::All, SidebarIcon::AllGames, cx))
                     .child(self.row(Scope::Favorites, SidebarIcon::Favorites, cx))
                     .child(self.row(Scope::Wishlist, SidebarIcon::Wishlist, cx))

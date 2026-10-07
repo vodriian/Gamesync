@@ -23,3 +23,5 @@ mod filmstrip;
 
 mod panel;
 mod price;
+
+mod play_now;

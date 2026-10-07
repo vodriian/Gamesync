@@ -39,7 +39,7 @@ pub(crate) fn is_synced(key: &FieldKey) -> bool {
 /// Fields read from `personal` of a game record. Other personal fields,
 /// including unknown ones, use their own key. `cover` is a device path into
 /// local media and does not sync until media files sync.
-pub(crate) const PERSONAL_FIELDS: [&str; 8] = [
+pub(crate) const PERSONAL_FIELDS: [&str; 9] = [
     "status",
     "rating",
     "favorite",
@@ -48,6 +48,7 @@ pub(crate) const PERSONAL_FIELDS: [&str; 8] = [
     "notes",
     "description",
     "board_rank",
+    "play_now",
 ];
 
 /// `games` is the loaded library, which leaves out archived games, so an
@@ -201,6 +202,14 @@ fn project_game(
             target,
             &format!("personal.collections.{id}"),
             json!(true),
+        );
+    }
+    if !personal.play_now.is_default() {
+        set(
+            fields,
+            target,
+            "personal.play_now",
+            json!(personal.play_now),
         );
     }
     project_extra(fields, target, "personal.", &personal.extra);
