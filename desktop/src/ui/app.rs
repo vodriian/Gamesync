@@ -38,6 +38,7 @@ pub struct GameSyncApp {
     settings_view: Option<Entity<super::settings::SettingsView>>,
     grid: Entity<GameGrid>,
     home: Entity<HomeView>,
+    play_now: Entity<super::play_now::PlayNowView>,
     sidebar: Entity<LibrarySidebar>,
     sidebar_shown: bool,
     sidebar_motion: super::motion::Motion,
@@ -96,6 +97,8 @@ impl GameSyncApp {
         let library = cx.new(|_| library);
         let best_on = cx.new(|cx| super::best_on_state::BestOnState::new(library.clone(), cx));
         cx.set_global(super::best_on_state::BestOnGlobal(best_on));
+        let analysis = cx.new(|_| super::analysis_job::AnalysisJob::new(library.clone()));
+        cx.set_global(super::analysis_job::AnalysisGlobal(analysis));
         let sync = cx.new(|_| crate::sync_runtime::SyncState {
             folder: settings.sync_folder.clone(),
             ..Default::default()
@@ -103,8 +106,18 @@ impl GameSyncApp {
         let cache = LruImageCache::new(DEFAULT_BUDGET_BYTES, cx);
         let grid = cx.new(|cx| GameGrid::new(library.clone(), cache.clone(), cx));
         let home = cx.new(|cx| HomeView::new(library.clone(), cache.clone(), cx));
-        let sidebar = cx.new(|cx| LibrarySidebar::new(library.clone(), sync.clone(), cx));
-        let detail = cx.new(|cx| DetailPanel::new(library.clone(), cache.clone(), cx));
+        let play_now = cx.new(|cx| {
+            super::play_now::PlayNowView::new(
+                library.clone(),
+                cache.clone(),
+                settings.active_play.clone(),
+                cx,
+            )
+        });
+        let sidebar =
+            cx.new(|cx| LibrarySidebar::new(library.clone(), sync.clone(), play_now.clone(), cx));
+        let detail =
+            cx.new(|cx| DetailPanel::new(library.clone(), cache.clone(), play_now.clone(), cx));
         let search = cx.new(|cx| InputState::new(window, cx).placeholder("Search games or tags…"));
         let search_subscription = cx.subscribe(&search, |this, search, event, cx| {
             if matches!(event, InputEvent::Change) {
@@ -120,7 +133,11 @@ impl GameSyncApp {
                 this.detail_shown = false;
                 this.grid
                     .update(cx, |grid, _| grid.preserve_viewport(false));
-                this.restore_grid_focus = true;
+                if this.library.read(cx).play_now {
+                    this.play_now.update(cx, |view, cx| view.restore_focus(cx));
+                } else {
+                    this.restore_grid_focus = true;
+                }
                 cx.notify();
             }
             if let super::editor::EditorEvent::ShowScope(scope) = event {
@@ -152,6 +169,17 @@ impl GameSyncApp {
             this.detail.update(cx, |detail, cx| detail.present(cx));
             cx.notify();
         });
+        let play_subscription = cx.subscribe(
+            &play_now,
+            |this, _, event: &super::play_now::OpenGame, cx| {
+                this.library
+                    .update(cx, |lib, _| lib.select_from_home(event.0));
+                this.clear_search = true;
+                this.detail_shown = true;
+                this.detail.update(cx, |detail, cx| detail.present_open(cx));
+                cx.notify();
+            },
+        );
         let bulk_subscription =
             cx.subscribe(&grid, |this, _, event: &super::grid::BulkSaved, cx| {
                 this.sidebar
@@ -161,8 +189,8 @@ impl GameSyncApp {
             let (section, in_wishlist) = {
                 let lib = library.read(cx);
                 (
-                    (!lib.home).then(|| lib.scope.view_key()),
-                    !lib.home && lib.scope == crate::model::Scope::Wishlist,
+                    (!lib.home && !lib.play_now).then(|| lib.scope.view_key()),
+                    !lib.home && !lib.play_now && lib.scope == crate::model::Scope::Wishlist,
                 )
             };
             if section != this.active_section {
@@ -197,6 +225,7 @@ impl GameSyncApp {
             settings_view: None,
             grid,
             home,
+            play_now,
             sidebar,
             sidebar_shown: true,
             sidebar_motion: super::motion::Motion::new(1.),
@@ -216,6 +245,7 @@ impl GameSyncApp {
             _subscriptions: vec![
                 grid_subscription,
                 home_subscription,
+                play_subscription,
                 bulk_subscription,
                 search_subscription,
                 library_subscription,
@@ -243,6 +273,8 @@ impl GameSyncApp {
         if app.omarchy_mode {
             app.start_omarchy_sync(cx);
         }
+        app._subscriptions
+            .push(cx.observe_window_activation(window, Self::window_activated));
         if let Some(path) = initial_path {
             app.open_folder(path, cx);
         }
@@ -297,6 +329,16 @@ impl GameSyncApp {
             cx.notify();
             return false;
         }
+        if self.play_now.read(cx).busy() {
+            self.library.update(cx, |lib, cx| {
+                lib.show_play_now();
+                cx.notify();
+            });
+            self.notice =
+                "Finish saving or discard your Play now profile changes before closing.".into();
+            cx.notify();
+            return false;
+        }
         if self.detail.read(cx).busy(cx) {
             self.detail_shown = true;
             self.grid.update(cx, |grid, _| grid.preserve_viewport(true));
@@ -319,9 +361,19 @@ impl GameSyncApp {
         }
     }
 
+    /// Native looks follow the system accent; pick up a change made in system settings.
+    pub fn window_activated(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if window.is_window_active() && theme::system_accent_changed(cx) {
+            theme::apply_choice(&self.theme, window, cx);
+        }
+    }
+
     fn toolbar(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let home = self.library.read(cx).home;
-        let mut title = if home {
+        let play_now = self.library.read(cx).play_now;
+        let mut title = if play_now {
+            "Play now".into()
+        } else if home {
             "Home".into()
         } else {
             self.library
@@ -331,9 +383,8 @@ impl GameSyncApp {
         if self.library.read(cx).best_on_demo {
             title.push_str(" · Demo");
         }
-        h_flex()
-            .h(px(68.))
-            .px_5()
+        let row = h_flex()
+            .h(px(super::chrome::toolbar_height(cx)))
             .gap_3()
             .child(
                 Button::new("sidebar-toggle")
@@ -357,7 +408,37 @@ impl GameSyncApp {
                     .child(title),
             )
             // Home is not a list of games, so views, filters, and search do not apply.
-            .when(!home, |toolbar| toolbar.child(self.library_controls(cx)))
+            .when(play_now, |toolbar| {
+                toolbar.child(self.play_now.update(cx, |view, cx| view.toolbar(cx)))
+            })
+            .when(!home && !play_now, |toolbar| {
+                toolbar.child(self.library_controls(cx))
+            });
+        if !crate::theme::macos_shell(cx) {
+            return row.px_5().into_any_element();
+        }
+        // Keep the leading items clear of the window controls while the sidebar is hidden.
+        let hidden = 1. - self.sidebar_progress(cx);
+        gpui_component::TitleBar::new()
+            .border_b_0()
+            .bg(gpui::transparent_black())
+            .h(px(super::chrome::TITLEBAR))
+            .pl(px(12. + (super::chrome::TRAFFIC_LIGHTS_END - 12.) * hidden))
+            .pr(px(12.))
+            .child(row.flex_1().min_w_0())
+            .into_any_element()
+    }
+
+    fn sidebar_progress(&self, cx: &gpui::App) -> f32 {
+        if super::motion::reduced(cx) {
+            if self.sidebar_shown {
+                1.
+            } else {
+                0.
+            }
+        } else {
+            self.sidebar_motion.value()
+        }
     }
 
     fn apply_view(&mut self, view: LibraryView, cx: &mut Context<Self>) {
@@ -483,11 +564,24 @@ impl Render for GameSyncApp {
             window.set_window_title(&title);
             self.window_title = title;
         }
-        if self.detail_shown {
+        if self.detail_shown && !self.detail.read(cx).is_overlay() {
+            // The native macOS detail page is flush; its header shares the titlebar row.
+            if crate::theme::macos_shell(cx) {
+                return v_flex()
+                    .size_full()
+                    .bg(super::card::tabletop(cx))
+                    .child(self.detail.clone())
+                    .children(gpui_component::Root::render_dialog_layer(window, cx))
+                    .into_any_element();
+            }
             return v_flex()
                 .size_full()
                 .bg(cx.theme().sidebar)
-                .child(gpui_component::TitleBar::new().border_b_0())
+                .child(
+                    gpui_component::TitleBar::new()
+                        .border_b_0()
+                        .h(px(super::chrome::TITLEBAR)),
+                )
                 .child(
                     div()
                         .flex_1()
@@ -499,19 +593,15 @@ impl Render for GameSyncApp {
                 .children(gpui_component::Root::render_dialog_layer(window, cx))
                 .into_any_element();
         }
-        let sidebar_progress = if super::motion::reduced(cx) {
-            if self.sidebar_shown {
-                1.
-            } else {
-                0.
-            }
-        } else {
-            self.sidebar_motion.value()
-        };
+        let sidebar_progress = self.sidebar_progress(cx);
         let sidebar_width = px(255. * sidebar_progress);
+        let macos_shell = crate::theme::macos_shell(cx);
         let home = self.library.read(cx).home;
+        let play_now = self.library.read(cx).play_now;
         let library_surface = div().size_full().map(|surface| {
-            if home {
+            if play_now {
+                surface.child(self.play_now.clone())
+            } else if home {
                 surface.child(self.home.clone())
             } else {
                 surface.child(self.grid.clone())
@@ -579,7 +669,7 @@ impl Render for GameSyncApp {
                         )
                     }),
             )
-            .when(!home, |content| {
+            .when(!home && !play_now, |content| {
                 content.child(
                     div()
                         .absolute()
@@ -629,12 +719,22 @@ impl Render for GameSyncApp {
                                 .w(px(255.))
                                 .h_full()
                                 .ml(sidebar_width - px(255.))
-                                .child(div().h(px(34.)).flex_shrink_0())
+                                .child(div().h(px(super::chrome::TITLEBAR)).flex_shrink_0())
                                 .child(div().flex_1().min_h_0().child(self.sidebar.clone())),
                         ),
                 )
             })
-            .child(
+            .child(if macos_shell {
+                // The toolbar shares the titlebar row, so content starts at the window top.
+                v_flex()
+                    .flex_1()
+                    .min_w_0()
+                    .h_full()
+                    .when(sidebar_progress > 0., |column| {
+                        column.border_l_1().border_color(cx.theme().sidebar_border)
+                    })
+                    .child(content)
+            } else {
                 v_flex()
                     .flex_1()
                     .min_w_0()
@@ -643,9 +743,10 @@ impl Render for GameSyncApp {
                     .child(
                         div()
                             .h(px(if cfg!(target_os = "macos") {
-                                34. * (1. - f32::from(sidebar_width) / 100.).clamp(0., 1.)
+                                super::chrome::TITLEBAR
+                                    * (1. - f32::from(sidebar_width) / 100.).clamp(0., 1.)
                             } else {
-                                34.
+                                super::chrome::TITLEBAR
                             }))
                             .flex_shrink_0(),
                     )
@@ -655,20 +756,33 @@ impl Render for GameSyncApp {
                             .min_h_0()
                             .p(px(8.))
                             .child(super::panel::content(content, cx)),
-                    ),
-            )
-            .child(
-                div()
-                    .absolute()
-                    .top_0()
-                    .left_0()
-                    .w(if cfg!(target_os = "macos") && sidebar_progress > 0. {
-                        sidebar_width.max(px(80.))
-                    } else {
-                        window.viewport_size().width
-                    })
-                    .child(gpui_component::TitleBar::new().border_b_0()),
-            )
+                    )
+            })
+            // The native toolbar is itself a drag area; cover only the sidebar row.
+            .when(!macos_shell || sidebar_progress > 0., |shell| {
+                shell.child(
+                    div()
+                        .absolute()
+                        .top_0()
+                        .left_0()
+                        .w(if macos_shell {
+                            sidebar_width
+                        } else if cfg!(target_os = "macos") && sidebar_progress > 0. {
+                            sidebar_width.max(px(80.))
+                        } else {
+                            window.viewport_size().width
+                        })
+                        .child(
+                            gpui_component::TitleBar::new()
+                                .border_b_0()
+                                .h(px(super::chrome::TITLEBAR)),
+                        ),
+                )
+            })
+            .when(self.detail_shown, |shell| {
+                shell.child(div().absolute().inset_0().child(self.detail.clone()))
+            })
+            .children(gpui_component::Root::render_dialog_layer(window, cx))
             .into_any_element()
     }
 }

@@ -135,7 +135,7 @@ impl Render for Collections {
             })
             .unwrap_or_default();
         v_flex().id("collections-window").size_full().overflow_y_scroll().p_6().gap_4().bg(cx.theme().background).text_color(cx.theme().foreground)
-            .child(gpui_component::TitleBar::new().border_b_0())
+            .child(crate::ui::chrome::compact_titlebar(cx))
             .child(div().text_lg().font_semibold().child("Review collections"))
             .when(alternatives.is_empty(), |v| v.child("No collection conflicts. Use the sidebar to create or rename a collection."))
             .when(!alternatives.is_empty(), |v| v.child("Library definitions conflict. Keep one version below. Collections absent from that version become archived; other status keys remain available."))

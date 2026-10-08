@@ -145,26 +145,24 @@ analysis never overwrite them.
 
 ## Choose
 
-Take feeling and available minutes: 15, 30, 60, 120, or a custom value.
-Reuse Glaze Picked's feeling-to-energy and mood mapping. Keep mood and energy
-as editable game properties; they are not separate picker inputs.
-Return three candidates with short reasons and actions to open details,
-skip, or launch through Steam. Choosing uses saved data and works offline.
+The October 6 MVP review replaces the earlier feeling-only direction with
+**Play now**, directly below Home: time or no limit, energy, an optional
+casual activity, and independent Brain dead. The canonical requirements,
+open scoring decisions, and HTML review surface are in [Play now](play-now.md).
 
-Port Picked's feeling, mood, rating, favorite, and repetition scoring into a pure Rust
-function. Use one documented scale: energy low/medium/high and decompression
-1–5. Test known ranking cases. Record recommendation and skip history for
-repetition control. Keep identical inputs deterministic.
+Return at most three eligible games with short reasons. Exclude hidden games
+on every path before ranking. Choose locally from saved profiles, manual
+values, or labeled rule estimates; AI enrichment is optional. Keep personal
+values separate and never overwrite them with analysis.
 
-Filter eligibility before ranking. Use owned games and manually marked
-available games. Include Backlog, Want to play, and Playing by default.
-Exclude Paused, Completed, and Dropped unless enabled. Apply known time and
-energy constraints. Do not treat unknown metadata as a confident match.
-
-Store practical session duration in minutes; distinguish it from total game
-completion time. Show insufficient-data candidates separately if needed.
-If nothing fits, explain the limiting filters and let the user relax them.
-Launching does not automatically mark a game played or completed.
+Use a pure deterministic Rust selector with stable IDs. Test eligibility,
+unknown/estimated data, finite and unlimited time, repetition, and feedback
+separation. Practical session duration is distinct from completion time.
+Explain empty results and offer explicit filter changes. Launching does not
+automatically mark a game played or completed. The offline native implementation
+is on `vova/play-now-native`, including manual profiles, recoverable feedback,
+recent choices, and local Steam launch requests. AI provider requests remain
+deferred; the existing settings do not yet perform profile analysis.
 
 ## Steam and metadata
 

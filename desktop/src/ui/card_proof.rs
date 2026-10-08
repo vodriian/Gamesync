@@ -80,6 +80,7 @@ impl Render for Proof {
                             material: true,
                             frosted_top: 0.,
                             hinge: 0.,
+                            spine_round: 1.,
                         },
                         crate::theme::interface_radius(cx, px(17.)),
                         face,

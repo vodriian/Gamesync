@@ -25,6 +25,7 @@ impl GameSyncApp {
                         .context("Local cache directory is unavailable")?
                         .cache_dir()
                         .to_owned();
+                    let cache = crate::settings::preview_dir().map(|p| p.join("cache")).unwrap_or(cache);
                     std::fs::create_dir_all(&cache)?;
                     let mut reader = LibraryReader::open(&root, &cache)?;
                     let mut loaded = reader.refresh()?;

@@ -6,6 +6,7 @@ pub mod library;
 pub mod library_reader;
 pub mod prices;
 pub mod protondb;
+pub mod recommendations;
 pub mod record_store;
 pub mod records;
 mod revision_store;
@@ -14,9 +15,11 @@ pub mod storage;
 pub mod suitability;
 pub mod sync;
 
+pub mod ai;
 pub mod credentials;
 pub mod omarchy;
 pub mod settings;
 pub mod steam;
 
 pub mod appearance;
+pub mod native_palette;

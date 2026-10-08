@@ -25,7 +25,7 @@ impl GameGrid {
         let visible = self.library.read(cx).visible.len();
         h_flex()
             .absolute()
-            .top(px(68.))
+            .top(px(crate::ui::chrome::toolbar_height(cx)))
             .left_0()
             .right_0()
             .h(px(42.))

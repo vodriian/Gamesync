@@ -252,6 +252,7 @@ pub struct Library {
     /// Home is a page over the whole library, not a scope. The app opens on it.
     /// `scope` keeps the last library scope for when the user leaves Home.
     pub home: bool,
+    pub play_now: bool,
     pub show_hidden_games: bool,
     pub display: LibraryDisplay,
     pub filter_status: Option<String>,
@@ -307,6 +308,7 @@ impl Library {
             selected: None,
             scope: Scope::All,
             home: true,
+            play_now: false,
             show_hidden_games: false,
             display: LibraryDisplay::default(),
             filter_status: None,
@@ -395,6 +397,7 @@ impl Library {
     pub fn replace(&mut self, mut next: Self, same_folder: bool) {
         next.show_hidden_games = self.show_hidden_games;
         next.home = self.home;
+        next.play_now = self.play_now;
         next.price_cache = self.price_cache.clone();
         next.apply_quotes();
         next.display = self.display.clone();
@@ -608,6 +611,7 @@ impl Library {
 
     pub fn set_scope(&mut self, scope: Scope) {
         self.home = false;
+        self.play_now = false;
         self.scope = scope;
         self.recompute();
     }
@@ -645,6 +649,12 @@ impl Library {
 
     pub fn show_home(&mut self) {
         self.home = true;
+        self.play_now = false;
+    }
+
+    pub fn show_play_now(&mut self) {
+        self.home = false;
+        self.play_now = true;
     }
 
     /// Select a game from Home. Home ignores the library scope, search, and

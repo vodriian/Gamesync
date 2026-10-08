@@ -77,7 +77,8 @@ The user requested a step-by-step implementation: prototype first, tests next.
 - Best on uses the supplied `computer-stroke-rounded.svg` directly from
   `Design/resources/icons-new/`; the SVG is unchanged.
 - Keep new sidebar expansion state out of persisted settings until compatibility
-  is tested. Existing view keys remain strings.
+  is tested. Best on starts collapsed on launch and can be expanded for the
+  current session. Existing view keys remain strings.
 
 ## Steam evidence
 
@@ -163,6 +164,10 @@ Accepted on 2026-10-06 and built on `details-card-v2`.
   played, My PC (High-end adds 10 to PC), ProtonDB, tag preferences, then
   equipment. A preference match moves 15 points each way; a game in both
   lists keeps its fit. Prefer PC can also match games with Steam Workshop.
+  Tag rules and equipment match Steam tags and your own tags (October 7);
+  the two lists stay separate in the record. Typing in a tag field suggests
+  matching library tags from both sources, most used first; a tooltip names
+  the source. Return adds the exact or first match, else the typed text.
   Equipment makes Steam Deck blocked ("Needs your <name>.") and wins over
   everything except a choice on the game itself. Points change only known
   scores, so a rule never invents Deck evidence.

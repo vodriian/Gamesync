@@ -1,5 +1,6 @@
 import "tokens/colors.dark.elyx" as darkTheme
 import "tokens/colors.elyx" as c
+import "resources/icons-new/cards-02-stroke-rounded.svg" as playNowIcon
 import "resources/icons-new/eye-off-stroke-rounded.svg" as hiddenIcon
 import "tokens/typography.elyx" as typography
 import "tokens/spacing.elyx" as spacing
@@ -33,6 +34,7 @@ export Sidebar = frame {
     padding: [42px, 8px, 12px],
     children: [
       home,
+      playNow,
       all,
       favorites,
       wishlist,
@@ -53,6 +55,18 @@ export Sidebar = frame {
       labelArea {
         label {
           contents: "Home"
+        }
+      }
+    }
+
+    playNow = frame : rows.NavigationRow {
+      glyph {
+        contents: playNowIcon
+      }
+
+      labelArea {
+        label {
+          contents: "Play now"
         }
       }
     }

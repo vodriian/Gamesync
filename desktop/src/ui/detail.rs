@@ -16,10 +16,13 @@ use gpui_component::{
 };
 use std::f32::consts::PI;
 
+gpui::actions!(game_card, [NextControl, PreviousControl]);
+
 pub struct DetailPanel {
     focus: FocusHandle,
     filmstrip: Entity<super::filmstrip::Filmstrip>,
     strip_shown: bool,
+    overlay: bool,
     strip_motion: super::motion::Motion,
     // Keep the open card when an edit removes it from the current library filter.
     viewed: Option<uuid::Uuid>,
@@ -37,6 +40,7 @@ pub struct DetailPanel {
     cache: Entity<LruImageCache>,
     editor: Option<Entity<InspectorEditor>>,
     best_on: Option<Entity<super::best_on::BestOnPanel>>,
+    play_now: Entity<super::play_now::PlayNowView>,
     review: Option<Entity<ConflictReview>>,
     cover_refresh: Option<uuid::Uuid>,
     details_resync: Option<uuid::Uuid>,
@@ -48,9 +52,15 @@ impl DetailPanel {
     pub fn new(
         library: Entity<Library>,
         cache: Entity<LruImageCache>,
+        play_now: Entity<super::play_now::PlayNowView>,
         cx: &mut Context<Self>,
     ) -> Self {
+        cx.bind_keys([
+            gpui::KeyBinding::new("tab", NextControl, Some("GameCardOverlay")),
+            gpui::KeyBinding::new("shift-tab", PreviousControl, Some("GameCardOverlay")),
+        ]);
         cx.observe(&library, |_, _, cx| cx.notify()).detach();
+        cx.observe(&play_now, |_, _, cx| cx.notify()).detach();
         let filmstrip =
             cx.new(|cx| super::filmstrip::Filmstrip::new(library.clone(), cache.clone(), cx));
         cx.subscribe(
@@ -70,6 +80,7 @@ impl DetailPanel {
         Self {
             filmstrip,
             strip_shown: true,
+            overlay: false,
             strip_motion: super::motion::Motion::new(1.),
             focus: cx.focus_handle(),
             viewed: None,
@@ -86,6 +97,7 @@ impl DetailPanel {
             cache,
             editor: None,
             best_on: None,
+            play_now,
             review: None,
             cover_refresh: None,
             details_resync: None,
@@ -101,7 +113,34 @@ impl DetailPanel {
             .set(if self.strip_shown { 1. } else { 0. }, cx);
     }
 
+    pub fn is_overlay(&self) -> bool {
+        self.overlay
+    }
+
+    fn focus_control(&self, previous: bool, window: &mut Window, cx: &mut Context<Self>) {
+        // Skip the still-rendered background controls when cycling the overlay.
+        let start = window.focused(cx);
+        loop {
+            if previous {
+                window.focus_prev();
+            } else {
+                window.focus_next();
+            }
+            if self.focus.contains_focused(window, cx) || window.focused(cx) == start {
+                break;
+            }
+        }
+        cx.stop_propagation();
+    }
+
+    fn close(&mut self, cx: &mut Context<Self>) {
+        if !self.busy(cx) {
+            cx.emit(EditorEvent::Closed);
+        }
+    }
+
     pub fn present(&mut self, cx: &mut Context<Self>) {
+        self.overlay = self.library.read(cx).play_now;
         // A failed or queued draft must remain attached to its own game.
         if let Some(editor) = &self.editor {
             if editor.read(cx).busy(cx) {
@@ -121,6 +160,12 @@ impl DetailPanel {
         self.yaw.set(0.);
         self.take_focus = true;
         cx.notify();
+    }
+
+    pub fn present_open(&mut self, cx: &mut Context<Self>) {
+        self.present(cx);
+        self.open = true;
+        self.turn = super::card_motion::Spring::new(PI);
     }
 
     fn flip(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -169,7 +214,8 @@ impl DetailPanel {
     }
 
     pub fn busy(&self, cx: &App) -> bool {
-        self.cover_refresh.is_some()
+        self.play_now.read(cx).busy()
+            || self.cover_refresh.is_some()
             || self.details_resync.is_some()
             || self
                 .review
@@ -418,7 +464,9 @@ impl Render for DetailPanel {
             }
         }
         let busy = self.busy(cx);
-        let strip_progress = if super::motion::reduced(cx) {
+        let strip_progress = if self.overlay {
+            0.
+        } else if super::motion::reduced(cx) {
             if self.strip_shown {
                 1.
             } else {
@@ -434,7 +482,7 @@ impl Render for DetailPanel {
             gpui::size(window_size.width, window_size.height - px(50.))
         };
         // A page keeps the card's proportions. The open book needs room for two.
-        let width = ((f32::from(available.height) - 270.) / 1.46)
+        let width = ((f32::from(available.height) - if self.overlay { 160. } else { 270. }) / 1.46)
             .min((f32::from(available.width) - 64.) / 2.)
             .clamp(160., 460.);
         let height = width * 1.46;
@@ -474,7 +522,12 @@ impl Render for DetailPanel {
         let game_id = game.as_ref().map(|g| g.id);
         let layer_id = |role| game_id.map_or(0, |id| super::card::surface_id(id, role));
 
-        let mut stage = div().id("focused-card-surface").relative().size_full();
+        let mut stage = div()
+            .id("focused-card-surface")
+            .relative()
+            .size_full()
+            .occlude()
+            .on_click(|_, _, cx| cx.stop_propagation());
         let front = game
             .as_ref()
             .map(|game| super::card::front(game, width, None, false, cx));
@@ -499,6 +552,14 @@ impl Render for DetailPanel {
             );
         } else if let Some(game) = &game {
             let (left, right) = self.pages(game, cx);
+            // The book is one object. Its spine corners square off as it
+            // opens, so the turn ends on exactly the settled spread, and one
+            // table shadow follows its footprint instead of each page casting
+            // its own.
+            let open = (1. - angle.cos()) / 2.;
+            let spine_radius = radius * (1. - open);
+            let border = cx.theme().border;
+            let paper = cx.theme().background;
             if spread {
                 stage = stage.child(
                     h_flex()
@@ -506,8 +567,8 @@ impl Render for DetailPanel {
                         .rounded(radius)
                         .overflow_hidden()
                         .border_1()
-                        .border_color(cx.theme().border)
-                        .bg(cx.theme().background)
+                        .border_color(border)
+                        .bg(paper)
                         .shadow(super::card::card_shadow(true))
                         .child(
                             div()
@@ -515,7 +576,7 @@ impl Render for DetailPanel {
                                 .min_w_0()
                                 .h_full()
                                 .border_r_1()
-                                .border_color(cx.theme().border)
+                                .border_color(border)
                                 .child(left),
                         )
                         .child(div().flex_1().min_w_0().h_full().child(right)),
@@ -528,23 +589,42 @@ impl Render for DetailPanel {
                     pitch,
                     yaw: yaw - angle,
                     material: true,
+                    spine_round: 1. - open,
                     ..Default::default()
                 };
+                // The projected footprint on the table: the right page plus
+                // the part of the leaf that has swung past the spine.
+                let footprint = width * angle.cos().min(0.);
                 stage =
                     stage
                         .child(
+                            div()
+                                .absolute()
+                                .left(px(spine + footprint))
+                                .top_0()
+                                .w(px(width - footprint))
+                                .h(dimensions.height)
+                                .rounded(radius)
+                                .shadow(super::card::card_shadow(true)),
+                        )
+                        .child(
+                            // The leaf's back supplies the spine line when open,
+                            // so this page has no left border.
                             div()
                                 .absolute()
                                 .left(px(spine))
                                 .top_0()
                                 .w(dimensions.width)
                                 .h(dimensions.height)
+                                .rounded_tl(spine_radius)
+                                .rounded_bl(spine_radius)
                                 .rounded_r(radius)
                                 .overflow_hidden()
-                                .border_1()
-                                .border_color(cx.theme().border)
-                                .bg(cx.theme().background)
-                                .shadow(super::card::card_shadow(false))
+                                .border_t_1()
+                                .border_r_1()
+                                .border_b_1()
+                                .border_color(border)
+                                .bg(paper)
                                 .child(right),
                         )
                         .child(
@@ -571,14 +651,16 @@ impl Render for DetailPanel {
                                         ..leaf
                                     },
                                     radius,
+                                    // Square on the spine side; the shader
+                                    // mask rounds it by `spine_round`.
                                     div()
                                         .w(dimensions.width)
                                         .h(dimensions.height)
-                                        .rounded(radius)
+                                        .rounded_l(radius)
                                         .overflow_hidden()
                                         .border_1()
-                                        .border_color(cx.theme().border)
-                                        .bg(cx.theme().background)
+                                        .border_color(border)
+                                        .bg(paper)
                                         .child(left),
                                 ),
                             ),
@@ -610,8 +692,30 @@ impl Render for DetailPanel {
             .id("card-viewer")
             .occlude()
             .track_focus(&self.focus)
+            .tab_stop(true)
             .size_full()
-            .bg(super::card::tabletop(cx))
+            .bg(if self.overlay {
+                gpui::rgba(0x00000099).into()
+            } else {
+                super::card::tabletop(cx)
+            })
+            .on_click(cx.listener(|this, _, _, cx| {
+                if this.overlay {
+                    this.close(cx);
+                }
+                cx.stop_propagation();
+            }))
+            .on_scroll_wheel(|_, _, cx| cx.stop_propagation())
+            .when(self.overlay, |viewer| {
+                viewer
+                    .key_context("GameCardOverlay")
+                    .on_action(cx.listener(|this, _: &NextControl, window, cx| {
+                        this.focus_control(false, window, cx)
+                    }))
+                    .on_action(cx.listener(|this, _: &PreviousControl, window, cx| {
+                        this.focus_control(true, window, cx)
+                    }))
+            })
             .text_color(cx.theme().foreground)
             .on_action(cx.listener(|this, _: &crate::SaveDetails, _, cx| {
                 if let Some(editor) = &this.editor {
@@ -620,13 +724,14 @@ impl Render for DetailPanel {
             }))
             .on_key_down(cx.listener(|this, event: &gpui::KeyDownEvent, window, cx| {
                 if event.keystroke.key == "escape" {
-                    cx.emit(EditorEvent::Closed);
+                    this.close(cx);
+                    cx.stop_propagation();
                 } else if this.focus.is_focused(window) {
                     match event.keystroke.key.as_str() {
                         "space" => this.flip(window, cx),
-                        "t" => this.toggle_strip(cx),
-                        "left" => this.step(-1, cx),
-                        "right" => this.step(1, cx),
+                        "t" if !this.overlay => this.toggle_strip(cx),
+                        "left" if !this.overlay => this.step(-1, cx),
+                        "right" if !this.overlay => this.step(1, cx),
                         _ if this.turn.active() => cx.stop_propagation(),
                         _ => cx.propagate(),
                     }
@@ -636,19 +741,21 @@ impl Render for DetailPanel {
                     cx.propagate();
                 }
             }))
-            .child(
-                h_flex()
-                    .h(px(66.))
-                    .px_6()
+            .when(!self.overlay, |viewer| {
+                let header = h_flex()
                     .gap_2()
                     .flex_shrink_0()
                     .child(
                         Button::new("close-card")
                             .ghost()
-                            .label("Back to library")
-                            .tooltip("Back to library (Esc)")
+                            .label(if self.library.read(cx).play_now {
+                                "Back to Play now"
+                            } else {
+                                "Back to library"
+                            })
+                            .tooltip("Back (Esc)")
                             .icon(IconName::ArrowLeft)
-                            .on_click(cx.listener(|_, _, _, cx| cx.emit(EditorEvent::Closed))),
+                            .on_click(cx.listener(|this, _, _, cx| this.close(cx))),
                     )
                     .child(div().flex_1())
                     .child(
@@ -680,8 +787,37 @@ impl Render for DetailPanel {
                                 window.focus(&this.focus);
                                 this.step(1, cx);
                             })),
-                    ),
-            )
+                    );
+                // Native macOS: the header is the unified toolbar row beside the window controls.
+                viewer.child(if crate::theme::macos_shell(cx) {
+                    super::chrome::titlebar(cx)
+                        .pl(px(super::chrome::TRAFFIC_LIGHTS_END))
+                        .pr(px(12.))
+                        .border_b_1()
+                        .border_color(cx.theme().border)
+                        .child(header.flex_1())
+                        .into_any_element()
+                } else {
+                    header.h(px(66.)).px_6().into_any_element()
+                })
+            })
+            .when(self.overlay, |viewer| {
+                viewer.child(
+                    h_flex()
+                        .h(px(54.))
+                        .px_6()
+                        .justify_end()
+                        .flex_shrink_0()
+                        .child(
+                            Button::new("dismiss-game-card")
+                                .ghost()
+                                .icon(IconName::Close)
+                                .tooltip("Close (Esc)")
+                                .disabled(busy)
+                                .on_click(cx.listener(|this, _, _, cx| this.close(cx))),
+                        ),
+                )
+            })
             .child(
                 v_flex()
                     .flex_1()
@@ -697,7 +833,9 @@ impl Render for DetailPanel {
                     )
                     .child(
                         h_flex()
+                            .id("card-face-tabs")
                             .gap_2()
+                            .on_click(|_, _, cx| cx.stop_propagation())
                             .child(
                                 Button::new("card-front-tab")
                                     .ghost()
@@ -779,6 +917,14 @@ impl DetailPanel {
             .clone()
             .filter(|_| assessed)
             .map(|panel| panel.into_any_element());
+        let editor_busy = self
+            .editor
+            .as_ref()
+            .is_some_and(|editor| editor.read(cx).busy(cx));
+        let play_now = self.review.is_none().then(|| {
+            self.play_now
+                .update(cx, |view, cx| view.game_section(game.id, editor_busy, cx))
+        });
         let (summary, personal) = match (&self.review, &self.editor) {
             // A conflict review replaces the editable fields until it closes.
             (Some(review), _) => (
@@ -792,7 +938,10 @@ impl DetailPanel {
                 review.clone().into_any_element(),
             ),
             (None, Some(editor)) => editor.update(cx, |editor, cx| {
-                (editor.summary_page(cx), editor.personal_page(best_on, cx))
+                (
+                    editor.summary_page(cx),
+                    editor.personal_page(best_on, play_now, cx),
+                )
             }),
             (None, None) => preview_pages(game, best_on, cx),
         };

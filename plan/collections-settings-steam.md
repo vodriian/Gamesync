@@ -19,6 +19,7 @@ flat collections. Do not import its runtime or browser storage.
   collection IDs from the chosen version remain archived. Other status keys stay
   available. Every branch stays in history.
 - Settings: one native window, sidebar entry, and Command/Control-comma.
+  The title row always reads "Settings"; the toolbar tabs name the section.
   General, Look and feel, and AI sections; all themes; Steam account and key;
   sync, cancel, last success, and device disconnect.
 - Steam: validate account and key before saving, then import owned games and
@@ -28,8 +29,13 @@ flat collections. Do not import its runtime or browser storage.
   marked complete. Resolve current asset paths before legacy portraits and header
   fallback. Reject near-uniform placeholder images; keep old media on failure.
 
-Credentials use Test key followed by Save key. Both fields are masked. Repeating
-a save of the same key does not rewrite secure storage. The Library group was removed from Settings. Open folders from the main toolbar.
+Settings → General follows the AI provider pattern. Without a saved key, a form
+asks for the Steam profile or ID and the API key; Save key appears after Test
+key passes. With a saved key, a **Steam API key** row shows "Key saved" and an
+info button. Its dialog edits the profile or key; Save tests first and saves
+only if the test passes, and an empty key field keeps the saved key. Remove key
+is in the same dialog. Both fields are masked. Repeating a save of the same key
+does not rewrite secure storage. The Library group was removed from Settings. Open folders from the main toolbar.
 Normal startup does not load fixtures; demo data requires an explicit QA flag.
 
 ## Keys
@@ -64,9 +70,21 @@ accessibility tree; keyboard operation does not establish screen-reader support.
 3. Add editable mood, energy, and session length; then the offline feeling/time picker.
 4. Add AI suggestions after manual tuning works. Backup/restore and ProtonDB stay deferred.
 
-## AI settings preview
+## AI settings
 
-Ollama and OpenAI, Claude, Grok, and Gemini have interactive mock forms. Model
-entry comes before the API key. Test and add/remove states are simulated and
-kept only while Settings is open. No network requests or credential writes occur.
-Actual provider integration and model discovery remain deferred.
+Settings → AI lists added providers. Each row shows the provider, a model
+dropdown, and an info button. The info button opens a dialog to replace the
+key (or Ollama's server address) or to delete the provider. A saved key is
+not read back and not tested again; an empty key field keeps it.
+
+To add a provider, choose OpenAI, Claude, Grok, Gemini, or Ollama, enter the
+key or server address, and test it. A passing test shows the model dropdown
+and the Add button. API keys go to the OS credential store
+(`app.GameSync.AI`, one entry per provider). The chosen model, the models
+found by the last test, and Ollama's address are device settings
+(`ai_providers`) and do not sync. A test is a real model-list request.
+Replacing a key or address tests it first; a failed test changes nothing.
+Refresh models reads the saved key again, which can show an OS prompt.
+Claude uses Anthropic Messages. OpenAI, Grok, Gemini, and Ollama use their
+OpenAI-compatible chat endpoints. The first consumer is
+[Play now analysis](play-now.md#ai-profile-analysis--october-7).

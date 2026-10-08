@@ -26,6 +26,43 @@ pub enum DarkContrast {
     Tonal,
     Black,
 }
+/// Native follows the platform's own look; Theme uses the bundled Baseline schemes.
+/// Scheme, contrast, and accent choices are kept while Native is active.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Look {
+    #[default]
+    Native,
+    Theme,
+}
+/// The platform look offered as "Native" on this device.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NativePlatform {
+    MacOs,
+    Windows,
+    Omarchy,
+}
+impl NativePlatform {
+    /// Linux has no single native look; Omarchy is offered only when its theme state exists.
+    pub fn current(omarchy_available: bool) -> Option<Self> {
+        if cfg!(target_os = "macos") {
+            Some(Self::MacOs)
+        } else if cfg!(target_os = "windows") {
+            Some(Self::Windows)
+        } else if omarchy_available {
+            Some(Self::Omarchy)
+        } else {
+            None
+        }
+    }
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::MacOs => "MacOS",
+            Self::Windows => "Windows",
+            Self::Omarchy => "Omarchy",
+        }
+    }
+}
 /// Stable catalog identity. Unknown future IDs round-trip and resolve to a safe default.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
@@ -49,6 +86,7 @@ impl From<String> for SchemeId {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Appearance {
+    pub look: Look,
     pub mode: AppearanceMode,
     pub light_scheme: SchemeId,
     pub dark_scheme: SchemeId,
@@ -60,6 +98,7 @@ pub struct Appearance {
 impl Default for Appearance {
     fn default() -> Self {
         Self {
+            look: Look::Native,
             mode: AppearanceMode::Auto,
             light_scheme: "sanctum".into(),
             dark_scheme: "notion".into(),
@@ -93,6 +132,13 @@ impl Appearance {
             _ => {}
         }
         result
+    }
+    /// The native platform look in effect, or None when Theme applies.
+    pub fn native(&self, omarchy_available: bool) -> Option<NativePlatform> {
+        match self.look {
+            Look::Native => NativePlatform::current(omarchy_available),
+            Look::Theme => None,
+        }
     }
     pub fn is_dark(&self, system_dark: bool) -> bool {
         match self.mode {

@@ -1,0 +1,41 @@
+# Windows test build. GPUI compiles its DirectX shaders with fxc.exe from the
+# Windows SDK at build time, so the app cannot be cross-compiled from macOS.
+name: Windows test build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [windows-test-build]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.94.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop
+      - name: Build
+        run: cargo build --release --locked
+      - name: Test
+        # Results are reported; a failure does not block the test build.
+        continue-on-error: true
+        run: cargo test --release --locked
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item target/release/gamesync-desktop.exe dist/GameSync.exe
+          Compress-Archive -Path dist/GameSync.exe -DestinationPath dist/GameSync-windows-x64.zip -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GameSync-windows-x64
+          path: desktop/dist/GameSync-windows-x64.zip
+          retention-days: 14

@@ -3,11 +3,162 @@ use super::*;
 use gpui::{div, px};
 use gpui_component::{
     button::{Button, ButtonVariants as _},
-    checkbox::Checkbox,
     h_flex,
     input::Input,
-    v_flex, ActiveTheme as _, Disableable as _, Selectable as _, StyledExt as _,
+    v_flex, ActiveTheme as _, Disableable as _, IconName, Selectable as _, Sizable as _,
+    StyledExt as _, WindowExt as _,
 };
+
+const STEAM_KEY_HELP: (&str, &str) = (
+    "steamcommunity.com/dev/apikey",
+    "https://steamcommunity.com/dev/apikey",
+);
+
+/// "Get your API key from <link>.", as in the AI provider dialog.
+fn steam_help(cx: &gpui::App) -> gpui::Div {
+    let (label, url) = STEAM_KEY_HELP;
+    h_flex()
+        .flex_wrap()
+        .text_sm()
+        .text_color(cx.theme().muted_foreground)
+        .child("Get your API key from\u{a0}")
+        .child(
+            div()
+                .id("steam-help-link")
+                .text_color(cx.theme().link)
+                .cursor_pointer()
+                .child(label)
+                .on_click(move |_, _, cx| cx.open_url(url)),
+        )
+        .child(".")
+}
+
+/// One labeled input on the group surface, as in the AI provider dialog.
+fn dialog_field(label: &'static str, input: &Entity<InputState>, cx: &gpui::App) -> gpui::Div {
+    h_flex()
+        .gap_3()
+        .pl_3()
+        .rounded(cx.theme().radius_lg)
+        .bg(cx.theme().group_box)
+        .child(div().flex_shrink_0().child(label))
+        .child(div().flex_1().child(Input::new(input).appearance(false)))
+}
+
+impl SettingsView {
+    /// Settings → AI pattern: a saved key is one row with an info button that
+    /// opens the editor; without a key, an add form saves after a passing test.
+    fn steam_key(&self, has_library: bool, cx: &mut Context<Self>) -> gpui::Div {
+        let title = div().font_semibold().child("Steam API key");
+        if self.key_saved {
+            let row = h_flex()
+                .gap_2()
+                .pl_4()
+                .pr_2()
+                .py_1()
+                .rounded(cx.theme().radius_lg)
+                .bg(cx.theme().group_box)
+                .child(div().flex_1().child("Steam"))
+                .child(
+                    div()
+                        .text_sm()
+                        .text_color(cx.theme().muted_foreground)
+                        .child("Key saved"),
+                )
+                .child(
+                    Button::new("steam-info")
+                        .ghost()
+                        .small()
+                        .icon(IconName::Info)
+                        .tooltip("Edit Steam connection")
+                        .disabled(self.busy || !has_library)
+                        .on_click(
+                            cx.listener(|this, _, window, cx| this.open_steam_editor(window, cx)),
+                        ),
+                );
+            return v_flex().gap_2().child(title).child(row);
+        }
+        let tested = self.tested_matches(cx);
+        let form = v_flex()
+            .p_5()
+            .gap_4()
+            .rounded(cx.theme().radius_lg)
+            .bg(cx.theme().group_box)
+            .child("Steam profile or ID")
+            .child(Input::new(&self.profile).disabled(self.busy || !has_library))
+            .child("API key")
+            .child(Input::new(&self.key).disabled(self.busy || !has_library))
+            .child(steam_help(cx))
+            .child(
+                h_flex()
+                    .gap_2()
+                    .child(
+                        Button::new("test-steam")
+                            .label("Test key")
+                            .disabled(self.busy || !has_library)
+                            .on_click(cx.listener(|this, _, _, cx| this.test_key(cx))),
+                    )
+                    .when(tested, |row| {
+                        row.child(
+                            Button::new("save-steam")
+                                .primary()
+                                .label("Save key")
+                                .disabled(self.busy)
+                                .on_click(cx.listener(|this, _, _, cx| this.save_key(cx))),
+                        )
+                    }),
+            );
+        v_flex().gap_2().child(title).child(form)
+    }
+
+    /// Change the profile or key, or remove the key. Save tests first; an
+    /// empty key field tests and keeps the saved key.
+    fn open_steam_editor(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        // The saved key is not read back; an empty field keeps it.
+        self.key.update(cx, |input, cx| {
+            input.set_placeholder("Saved. Paste a new key to replace it.", window, cx)
+        });
+        let view = cx.entity();
+        let profile = self.profile.clone();
+        let key = self.key.clone();
+        window.open_dialog(cx, move |dialog, _, cx| {
+            let remove = view.clone();
+            let save = view.clone();
+            dialog
+                .title("Steam")
+                .w(px(500.))
+                .close_button(false)
+                .button_props(gpui_component::dialog::DialogButtonProps::default().ok_text("Save"))
+                .child(
+                    v_flex()
+                        .gap_3()
+                        .child(dialog_field("Steam profile or ID", &profile, cx))
+                        .child(dialog_field("API key", &key, cx))
+                        .child(steam_help(cx)),
+                )
+                .footer(move |ok, cancel, window, cx| {
+                    let remove = remove.clone();
+                    vec![
+                        Button::new("steam-remove")
+                            .danger()
+                            .label("Remove key")
+                            .on_click(move |_, window, cx| {
+                                window.close_dialog(cx);
+                                remove.update(cx, |this, cx| this.remove_key(cx));
+                            })
+                            .into_any_element(),
+                        div().flex_1().into_any_element(),
+                        cancel(window, cx),
+                        ok(window, cx),
+                    ]
+                })
+                .on_ok(move |_, _, cx| {
+                    save.update(cx, |this, cx| this.test_and_save(cx));
+                    true
+                })
+        });
+    }
+}
+
 impl Render for SettingsView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         if self.clear_key {
@@ -43,119 +194,11 @@ impl Render for SettingsView {
             }
         }
         let has_library = source.is_some() && !self.library.read(cx).demo;
-        let surface = cx.theme().secondary;
+        let surface = crate::ui::controls::group_surface(cx);
         let radius = cx.theme().radius_lg;
         let group = || v_flex().p_5().gap_4().rounded(radius).bg(surface);
-        let appearance = group()
-            // Omarchy is a Linux desktop integration, not a generic theme.
-            .when(self.omarchy_available || self.omarchy_mode, |group| {
-                group.child(self.omarchy_controls(cx))
-            })
-            .child(self.appearance_controls(cx))
-            .child(
-                Checkbox::new("reduce-motion")
-                    .label("Reduce motion")
-                    .checked(self.reduce_motion)
-                    .on_click(cx.listener(|this, checked: &bool, _, cx| {
-                        this.reduce_motion = *checked;
-                        cx.global_mut::<super::super::motion::MotionPreferences>()
-                            .reduced = *checked;
-                        let value = *checked;
-                        cx.spawn(async move |this, cx| {
-                            let result = cx
-                                .background_spawn(async move {
-                                    settings::update(|s| s.reduce_motion = value)
-                                })
-                                .await;
-                            if let Err(error) = result {
-                                let _ = this.update(cx, |this, cx| {
-                                    this.message =
-                                        format!("Could not save motion preference: {error}");
-                                    cx.notify();
-                                });
-                            }
-                        })
-                        .detach();
-                        cx.notify();
-                    })),
-            );
-        let appearance = appearance.child(
-            Checkbox::new("show-hidden-games")
-                .label("Show hidden games in sidebar")
-                .checked(self.library.read(cx).show_hidden_games)
-                .disabled(self.saving_hidden_preference)
-                .on_click(cx.listener(|this, checked: &bool, _, cx| {
-                    let value = *checked;
-                    this.saving_hidden_preference = true;
-                    cx.notify();
-                    cx.spawn(async move |this, cx| {
-                        let result = cx
-                            .background_spawn(async move {
-                                settings::update(|s| s.show_hidden_games = value)
-                            })
-                            .await;
-                        let _ = this.update(cx, |this, cx| {
-                            this.saving_hidden_preference = false;
-                            match result {
-                                Ok(()) => this.library.update(cx, |library, cx| {
-                                    library.set_show_hidden_games(value);
-                                    cx.notify();
-                                }),
-                                Err(error) => {
-                                    this.message =
-                                        format!("Could not save sidebar preference: {error}")
-                                }
-                            }
-                            cx.notify();
-                        });
-                    })
-                    .detach();
-                })),
-        );
-        let connection = group()
-            .child("Steam profile or ID")
-            .child(Input::new(&self.profile).disabled(self.busy || !has_library))
-            .child(if self.key_saved {
-                "Steam API key saved"
-            } else {
-                "Steam API key"
-            })
-            .child(Input::new(&self.key).disabled(self.busy || !has_library))
-            .child(
-                h_flex()
-                    .flex_wrap()
-                    .gap_2()
-                    .child(
-                        Button::new("test-steam")
-                            .label("Test key")
-                            .disabled(self.busy || !has_library)
-                            .on_click(cx.listener(|this, _, _, cx| this.test_key(cx))),
-                    )
-                    .child(
-                        Button::new("save-steam")
-                            .primary()
-                            .label("Save key")
-                            .disabled(self.busy || !self.tested_matches(cx))
-                            .on_click(cx.listener(|this, _, _, cx| this.save_key(cx))),
-                    )
-                    .child(div().flex_1())
-                    .when(self.key_saved, |row| {
-                        row.child(
-                            Button::new("remove-steam")
-                                .label("Remove key")
-                                .disabled(self.busy || !has_library)
-                                .on_click(cx.listener(|this, _, _, cx| this.remove_key(cx))),
-                        )
-                    }),
-            )
-            .child(
-                div()
-                    .text_sm()
-                    .text_color(cx.theme().muted_foreground)
-                    .child(
-                        "Saved keys stay in this device’s secure storage, separate from game data.",
-                    ),
-            );
+        let appearance = group().child(self.look_and_feel(cx));
+        let connection = self.steam_key(has_library, cx);
         let sync = group()
             .child(
                 h_flex()
@@ -192,27 +235,186 @@ impl Render for SettingsView {
                             .on_click(cx.listener(|this, _, _, cx| this.save_country(cx))),
                     ),
             );
+        // macOS keeps the toolbar-tab form in both looks; Theme changes only colors.
+        let native = crate::ui::controls::MAC_SETTINGS;
+        let feedback = (!self.message.is_empty()).then(|| {
+            div()
+                .id("settings-feedback")
+                .max_h(px(96.))
+                .overflow_y_scroll()
+                .text_sm()
+                .child(self.message.clone())
+        });
+        let body = v_flex()
+            .gap_6()
+            .when(self.section == Section::Appearance, |column| {
+                column.child(if native {
+                    self.look_and_feel_form(cx).into_any_element()
+                } else {
+                    appearance.into_any_element()
+                })
+            })
+            .when(self.section == Section::General, |column| {
+                column.child(connection).child(sync)
+            })
+            .when(self.section == Section::Sync, |column| {
+                column.child(self.sync_section(cx))
+            })
+            .when(self.section == Section::BestOn, |column| {
+                column.child(self.best_on.clone())
+            })
+            .when(self.section == Section::Ai, |column| {
+                column.child(self.ai.clone())
+            });
+        let shell = if native {
+            self.native_shell(feedback, body, cx).into_any_element()
+        } else {
+            self.theme_shell(feedback, body, cx).into_any_element()
+        };
+        div()
+            .size_full()
+            .child(shell)
+            // AI provider details open in a modal.
+            .children(gpui_component::Root::render_dialog_layer(window, cx))
+    }
+}
+
+const SECTIONS: [Section; 5] = [
+    Section::General,
+    Section::Sync,
+    Section::Appearance,
+    Section::BestOn,
+    Section::Ai,
+];
+
+fn section_icon(section: Section) -> gpui_component::Icon {
+    match section {
+        Section::General => gpui_component::Icon::from(gpui_component::IconName::Settings),
+        Section::Sync => gpui_component::Icon::from(gpui_component::IconName::FolderOpen),
+        Section::Appearance => gpui_component::Icon::from(gpui_component::IconName::Palette),
+        Section::BestOn => gpui_component::Icon::new(crate::assets::SetupIcon::Pc),
+        Section::Ai => gpui_component::Icon::from(gpui_component::IconName::Bot),
+    }
+}
+
+impl SettingsView {
+    fn select_section(&mut self, section: Section, cx: &mut Context<Self>) {
+        self.section = section;
+        self.stop_confirm = false;
+        if !self.busy {
+            self.message.clear();
+        }
+        cx.notify();
+    }
+
+    /// macOS Settings window: title row, toolbar tabs, then one centered pane.
+    fn native_shell(
+        &self,
+        feedback: Option<impl IntoElement>,
+        body: impl IntoElement,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
+        let theme = cx.theme();
+        let tabs = h_flex()
+            .justify_center()
+            .gap_1()
+            .pb_2()
+            .border_b_1()
+            .border_color(theme.border)
+            .children(SECTIONS.into_iter().map(|section| {
+                let selected = self.section == section;
+                let tint = if selected {
+                    theme.primary
+                } else {
+                    theme.muted_foreground
+                };
+                div()
+                    .id(section.label())
+                    .flex()
+                    .flex_col()
+                    .items_center()
+                    .gap_0p5()
+                    .min_w(px(68.))
+                    .px_2()
+                    .py_1()
+                    .rounded(px(6.))
+                    .cursor_pointer()
+                    .when(selected, |tab| tab.bg(theme.secondary_hover))
+                    .hover(|tab| tab.bg(theme.secondary_hover))
+                    .child(section_icon(section).size(px(22.)).text_color(tint))
+                    .child(
+                        div()
+                            .text_xs()
+                            .text_color(if selected {
+                                theme.primary
+                            } else {
+                                theme.foreground
+                            })
+                            .child(section.label()),
+                    )
+                    .on_click(cx.listener(move |this, _, _, cx| this.select_section(section, cx)))
+            }));
+        v_flex()
+            .size_full()
+            .bg(theme.background)
+            .text_color(theme.foreground)
+            .text_size(px(13.))
+            .child(
+                // Center the title on the window, not on the space after the controls.
+                crate::ui::chrome::compact_titlebar(cx)
+                    .bg(gpui::transparent_black())
+                    .pl(px(0.))
+                    .justify_center()
+                    .child(
+                        div()
+                            .flex_1()
+                            .text_center()
+                            .font_semibold()
+                            .child("Settings"),
+                    ),
+            )
+            .child(tabs)
+            .child(
+                v_flex()
+                    .id("settings-scroll")
+                    .flex_1()
+                    .min_h_0()
+                    .overflow_y_scroll()
+                    .items_center()
+                    .child(
+                        // A definite width: with w_full + max_w, wrapped text was
+                        // measured narrower than drawn, so the scroll range was short.
+                        // The window's 700 px minimum keeps this width in view.
+                        v_flex()
+                            .w(px(640.))
+                            .px_8()
+                            .py_6()
+                            .gap_4()
+                            .children(feedback)
+                            .child(body),
+                    ),
+            )
+    }
+
+    /// Theme look: left navigation and grouped panels from the Elyx design.
+    fn theme_shell(
+        &self,
+        feedback: Option<impl IntoElement>,
+        body: impl IntoElement,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
         v_flex()
             .size_full()
             .bg(cx.theme().background)
             .text_color(cx.theme().foreground)
-            .child(gpui_component::TitleBar::new().border_b_0())
+            .child(crate::ui::chrome::compact_titlebar(cx))
             .child(
                 v_flex()
                     .p_6()
                     .gap_2()
                     .flex_shrink_0()
                     .child(div().text_xl().font_semibold().child("Settings"))
-                    .when(!self.message.is_empty(), |header| {
-                        header.child(
-                            div()
-                                .id("settings-feedback")
-                                .max_h(px(96.))
-                                .overflow_y_scroll()
-                                .text_sm()
-                                .child(self.message.clone()),
-                        )
-                    }),
+                    .children(feedback),
             )
             .child(
                 h_flex()
@@ -227,49 +429,18 @@ impl Render for SettingsView {
                             .flex_shrink_0()
                             .border_r_1()
                             .border_color(cx.theme().border)
-                            .children(
-                                [
-                                    Section::General,
-                                    Section::Sync,
-                                    Section::Appearance,
-                                    Section::BestOn,
-                                    Section::Ai,
-                                ]
-                                .into_iter()
-                                .map(|section| {
-                                    Button::new(section.label())
-                                        .ghost()
-                                        .label(section.label())
-                                        .icon(match section {
-                                            Section::General => gpui_component::Icon::from(
-                                                gpui_component::IconName::Settings,
-                                            ),
-                                            Section::Sync => gpui_component::Icon::from(
-                                                gpui_component::IconName::FolderOpen,
-                                            ),
-                                            Section::Appearance => gpui_component::Icon::from(
-                                                gpui_component::IconName::Palette,
-                                            ),
-                                            Section::BestOn => gpui_component::Icon::new(
-                                                crate::assets::SetupIcon::Pc,
-                                            ),
-                                            Section::Ai => gpui_component::Icon::from(
-                                                gpui_component::IconName::Bot,
-                                            ),
-                                        })
-                                        .justify_start()
-                                        .w_full()
-                                        .selected(self.section == section)
-                                        .on_click(cx.listener(move |this, _, _, cx| {
-                                            this.section = section;
-                                            this.stop_confirm = false;
-                                            if !this.busy {
-                                                this.message.clear();
-                                            }
-                                            cx.notify();
-                                        }))
-                                }),
-                            ),
+                            .children(SECTIONS.into_iter().map(|section| {
+                                Button::new(section.label())
+                                    .ghost()
+                                    .label(section.label())
+                                    .icon(section_icon(section))
+                                    .justify_start()
+                                    .w_full()
+                                    .selected(self.section == section)
+                                    .on_click(cx.listener(move |this, _, _, cx| {
+                                        this.select_section(section, cx)
+                                    }))
+                            })),
                     )
                     .child(
                         v_flex()
@@ -283,21 +454,7 @@ impl Render for SettingsView {
                             .pb_6()
                             .gap_6()
                             .child(div().text_lg().font_semibold().child(self.section.label()))
-                            .when(self.section == Section::Appearance, |column| {
-                                column.child(appearance)
-                            })
-                            .when(self.section == Section::General, |column| {
-                                column.child(connection).child(sync)
-                            })
-                            .when(self.section == Section::Sync, |column| {
-                                column.child(self.sync_section(cx))
-                            })
-                            .when(self.section == Section::BestOn, |column| {
-                                column.child(self.best_on.clone())
-                            })
-                            .when(self.section == Section::Ai, |column| {
-                                column.child(self.ai.clone())
-                            }),
+                            .child(body),
                     ),
             )
     }

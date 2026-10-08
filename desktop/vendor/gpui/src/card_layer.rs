@@ -33,6 +33,11 @@ pub struct CardPose {
     /// 0 the center, and 1 the right edge. An edge axis turns the face like a book
     /// cover on its spine. Metal only; Blade keeps the center axis.
     pub hinge: f32,
+    /// Fraction of the radius kept on the two corners at the hinge edge:
+    /// 1 keeps them round, 0 makes them square. Ignored when `hinge` is 0.
+    /// Hinged faces also skip the projected shadow; the caller draws one
+    /// table shadow for the whole book.
+    pub spine_round: f32,
 }
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]

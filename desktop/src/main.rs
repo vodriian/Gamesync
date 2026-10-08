@@ -5,6 +5,7 @@ mod managed_storage;
 mod model;
 mod sync_runtime;
 use gamesync_desktop::settings;
+mod system_accent;
 mod theme;
 mod ui;
 mod watcher;
@@ -47,6 +48,23 @@ fn main() -> anyhow::Result<()> {
         path.ancestors()
             .any(|part| part.file_name() == Some(std::ffi::OsStr::new("BestOnDemo.app")))
     });
+    let play_now_bundle = std::env::current_exe().is_ok_and(|path| {
+        path.ancestors()
+            .any(|part| part.file_name() == Some(std::ffi::OsStr::new("PlayNowDemo.app")))
+    });
+    if play_now_bundle || args.iter().any(|arg| arg == "--play-now-demo") {
+        if !args.iter().any(|arg| arg == "--play-now-demo") {
+            args.push("--play-now-demo".into());
+        }
+        // Launch Services drops shell flags and environment. This bundle must
+        // never open the user's normal library or load their sync settings.
+        if settings::preview_dir().is_none() {
+            std::env::set_var(
+                "GAMESYNC_PREVIEW_DIR",
+                std::env::temp_dir().join("gamesync-play-now-demo"),
+            );
+        }
+    }
     if prototype_bundle && !args.iter().any(|arg| arg == "--best-on-demo") {
         args.push("--best-on-demo".into());
     }
@@ -60,9 +78,12 @@ fn main() -> anyhow::Result<()> {
     let preview = args
         .iter()
         .any(|arg| matches!(arg.as_str(), "--stress" | "--missing-covers" | "--empty"));
+    let play_now_demo = args.iter().any(|arg| arg == "--play-now-demo");
     let best_on_demo = args.iter().any(|arg| arg == "--best-on-demo");
     let sample = args.iter().any(|arg| arg == "--demo");
-    let initial_path = if best_on_demo {
+    let initial_path = if play_now_demo {
+        Some(managed_storage::play_now_demo_path()?)
+    } else if best_on_demo {
         Some(managed_storage::best_on_demo_path()?)
     } else if preview {
         None
@@ -73,10 +94,12 @@ fn main() -> anyhow::Result<()> {
     let demo_requested = args.iter().any(|arg| {
         matches!(
             arg.as_str(),
-            "--demo" | "--stress" | "--missing-covers" | "--best-on-demo"
+            "--demo" | "--stress" | "--missing-covers" | "--best-on-demo" | "--play-now-demo"
         )
     });
-    let mut games = if best_on_demo {
+    let mut games = if play_now_demo {
+        fixtures::play_now_games()?
+    } else if best_on_demo {
         fixtures::best_on_games()?
     } else if demo_requested {
         fixtures::games()?
@@ -107,6 +130,9 @@ fn main() -> anyhow::Result<()> {
     let small_window = args.iter().any(|arg| arg == "--small-window");
     let mut library = model::Library::new(games);
     library.best_on_demo = best_on_demo;
+    if play_now_demo {
+        library.show_play_now();
+    }
     if best_on_demo {
         library.name = "Best on · Demo".into();
         library.set_scope(model::Scope::Smart(
@@ -119,9 +145,13 @@ fn main() -> anyhow::Result<()> {
         library.name = "My games".into();
         library.demo = false;
     }
-    let (initial_theme, omarchy_mode) = settings::load()
-        .map(|settings| (settings.appearance(), settings.omarchy_mode))
+    let initial_theme = settings::load()
+        .map(|settings| settings.appearance())
         .unwrap_or_default();
+    // Omarchy is the native look on Linux when its theme state exists. The
+    // legacy `omarchy_mode` flag is no longer read; Native is the default look.
+    let omarchy_mode = initial_theme.native(gamesync_desktop::omarchy::is_available())
+        == Some(gamesync_desktop::appearance::NativePlatform::Omarchy);
     let initial_omarchy = omarchy_mode
         .then(gamesync_desktop::omarchy::OmarchyTheme::load_active)
         .transpose()
@@ -157,10 +187,7 @@ fn main() -> anyhow::Result<()> {
             let result = cx.open_window(
                 WindowOptions {
                     app_id: Some(APP_ID.into()),
-                    titlebar: Some(gpui::TitlebarOptions {
-                        title: Some(library.name.clone().into()),
-                        ..gpui_component::TitleBar::title_bar_options()
-                    }),
+                    titlebar: Some(ui::chrome::titlebar_options(library.name.clone())),
                     window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
                         None,
                         if small_window {

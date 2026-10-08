@@ -1,0 +1,20 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "tokens/typography.elyx" as typography
+import "design/controls/Switch.elyx" as switches
+
+// One boolean setting: label at the leading edge, switch at the trailing edge.
+export SwitchRow = frame {
+  width: 100%,
+  layout: {justify-content: .space-between, align-items: .center},
+  children: [label, toggle],
+
+  label = text {
+    fill: c.ui.text,
+    contents: "Setting",
+    font-size: typography.size.body,
+    font-family: typography.family.interface
+  }
+
+  toggle = frame : switches.Switch {}
+}

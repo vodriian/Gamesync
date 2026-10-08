@@ -531,7 +531,7 @@ impl InspectorEditor {
 /// Existing library tags that match `query`, most used first, without tags
 /// the game already has. Also the query as a new tag when no tag has that
 /// name. Matching ignores case.
-fn suggest_tags<'a>(
+pub(crate) fn suggest_tags<'a>(
     library: impl Iterator<Item = &'a String>,
     current: &[String],
     query: &str,
@@ -678,6 +678,7 @@ impl InspectorEditor {
     pub fn personal_page(
         &mut self,
         best_on: Option<gpui::AnyElement>,
+        play_now: Option<gpui::AnyElement>,
         cx: &mut Context<Self>,
     ) -> gpui::AnyElement {
         let selected = self.personal.status.clone();
@@ -783,6 +784,7 @@ impl InspectorEditor {
             })
             .children(best_on)
             .children(self.status_line(Field::Preference, cx))
+            .children(play_now)
             .child(hint("Notes", cx))
             .child(
                 // Notes fill the rest of the page, so the page ends with the

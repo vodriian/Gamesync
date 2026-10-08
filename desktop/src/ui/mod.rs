@@ -1,8 +1,11 @@
+pub mod analysis_job;
 pub mod app;
 mod best_on;
 pub mod best_on_state;
 mod card;
+pub mod chrome;
 mod conflicts;
+mod controls;
 mod definitions;
 mod detail;
 mod editor;
@@ -23,3 +26,5 @@ mod filmstrip;
 
 mod panel;
 mod price;
+
+mod play_now;

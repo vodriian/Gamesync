@@ -50,8 +50,8 @@ impl GameSyncApp {
         let (section, in_wishlist) = {
             let lib = self.library.read(cx);
             (
-                (!lib.home).then(|| lib.scope.view_key()),
-                !lib.home && lib.scope == crate::model::Scope::Wishlist,
+                (!lib.home && !lib.play_now).then(|| lib.scope.view_key()),
+                !lib.home && !lib.play_now && lib.scope == crate::model::Scope::Wishlist,
             )
         };
         if let Some(section) = section {

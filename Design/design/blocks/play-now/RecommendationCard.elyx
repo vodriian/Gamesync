@@ -1,0 +1,127 @@
+import "tokens/colors.dark.elyx" as darkTheme
+import "tokens/colors.elyx" as c
+import "tokens/typography.elyx" as typography
+import "design/controls/Button.elyx" as buttons
+import "design/controls/IconButton.elyx" as icons
+import "resources/icons-new/clock-fading-stroke-rounded.svg" as saveIcon
+import "resources/icons-new/fast-forward-stroke-rounded.svg" as skipIcon
+import "resources/images/1055540.jpg" as hike
+
+export RecommendationCard = frame {
+  width: 260px,
+  layout: {direction: .column, item-gap: 8px},
+  children: [role, cover, title, metadata, reason, actions],
+
+  role = frame {
+    layout: {align-items: .center, item-gap: 8px},
+    children: [number, label],
+
+    number = frame {
+      layout: {align-items: .center},
+      border: c.ui.border,
+      corner-radius: 3px,
+      padding: [2px, 4px],
+      children: value,
+
+      value = text {
+        fill: c.ui.text,
+        contents: "01",
+        font-size: 11,
+        font-family: typography.family.interface
+      }
+    }
+
+    label = text {
+      fill: c.ui.muted,
+      contents: "Closest fit",
+      font-size: 12,
+      font-family: typography.family.interface
+    }
+  }
+
+  cover = frame {
+    width: 100%,
+    height: 343px,
+    layout: {direction: .row},
+    fill: c.ui.surface,
+    border: c.ui.border,
+    shadow: {
+      drop-shadow: {
+        color: rgb(0%, 0%, 0%, 14%),
+        offset: point(0px, 10px),
+        blur-radius: 20px
+      }
+    },
+    corner-radius: 10px,
+    padding: 5px,
+    children: art,
+
+    art = frame {
+      width: 100%,
+      height: 100%,
+      fill: {image: {ref: hike}},
+      corner-radius: 7px
+    }
+  }
+
+  title = text {
+    fill: c.ui.text,
+    contents: "A Short Hike",
+    font-size: 18,
+    font-family: typography.family.interface,
+    font-style: "Semibold"
+  }
+
+  metadata = text {
+    fill: c.ui.muted,
+    contents: "10–25 min · Install unknown",
+    font-size: 12,
+    font-family: typography.family.interface
+  }
+
+  reason = text {
+    width: 100%,
+    min-height: 52px,
+    fill: c.ui.muted,
+    contents: "Fits your low energy budget.",
+    font-size: 12,
+    font-family: typography.family.interface
+  }
+
+  actions = frame {
+    width: 100%,
+    layout: {item-gap: 8px},
+    children: [play, skip, save],
+
+    play = frame : buttons.Primary {
+      width: 100%,
+      height: 40px,
+
+      label {
+        label {
+          contents: "Play"
+        }
+      }
+    }
+
+    skip = frame : icons.IconButton {
+      width: 40px,
+      height: 40px,
+      border[0].color: c.ui.border,
+
+      glyph {
+        contents: skipIcon
+      }
+    }
+
+    save = frame : icons.IconButton {
+      width: 40px,
+      height: 40px,
+      border[0].color: c.ui.border,
+
+      glyph {
+        contents: saveIcon
+      }
+    }
+  }
+}

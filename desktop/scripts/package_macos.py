@@ -41,7 +41,10 @@ root = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser()
 # A separate folder keeps a test build apart from the current local release.
 parser.add_argument("--output", type=Path, default=root / "target/macos")
+parser.add_argument("--name", default="GameSync", help="App display name and bundle filename")
 args = parser.parse_args()
+if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9 _-]*", args.name):
+    parser.error("--name must use letters, digits, spaces, underscores, or hyphens")
 version = tomllib.loads((root / "Cargo.toml").read_text())["package"]["version"]
 subprocess.run([
     "cargo", "build", "--release", "--locked", "--manifest-path",
@@ -56,7 +59,7 @@ if not minimum_os:
 
 output = args.output.resolve()
 output.mkdir(parents=True, exist_ok=True)
-app = output / "GameSync.app"
+app = output / f"{args.name}.app"
 if app.exists():
     shutil.rmtree(app)
 contents = app / "Contents"
@@ -66,9 +69,10 @@ shutil.copy2(binary, contents / "MacOS/gamesync-desktop")
 shutil.copy2(root / "icon/app-icon.icns", contents / "Resources/app-icon.icns")
 info = {
     "CFBundleExecutable": "gamesync-desktop",
+    # Named test builds retain the normal Keychain identity and library paths.
     "CFBundleIdentifier": "local.gamesync.desktop",
-    "CFBundleName": "GameSync",
-    "CFBundleDisplayName": "GameSync",
+    "CFBundleName": args.name,
+    "CFBundleDisplayName": args.name,
     "CFBundleIconFile": "app-icon.icns",
     "CFBundlePackageType": "APPL",
     "CFBundleShortVersionString": version,
@@ -84,7 +88,8 @@ subprocess.run(
     ["codesign", "--force", "--timestamp=none", "--sign", identity, str(app)], check=True
 )
 subprocess.run(["codesign", "--verify", "--strict", "--verbose=2", str(app)], check=True)
-archive = output / f"GameSync-{version}-macos-{platform.machine()}.zip"
+archive_name = args.name.replace(" ", "-")
+archive = output / f"{archive_name}-{version}-macos-{platform.machine()}.zip"
 if archive.exists():
     archive.unlink()
 subprocess.run(["ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", str(app), str(archive)], check=True)

@@ -68,6 +68,21 @@ impl Default for LibraryDisplay {
     }
 }
 
+/// One AI provider added on this device. Its API key is in the OS credential
+/// store, never here.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(default)]
+pub struct AiProvider {
+    /// The chosen model name. None until the user picks one.
+    pub model: Option<String>,
+    /// The server address for a local provider such as Ollama.
+    pub endpoint: Option<String>,
+    /// Models found by the last successful test, so Settings can list them
+    /// without reading the key again.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub models: Vec<String>,
+}
+
 #[derive(Deserialize, Serialize)]
 pub struct Settings {
     #[serde(default)]
@@ -76,6 +91,9 @@ pub struct Settings {
     #[serde(default)]
     pub section_views: BTreeMap<String, LibraryView>,
     pub library_path: Option<PathBuf>,
+    /// One device-local timer; never synchronized as Steam playtime.
+    #[serde(default)]
+    pub active_play: Option<crate::recommendations::ActivePlay>,
     #[serde(default = "system_theme")]
     pub theme: String,
     #[serde(default)]
@@ -110,6 +128,10 @@ pub struct Settings {
     /// data, so this does not sync.
     #[serde(default)]
     pub protondb: bool,
+    /// AI providers added on this device, by provider id. Device-local, like
+    /// their keys.
+    #[serde(default)]
+    pub ai_providers: BTreeMap<String, AiProvider>,
     #[serde(flatten)]
     extra: std::collections::BTreeMap<String, serde_json::Value>,
 }
@@ -119,7 +141,17 @@ fn system_theme() -> String {
 }
 static SETTINGS_LOCK: Mutex<()> = Mutex::new(());
 
+/// Optional isolated storage for native demo checks; normal launches ignore it.
+pub fn preview_dir() -> Option<PathBuf> {
+    std::env::var_os("GAMESYNC_PREVIEW_DIR")
+        .map(PathBuf::from)
+        .filter(|p| p.is_absolute())
+}
+
 fn path() -> Result<PathBuf> {
+    if let Some(root) = preview_dir() {
+        return Ok(root.join("settings.json"));
+    }
     Ok(
         directories::ProjectDirs::from("app", "GameSync", "GameSync")
             .context("Settings directory is unavailable")?
@@ -168,6 +200,7 @@ impl Default for Settings {
             library_display: LibraryDisplay::default(),
             section_views: Default::default(),
             library_path: None,
+            active_play: None,
             theme: system_theme(),
             appearance: None,
             omarchy_mode: false,
@@ -181,6 +214,7 @@ impl Default for Settings {
             device_name: None,
             best_on_rules: Default::default(),
             protondb: false,
+            ai_providers: Default::default(),
             extra: Default::default(),
         }
     }
@@ -188,21 +222,21 @@ impl Default for Settings {
 
 /// Shared footer and Settings wording for the last completed Steam sync.
 pub fn sync_label(time: Option<u64>) -> String {
-    time.map(|time| {
-        let age = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_or(0, |d| d.as_secs().saturating_sub(time));
-        if age < 60 {
-            "Last Steam sync: just now".into()
-        } else if age < 3600 {
-            format!("Last Steam sync: {} min ago", age / 60)
-        } else if age < 86400 {
-            format!("Last Steam sync: {} hours ago", age / 3600)
-        } else {
-            format!("Last Steam sync: {} days ago", age / 86400)
-        }
-    })
-    .unwrap_or_else(|| "No Steam sync time recorded".into())
+    time.map(|time| format!("Last Steam sync: {}", age_label(time)))
+        .unwrap_or_else(|| "No Steam sync time recorded".into())
+}
+
+/// How long ago a Unix time was: "just now", "5 min ago", "3 hours ago", "2 days ago".
+pub fn age_label(time: u64) -> String {
+    let age = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs().saturating_sub(time));
+    match age {
+        0..60 => "just now".into(),
+        60..3600 => format!("{} min ago", age / 60),
+        3600..86400 => format!("{} hours ago", age / 3600),
+        _ => format!("{} days ago", age / 86400),
+    }
 }
 
 impl Settings {
@@ -253,6 +287,7 @@ mod display_tests {
         assert!(old.library_display.board_manual);
         assert!(old.library_display.grid_title && old.library_display.grid_metadata);
         assert!(old.section_views.is_empty());
+        assert!(old.ai_providers.is_empty());
         let mut settings = old;
         settings.library_display = LibraryDisplay {
             sort: SortBy::Hours,
@@ -265,6 +300,14 @@ mod display_tests {
         settings
             .section_views
             .insert("favorites".into(), LibraryView::Cards);
+        let ollama = AiProvider {
+            model: Some("llama3.2".into()),
+            endpoint: Some("http://localhost:11434".into()),
+            models: vec!["llama3.2".into()],
+        };
+        settings
+            .ai_providers
+            .insert("ollama".into(), ollama.clone());
         let saved = serde_json::to_vec(&settings).unwrap();
         let restored: Settings = serde_json::from_slice(&saved).unwrap();
         assert_eq!(restored.library_display, settings.library_display);
@@ -272,6 +315,7 @@ mod display_tests {
             restored.section_views.get("favorites"),
             Some(&LibraryView::Cards)
         );
+        assert_eq!(restored.ai_providers.get("ollama"), Some(&ollama));
         assert_eq!(
             restored.extra.get("future_setting"),
             Some(&serde_json::json!(42))

@@ -36,11 +36,17 @@ float card_sdf(float2 uv, float2 dimensions, float radius) {
     float2 q = abs((uv - .5) * dimensions) - dimensions * .5 + radius;
     return length(max(q, 0.)) + min(max(q.x,q.y),0.) - radius;
 }
+// Corners on the hinge edge use a fraction of the radius, so a turning page
+// can meet its neighbor at a square spine.
+float face_radius(float2 uv, constant CardUniforms &u) {
+    bool spine = u.hinge.x != 0. && (uv.x - .5) * u.hinge.x > 0.;
+    return spine ? u.shape.x * u.hinge.y : u.shape.x;
+}
 fragment float4 card_fragment(CardVertex in [[stage_in]], constant CardUniforms &u [[buffer(0)]], texture2d<float> face [[texture(0)]]) {
     if (any(in.position.xy < u.clip.xy) || any(in.position.xy > u.clip.xy + u.clip.zw)) { discard_fragment(); }
     float yaw = u.viewport_pose.w - u.shape.y * M_PI_F;
     if (cos(yaw) * cos(u.viewport_pose.z) < 0.) { discard_fragment(); }
-    float d = card_sdf(in.uv, u.rect.zw, u.shape.x);
+    float d = card_sdf(in.uv, u.rect.zw, face_radius(in.uv, u));
     if (u.shape.w == 2.) {
         // Figma hover shadow: y 20, blur 40 (sigma 20), spread -20, black 27%.
         float scale = u.texture_region.w;

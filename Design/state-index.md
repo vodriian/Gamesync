@@ -2,8 +2,9 @@
 
 This is the single coverage map for the 90 original references. Related states
 share one source file. Select the named variant in Elyx or render its symbol.
-The four dark references use the canonical screen with `theme=dark`.
-`index.elyx` opens the default Grid, Settings, and the canonical Sidebar.
+The five dark references use the canonical screen with `theme=dark`.
+`index.elyx` opens the default Grid, Settings, the canonical Sidebar, and the
+Play now hand.
 
 ## Coverage and limits
 
@@ -102,6 +103,8 @@ records the completed static checks and remaining native comparison limit.
 | SettingsProtonDbUpdating | [BestOn.elyx](design/screens/settings/BestOn.elyx) | `SettingsProtonDbUpdating` | light |
 | SettingsProtonDbFailed | [BestOn.elyx](design/screens/settings/BestOn.elyx) | `SettingsProtonDbFailed` | light |
 | SettingsAppearance | [Appearance.elyx](design/screens/settings/Appearance.elyx) | `SettingsAppearance` | light |
+| SettingsMacOS | [Appearance.elyx](design/screens/settings/Appearance.elyx) | `SettingsMacOS` | light |
+| SettingsWindows | [Appearance.elyx](design/screens/settings/Appearance.elyx) | `SettingsWindows` | light |
 | SettingsOmarchy | [Appearance.elyx](design/screens/settings/Appearance.elyx) | `SettingsOmarchy` | light |
 | AiLocal | [AI.elyx](design/screens/settings/AI.elyx) | `AiLocal` | light |
 | AiCloud | [AI.elyx](design/screens/settings/AI.elyx) | `AiCloud` | light |
@@ -126,3 +129,34 @@ records the completed static checks and remaining native comparison limit.
 | CardsDark | [Cards.elyx](design/screens/library/Cards.elyx) | `Cards` | dark |
 | CardDetailsDark | [CardDetails.elyx](design/screens/details/CardDetails.elyx) | `CardDetails` | dark |
 | SettingsAppearanceDark | [Appearance.elyx](design/screens/settings/Appearance.elyx) | `SettingsAppearance` | dark |
+| SettingsMacOSDark | [Appearance.elyx](design/screens/settings/Appearance.elyx) | `SettingsMacOS` | dark |
+
+## Play now
+
+The native Play now flow adds these 12 references. Open
+[PlayNow.elyx](design/screens/play-now/PlayNow.elyx) or select a variant in Elyx.
+All support the explicit `theme=dark` context. The main index includes the hand.
+Shared Preferences and Switch blocks retain editable controls; the game overlay
+instances the existing book source. No second sidebar or book component was made.
+
+These references use sample games and the shared baseline palette. They show
+settled states, not executable animation. The native controls slide one selection
+pill per group in 200 ms; the switch thumb slides in 120 ms. Keyboard and Reduce
+motion snap. More options and save failure use taller canvases to show scroll
+content. Native interaction and platform limits are in the
+[delivery log](../plan/logs/2026-10-07-play-now-delivery.md).
+
+| State | Symbol | Notes |
+| --- | --- | --- |
+| Setup | `PlayNow` | Time, energy, activities; 40 px controls |
+| Brain dead on | `PlayNowBrainDead` | Switch below energy |
+| More options | `PlayNowOptions` | Setup, scope, installation, favorites |
+| Hand | `PlayNowHand` | Play, Skip, Save; customize after PC; one reshuffle |
+| Preferences modal | `PlayNowPreferences` | Shared setup over the existing hand |
+| Game overlay | `PlayNowGame` | Shared book, no filmstrip or Back bar |
+| Profile modal | `PlayNowProfile` | Personal corrections over the book |
+| Active session | `PlayNowPlaying` | Timer, sidebar hourglass, Done playing |
+| Saved | `PlayNowSaved` | Saved and excluded game review |
+| Recent | `PlayNowRecent` | Explicit session history |
+| No matches | `PlayNowEmpty` | Adjust preferences without relaxing hard filters |
+| Save failure | `PlayNowSaveFailed` | Retry or discard |

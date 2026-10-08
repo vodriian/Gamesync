@@ -1,15 +1,15 @@
-import "tokens/colors.dark.elyx" as darkTheme
 import "tokens/colors.elyx" as c
 import "design/blocks/shell/SettingsShell.elyx" as settingsSource
 import "tokens/spacing.elyx" as spacing
 import "tokens/typography.elyx" as typography
 import "design/controls/Button.elyx" as buttons
-import "design/controls/TextField.elyx" as fields
 import "design/controls/LabeledField.elyx" as labeledFields
 import "resources/icons-new/chevron-down-stroke-rounded.svg" as glyph_6
-import "design/controls/Checkbox.elyx" as checkboxes
 import "design/blocks/settings/SettingsGroup.elyx" as settingsGroups
+import "design/blocks/settings/SwitchRow.elyx" as switchRows
 
+// Theme look: every color scheme, contrast, and accent control is visible.
+// Native looks (MacOS, Windows, Omarchy) hide those rows; saved values stay.
 export SettingsAppearance = frame : settingsSource.Settings {
   left: 0px,
   top: 0px,
@@ -41,220 +41,231 @@ export SettingsAppearance = frame : settingsSource.Settings {
     top: 0px,
     width: 100%,
     overrides: [
-      insert(mode, after = .nil),
-      insert(lightScheme, after = mode),
-      insert(lightContrast, after = lightScheme),
-      insert(darkScheme, after = lightContrast),
-      insert(darkContrast, after = darkScheme),
-      insert(accent, after = darkContrast),
-      insert(motion, after = accent),
-      insert(hidden, after = motion)
+      insert(choices, after = .nil),
+      insert(lightRow, after = choices),
+      insert(darkRow, after = lightRow),
+      insert(additional, after = darkRow)
     ],
 
-    lightScheme = frame : labeledFields.LabeledField {
-      input {
-        value {
-          trailing {
-            contents: glyph_6,
-            display: .visible
+    choices = frame {
+      width: 100%,
+      layout: {item-gap: spacing.gap.section},
+      children: [mode, look],
+
+      mode = frame {
+        width: 100%,
+        layout: {direction: .column, item-gap: spacing.gap.regular},
+        children: [label, options],
+
+        label = text {
+          fill: c.ui.text,
+          contents: "Mode",
+          font-size: typography.size.body,
+          font-family: typography.family.interface,
+          font-style: "Medium"
+        }
+
+        options = frame {
+          layout: {item-gap: spacing.gap.medium},
+          children: [auto, light, dark],
+
+          auto = frame : buttons.Primary {
+            label {
+              label {
+                contents: "Auto"
+              }
+            }
           }
 
-          label {
-            contents: "Sanctum"
+          light = frame : buttons.Button {
+            label {
+              label {
+                contents: "Light"
+              }
+            }
+          }
+
+          dark = frame : buttons.Button {
+            label {
+              label {
+                contents: "Dark"
+              }
+            }
           }
         }
       }
 
-      label {
-        contents: "Light color scheme"
-      }
-    }
+      look = frame {
+        width: 100%,
+        layout: {direction: .column, item-gap: spacing.gap.regular},
+        children: [label, options],
 
-    lightContrast = frame : labeledFields.LabeledField {
-      input {
-        value {
-          trailing {
-            contents: glyph_6,
-            display: .visible
+        label = text {
+          fill: c.ui.text,
+          contents: "Appearance",
+          font-size: typography.size.body,
+          font-family: typography.family.interface,
+          font-style: "Medium"
+        }
+
+        options = frame {
+          layout: {item-gap: spacing.gap.medium},
+          children: [native, theme],
+
+          native = frame : buttons.Button {
+            label {
+              label {
+                contents: "MacOS"
+              }
+            }
           }
 
-          label {
-            contents: "Normal"
+          theme = frame : buttons.Primary {
+            label {
+              label {
+                contents: "Theme"
+              }
+            }
           }
         }
       }
-
-      label {
-        contents: "Light contrast"
-      }
     }
 
-    darkScheme = frame : labeledFields.LabeledField {
-      input {
-        value {
-          trailing {
-            contents: glyph_6,
-            display: .visible
-          }
+    lightRow = frame {
+      width: 100%,
+      layout: {item-gap: spacing.gap.section},
+      children: [lightScheme, lightContrast],
 
-          label {
-            contents: "Notion"
+      lightScheme = frame : labeledFields.LabeledField {
+        input {
+          value {
+            trailing {
+              contents: glyph_6,
+              display: .visible
+            }
+
+            label {
+              contents: "Sanctum"
+            }
           }
         }
-      }
 
-      label {
-        contents: "Dark color scheme"
-      }
-    }
-
-    darkContrast = frame : labeledFields.LabeledField {
-      input {
-        value {
-          trailing {
-            contents: glyph_6,
-            display: .visible
-          }
-
-          label {
-            contents: "Normal"
-          }
-        }
-      }
-
-      label {
-        contents: "Dark contrast"
-      }
-    }
-
-    accent = frame {
-      layout: {
-        item-gap: spacing.gap.large,
-        wrap: .true,
-        line-gap: spacing.gap.medium
-      },
-      children: [interface, scheme],
-
-      interface = frame : checkboxes.Checked {
         label {
-          contents: "Interface accent"
+          contents: "Light color scheme",
+          font-style: "Medium"
         }
       }
 
-      scheme = frame : checkboxes.Checked {
+      lightContrast = frame : labeledFields.LabeledField {
+        input {
+          value {
+            trailing {
+              contents: glyph_6,
+              display: .visible
+            }
+
+            label {
+              contents: "Normal"
+            }
+          }
+        }
+
+        label {
+          contents: "Light contrast",
+          font-style: "Medium"
+        }
+      }
+    }
+
+    darkRow = frame {
+      width: 100%,
+      layout: {item-gap: spacing.gap.section},
+      children: [darkScheme, darkContrast],
+
+      darkScheme = frame : labeledFields.LabeledField {
+        input {
+          value {
+            trailing {
+              contents: glyph_6,
+              display: .visible
+            }
+
+            label {
+              contents: "Notion"
+            }
+          }
+        }
+
+        label {
+          contents: "Dark color scheme",
+          font-style: "Medium"
+        }
+      }
+
+      darkContrast = frame : labeledFields.LabeledField {
+        input {
+          value {
+            trailing {
+              contents: glyph_6,
+              display: .visible
+            }
+
+            label {
+              contents: "Normal"
+            }
+          }
+        }
+
+        label {
+          contents: "Dark contrast",
+          font-style: "Medium"
+        }
+      }
+    }
+
+    additional = frame {
+      width: 100%,
+      layout: {direction: .column, item-gap: spacing.gap.small},
+      children: [heading, motion, hidden, schemeAccent, interfaceAccent],
+
+      heading = text {
+        fill: c.ui.text,
+        contents: "Additional settings",
+        font-size: typography.size.body,
+        font-family: typography.family.interface,
+        font-style: "Medium"
+      }
+
+      motion = frame : switchRows.SwitchRow {
+        label {
+          contents: "Reduce motion"
+        }
+      }
+
+      hidden = frame : switchRows.SwitchRow {
+        label {
+          contents: "Show hidden games in sidebar"
+        }
+      }
+
+      schemeAccent = frame : switchRows.SwitchRow {
         label {
           contents: "Color scheme accent"
         }
       }
-    }
 
-    mode = frame {
-      width: 100%,
-      layout: {direction: .column, item-gap: spacing.gap.regular},
-      children: [label, choices],
-
-      choices = frame {
-        width: 100%,
-        layout: {item-gap: spacing.gap.medium},
-        children: [auto, light, dark],
-
-        auto = frame : buttons.Primary {
-          label {
-            leading {
-              display: .none
-            }
-
-            trailing {
-              display: .none
-            }
-
-            detail {
-              display: .none
-            }
-
-            favorite {
-              display: .none
-            }
-
-            label {
-              contents: "Auto"
-            }
-          }
+      interfaceAccent = frame : switchRows.SwitchRow {
+        label {
+          contents: "Interface accent"
         }
-
-        light = frame : buttons.Button {
-          label {
-            leading {
-              display: .none
-            }
-
-            trailing {
-              display: .none
-            }
-
-            detail {
-              display: .none
-            }
-
-            favorite {
-              display: .none
-            }
-
-            label {
-              contents: "Light"
-            }
-          }
-        }
-
-        dark = frame : buttons.Button {
-          label {
-            leading {
-              display: .none
-            }
-
-            trailing {
-              display: .none
-            }
-
-            detail {
-              display: .none
-            }
-
-            favorite {
-              display: .none
-            }
-
-            label {
-              contents: "Dark"
-            }
-          }
-        }
-      }
-
-      label = text {
-        fill: c.ui.text,
-        contents: "Mode",
-        font-size: typography.size.body,
-        font-family: typography.family.interface
-      }
-    }
-
-    motion = frame : checkboxes.Checkbox {
-      label {
-        contents: "Reduce motion"
-      }
-    }
-
-    hidden = frame : checkboxes.Checkbox {
-      label {
-        contents: "Show hidden games in sidebar"
       }
     }
   }
 }
 
+// Native macOS look: system colors and accent; the Theme rows are hidden.
 @variant
-export SettingsOmarchy = frame : SettingsAppearance {
+export SettingsMacOS = frame : SettingsAppearance {
   left: 1360px,
   top: 0px,
 
@@ -262,84 +273,96 @@ export SettingsOmarchy = frame : SettingsAppearance {
     main {
       body {
         content {
-          overrides: [
-            insert(omarchy, after = .nil),
-            insert(note, after = omarchy),
-            insert(scheme, after = SettingsAppearance.content.mode),
-            remove(SettingsAppearance.content.accent),
-            remove(SettingsAppearance.content.darkContrast),
-            remove(SettingsAppearance.content.darkScheme),
-            remove(SettingsAppearance.content.lightScheme),
-            remove(SettingsAppearance.content.lightContrast)
-          ],
+          additional {
+            interfaceAccent {
+              display: .none
+            }
 
-          mode {
-            overrides: [
-              insert(input, after = SettingsAppearance.content.mode.label),
-              remove(SettingsAppearance.content.mode.choices)
-            ],
-            layout.item-gap: spacing.gap.icon
+            schemeAccent {
+              display: .none
+            }
+          }
+
+          darkRow {
+            display: .none
+          }
+
+          lightRow {
+            display: .none
+          }
+
+          choices {
+            look {
+              options {
+                @with-variant(buttons.Button)
+                theme {}
+
+                @with-variant(buttons.Primary)
+                native {}
+              }
+            }
           }
         }
       }
     }
   }
+}
 
-  omarchy = frame : checkboxes.Checked {
-    label {
-      contents: "Sync with Omarchy theme"
-    }
-  }
+// Windows offers the same choice under its own platform name.
+@variant
+export SettingsWindows = frame : SettingsMacOS {
+  left: 2720px,
+  top: 0px,
 
-  note = text {
-    left: 0px,
-    top: 0px,
-    width: 100%,
-    fill: c.ui.muted,
-    contents: "Use the active Omarchy theme on this Linux computer.",
-    font-size: typography.size.body,
-    font-family: typography.family.interface
-  }
-
-  input = frame : fields.TextField {
-    left: 0px,
-    top: 0px,
-    width: 100%,
-
-    value {
-      leading {
-        display: .none
-      }
-
-      trailing {
-        display: .none
-      }
-
-      detail {
-        display: .none
-      }
-
-      favorite {
-        display: .none
-      }
-
-      label {
-        contents: "Dark"
-      }
-    }
-  }
-
-  scheme = frame : labeledFields.LabeledField {
-    input {
-      value {
-        label {
-          contents: "Controlled by Omarchy"
+  sections {
+    main {
+      body {
+        content {
+          choices {
+            look {
+              options {
+                native {
+                  label {
+                    label {
+                      contents: "Windows"
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }
+  }
+}
 
-    label {
-      contents: "Color scheme"
+// On Linux the native choice appears only while Omarchy state is available.
+// It replaces the former "Sync with Omarchy theme" checkbox.
+@variant
+export SettingsOmarchy = frame : SettingsMacOS {
+  left: 4080px,
+  top: 0px,
+
+  sections {
+    main {
+      body {
+        content {
+          choices {
+            look {
+              options {
+                native {
+                  label {
+                    label {
+                      contents: "Omarchy"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

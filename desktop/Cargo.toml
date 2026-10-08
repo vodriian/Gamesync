@@ -22,7 +22,9 @@ rusqlite = { version = "=0.40.2", features = ["bundled"] }
 notify = "=7.0.0"
 image = { version = "=0.25.10", default-features = false, features = ["jpeg"] }
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
-keyring = { version = "3.6", features = ["apple-native", "sync-secret-service", "crypto-rust"] }
+# Each OS keeps keys in its own secure store; without a native feature keyring
+# falls back to memory and keys are lost on restart.
+keyring = { version = "3.6", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }
 # Synced API keys: the standard age format, not custom cryptography.
 age = { version = "=0.12.1", features = ["armor"] }
 # Keyed fingerprints of synced keys; already in the lock through other crates.
@@ -33,6 +35,16 @@ flate2 = "1"
 # Use system Metal on startup; do not require Apple's separate Metal Toolchain.
 [target.'cfg(target_os = "macos")'.dependencies]
 gpui = { version = "=0.2.2", features = ["runtime_shaders"] }
+# Reads the user's system accent color; already in the lock through gpui.
+objc = "0.2.7"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+# Reads the user's Windows accent color; already in the lock through other crates.
+windows-registry = "0.5"
+
+# objc 0.2 macros (system accent) test a legacy `cargo-clippy` feature in this crate.
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(feature, values("cargo-clippy"))'] }
 
 [profile.dev.package."*"]
 opt-level = 2
