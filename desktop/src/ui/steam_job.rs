@@ -13,7 +13,27 @@ use std::sync::{
 
 pub struct SteamGlobal(pub Entity<SteamJob>);
 impl Global for SteamGlobal {}
-pub struct Finished;
+pub struct Finished(pub Completion);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Completion {
+    Success,
+    Cancelled,
+    NeedsReview,
+    Failed,
+}
+
+impl Completion {
+    fn from_progress(progress: &steam::SyncProgress) -> Self {
+        if progress.cancelled {
+            Self::Cancelled
+        } else if progress.failures > 0 {
+            Self::NeedsReview
+        } else {
+            Self::Success
+        }
+    }
+}
 
 pub struct SteamJob {
     library: Entity<Library>,
@@ -106,16 +126,21 @@ impl SteamJob {
             };
             let _ = this.update(cx, |this, cx| {
                 this.cancel = None;
+                let completion;
                 match result {
                     Ok((result, timestamp)) => {
+                        completion = Completion::from_progress(&result);
                         this.message = result.message;
                         if timestamp.is_some() {
                             this.last_sync = timestamp;
                         }
                     }
-                    Err(error) => this.message = error.to_string(),
+                    Err(error) => {
+                        completion = Completion::Failed;
+                        this.message = error.to_string();
+                    }
                 }
-                cx.emit(Finished);
+                cx.emit(Finished(completion));
                 cx.notify();
             });
         })

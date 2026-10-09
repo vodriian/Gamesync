@@ -93,6 +93,13 @@ Place Steam sync directly before Settings. Use `refresh-04-stroke-rounded` at
 Reduce motion keeps it still; the accent color and progress tooltip show activity.
 Both entry points share one job. Cancellation stays in Settings.
 
+Completion toasts sit at the main window's bottom-right, 24 px from each edge.
+Use a quiet surface, a status icon, a short title, and optional details. Keep at
+most three cards visible. Use the shared 200 ms motion for upward entry, downward
+exit, and stack movement; fade individual paints to avoid GPUI subtree blending.
+Reduce motion uses static state changes. Dismiss after five readable seconds;
+hover and an inactive main window pause the timer. Keep keyboard focus unchanged.
+
 ## Motion and input
 
 - Give press feedback immediately. Commit the action on release when applicable.

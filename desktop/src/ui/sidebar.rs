@@ -27,9 +27,6 @@ pub struct LibrarySidebar {
     smart: smart::SmartState,
     busy: bool,
     message: String,
-    toast: Option<String>,
-    toast_icon: IconName,
-    toast_task: Option<gpui::Task<()>>,
 }
 
 impl LibrarySidebar {
@@ -57,33 +54,16 @@ impl LibrarySidebar {
             smart: smart::SmartState::new(),
             busy: false,
             message: String::new(),
-            toast: None,
-            toast_icon: IconName::CircleCheck,
-            toast_task: None,
         }
     }
 
     pub(super) fn show_toast(&mut self, message: &str, cx: &mut Context<Self>) {
         self.message.clear();
-        self.toast = Some(message.into());
-        self.toast_icon = IconName::CircleCheck;
-        // Replacing the task gives each new message its full display time.
-        self.toast_task = Some(cx.spawn(async move |this, cx| {
-            cx.background_executor()
-                .timer(std::time::Duration::from_secs(3))
-                .await;
-            let _ = this.update(cx, |this, cx| {
-                this.toast = None;
-                cx.notify();
-            });
-        }));
+        let toasts = cx.global::<super::toast::ToastGlobal>().0.clone();
+        toasts.update(cx, |toasts, cx| {
+            toasts.show(super::toast::Kind::Success, message.to_owned(), None, cx);
+        });
         cx.notify();
-    }
-
-    pub(super) fn show_sync_result(&mut self, message: &str, cx: &mut Context<Self>) {
-        self.show_toast(message, cx);
-        // A sync can finish with cancellation or partial failures.
-        self.toast_icon = IconName::Info;
     }
 
     fn row(&self, scope: Scope, icon: SidebarIcon, cx: &mut Context<Self>) -> impl IntoElement {
@@ -431,26 +411,5 @@ impl Render for LibrarySidebar {
                             }),
                     ),
             )
-            .when_some(self.toast.as_ref(), |sidebar, message| {
-                sidebar.child(
-                    h_flex()
-                        .absolute()
-                        .bottom(px(64.))
-                        .left_3()
-                        .right_3()
-                        .px_3()
-                        .py_2()
-                        .gap_2()
-                        .rounded(cx.theme().radius_lg)
-                        .border_1()
-                        .border_color(cx.theme().border)
-                        .bg(cx.theme().popover)
-                        .text_color(cx.theme().popover_foreground)
-                        .shadow_sm()
-                        .text_xs()
-                        .child(Icon::new(self.toast_icon.clone()).size_3())
-                        .child(message.clone()),
-                )
-            })
     }
 }

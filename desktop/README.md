@@ -164,6 +164,11 @@ It rotates while the job runs. Reduce motion keeps the icon still and uses the
 accent color to show activity. Open Settings to cancel. If Steam is not connected,
 the button opens General settings. Sample libraries cannot sync with Steam.
 
+When Steam sync ends, a toast appears at the bottom-right of the main window.
+It shows completion, cancellation, retry/review items, or an error. Toasts can
+be dismissed with the close button. Hover pauses their five-second timer; the
+timer also pauses while the main window is inactive.
+
 Keys use macOS Keychain or Linux Secret Service and stay outside the library.
 Unlock secure storage if it is unavailable. Remove key appears on the right only
 when a key is saved, and keeps your games. Linux requires D-Bus development libraries and an unlocked Secret
