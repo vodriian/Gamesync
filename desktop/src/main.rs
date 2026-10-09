@@ -31,6 +31,7 @@ gpui::actions!(
         ManageCollections,
         OpenSettings,
         OpenSyncSettings,
+        SyncSteam,
         ConnectSteam
     ]
 );
@@ -231,6 +232,10 @@ fn main() -> anyhow::Result<()> {
                     let sync_view = view.downgrade();
                     cx.on_action(move |_: &OpenSyncSettings, cx| {
                         let _ = sync_view.update(cx, |app, cx| app.open_sync_settings(cx));
+                    });
+                    let steam_view = view.downgrade();
+                    cx.on_action(move |_: &SyncSteam, cx| {
+                        let _ = steam_view.update(cx, |app, cx| app.sync_steam(cx));
                     });
                     let connect_view = view.downgrade();
                     cx.on_action(move |_: &ConnectSteam, cx| {

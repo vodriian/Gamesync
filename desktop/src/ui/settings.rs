@@ -14,10 +14,6 @@ use gamesync_desktop::{
 use gpui::{prelude::*, Entity, EventEmitter, Window};
 use gpui_component::input::{InputEvent, InputState};
 
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
 use uuid::Uuid;
 
 pub enum SettingsEvent {
@@ -80,7 +76,7 @@ pub struct SettingsView {
     saving_appearance_preference: bool,
     saving_hidden_preference: bool,
     busy: bool,
-    cancel: Option<steam::Cancellation>,
+    steam: Entity<super::steam_job::SteamJob>,
     message: String,
     last_sync: Option<u64>,
     sync: Entity<crate::sync_runtime::SyncState>,
@@ -106,6 +102,15 @@ impl SettingsView {
     ) -> Self {
         cx.observe(&library, |_, _, cx| cx.notify()).detach();
         cx.observe(&sync, |_, _, cx| cx.notify()).detach();
+        let steam = cx.global::<super::steam_job::SteamGlobal>().0.clone();
+        cx.observe(&steam, |this: &mut Self, job, cx| {
+            this.message = job.read(cx).message.clone();
+            if let Some(last) = job.read(cx).last_sync {
+                this.last_sync = Some(last);
+            }
+            cx.notify();
+        })
+        .detach();
         let best_on_library = library.clone();
         let best_on_state = cx.global::<super::best_on_state::BestOnGlobal>().0.clone();
         let open_rules = best_on_state.update(cx, |state, _| std::mem::take(&mut state.show_rules));
@@ -165,8 +170,8 @@ impl SettingsView {
             saving_appearance_preference: false,
             saving_hidden_preference: false,
             busy: false,
-            cancel: None,
-            message: String::new(),
+            message: steam.read(cx).message.clone(),
+            steam,
             last_sync: None,
         }
     }
@@ -218,15 +223,15 @@ impl SettingsView {
         self.section = Section::General;
         cx.notify();
     }
-    pub fn busy(&self) -> bool {
+    pub fn busy(&self, cx: &gpui::App) -> bool {
         self.saving_appearance_preference
             || self.saving_hidden_preference
-            || self.busy
+            || self.steam_busy(cx)
             || self.sync_busy
     }
     /// Read the saved Steam key again, for example after sync saved one.
     pub fn reload_connection(&mut self, cx: &mut Context<Self>) {
-        if let (Some(id), false) = (self.library_id, self.busy) {
+        if let (Some(id), false) = (self.library_id, self.steam_busy(cx)) {
             self.read_connection(id, cx);
         }
     }
@@ -287,7 +292,7 @@ impl SettingsView {
     /// Test, then save if the test passes. A test that cannot start clears the
     /// request, so a later manual test never saves by itself.
     fn test_and_save(&mut self, cx: &mut Context<Self>) {
-        if self.busy {
+        if self.steam_busy(cx) {
             return;
         }
         self.save_after_test = true;
@@ -297,7 +302,7 @@ impl SettingsView {
         }
     }
     fn test_key(&mut self, cx: &mut Context<Self>) {
-        if self.busy {
+        if self.steam_busy(cx) {
             return;
         }
         let Some((_, manifest)) = self.library.read(cx).source.clone() else {
@@ -358,7 +363,7 @@ impl SettingsView {
         cx.notify();
     }
     fn save_key(&mut self, cx: &mut Context<Self>) {
-        if self.busy || !self.tested_matches(cx) {
+        if self.steam_busy(cx) || !self.tested_matches(cx) {
             return;
         }
         let Some((root, manifest)) = self.library.read(cx).source.clone() else {
@@ -400,7 +405,7 @@ impl SettingsView {
         cx.notify();
     }
     fn remove_key(&mut self, cx: &mut Context<Self>) {
-        if self.busy || !self.key_saved {
+        if self.steam_busy(cx) || !self.key_saved {
             return;
         }
         let Some(id) = self.library_id else {
@@ -429,88 +434,13 @@ impl SettingsView {
         .detach();
     }
     fn sync(&mut self, cx: &mut Context<Self>) {
-        if self.busy {
+        if self.steam_busy(cx) {
             return;
         }
-        let Some((root, manifest)) = self.library.read(cx).source.clone() else {
-            return;
-        };
-        let Some(account) = manifest.definitions.steam_account else {
-            self.message = "Test and save your key first.".into();
-            cx.notify();
-            return;
-        };
-        let cancel = Arc::new(AtomicBool::new(false));
-        self.cancel = Some(cancel.clone());
-        self.busy = true;
-        self.message = "Starting sync…".into();
-        // One shared progress value bounds memory even when the window is closed.
-        let progress = Arc::new(std::sync::Mutex::new(String::new()));
-        let display_progress = progress.clone();
-        cx.spawn(async move |this, cx| {
-            let task = cx.background_spawn(async move {
-                let key = OsCredential::steam(manifest.library_id)?
-                    .get()?
-                    .ok_or_else(|| anyhow::anyhow!("Enter your Steam key in Settings"))?;
-                let result = steam::sync(&root, &account, &key, cancel, |state| {
-                    if let Ok(mut value) = progress.lock() {
-                        *value = state.message;
-                    }
-                })?;
-                let timestamp = if !result.cancelled {
-                    let now = std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)?
-                        .as_secs();
-                    settings::update(|s| {
-                        s.last_sync.insert(manifest.library_id.to_string(), now);
-                    })?;
-                    Some(now)
-                } else {
-                    None
-                };
-                Ok::<_, anyhow::Error>((result, timestamp))
-            });
-            futures::pin_mut!(task);
-            let result = loop {
-                let timer = cx
-                    .background_executor()
-                    .timer(std::time::Duration::from_millis(250));
-                futures::pin_mut!(timer);
-                match futures::future::select(task.as_mut(), timer).await {
-                    futures::future::Either::Left((result, _)) => break result,
-                    futures::future::Either::Right(_) => {
-                        let text = display_progress
-                            .lock()
-                            .map(|v| v.clone())
-                            .unwrap_or_default();
-                        let _ = this.update(cx, |this, cx| {
-                            if !text.is_empty() {
-                                this.message = text;
-                            }
-                            cx.notify();
-                        });
-                    }
-                }
-            };
-            let _ = this.update(cx, |this, cx| {
-                this.busy = false;
-                this.cancel = None;
-                match result {
-                    Ok((result, timestamp)) => {
-                        this.message = result.message;
-                        if timestamp.is_some() {
-                            this.last_sync = timestamp;
-                            cx.emit(SettingsEvent::LastSync(timestamp));
-                        }
-                    }
-                    Err(error) => this.message = error.to_string(),
-                }
-                cx.emit(SettingsEvent::Refresh);
-                cx.notify();
-            });
-        })
-        .detach();
-        cx.notify();
+        self.steam.update(cx, |job, cx| job.start(cx));
+    }
+    fn steam_busy(&self, cx: &gpui::App) -> bool {
+        self.busy || self.steam.read(cx).running()
     }
 }
 

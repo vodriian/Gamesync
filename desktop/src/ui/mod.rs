@@ -12,6 +12,7 @@ mod editor;
 mod grid;
 mod home;
 mod sidebar;
+mod steam_job;
 pub mod thumb_cache;
 
 pub mod collections;

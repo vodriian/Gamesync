@@ -99,6 +99,19 @@ impl GameSyncApp {
         cx.set_global(super::best_on_state::BestOnGlobal(best_on));
         let analysis = cx.new(|_| super::analysis_job::AnalysisJob::new(library.clone()));
         cx.set_global(super::analysis_job::AnalysisGlobal(analysis));
+        let steam = cx.new(|_| super::steam_job::SteamJob::new(library.clone()));
+        cx.set_global(super::steam_job::SteamGlobal(steam.clone()));
+        let steam_subscription =
+            cx.subscribe(&steam, |this, job, _: &super::steam_job::Finished, cx| {
+                let job = job.read(cx);
+                if job.last_sync.is_some() {
+                    this.last_sync = job.last_sync;
+                }
+                let message = job.message.clone();
+                this.sidebar
+                    .update(cx, |sidebar, cx| sidebar.show_sync_result(&message, cx));
+                this.refresh_library(cx);
+            });
         let sync = cx.new(|_| crate::sync_runtime::SyncState {
             folder: settings.sync_folder.clone(),
             ..Default::default()
@@ -243,6 +256,7 @@ impl GameSyncApp {
             omarchy_watch_task: None,
             appearance_revision: Default::default(),
             _subscriptions: vec![
+                steam_subscription,
                 grid_subscription,
                 home_subscription,
                 play_subscription,
@@ -279,6 +293,28 @@ impl GameSyncApp {
             app.open_folder(path, cx);
         }
         app
+    }
+
+    pub fn sync_steam(&mut self, cx: &mut Context<Self>) {
+        if self
+            .settings_view
+            .as_ref()
+            .is_some_and(|view| view.read(cx).busy(cx))
+        {
+            return;
+        }
+        let connected = self
+            .library
+            .read(cx)
+            .source
+            .as_ref()
+            .is_some_and(|(_, manifest)| manifest.definitions.steam_account.is_some());
+        if !connected {
+            self.open_steam_settings(cx);
+            return;
+        }
+        let steam = cx.global::<super::steam_job::SteamGlobal>().0.clone();
+        steam.update(cx, |job, cx| job.start(cx));
     }
 
     pub fn refresh_library(&mut self, cx: &mut Context<Self>) {
@@ -319,10 +355,15 @@ impl GameSyncApp {
             cx.notify();
             return false;
         }
-        if self
-            .settings_view
-            .as_ref()
-            .is_some_and(|view| view.read(cx).busy())
+        if cx
+            .global::<super::steam_job::SteamGlobal>()
+            .0
+            .read(cx)
+            .running()
+            || self
+                .settings_view
+                .as_ref()
+                .is_some_and(|view| view.read(cx).busy(cx))
         {
             self.notice =
                 "Wait for Settings to finish, or cancel the Steam sync, before closing.".into();

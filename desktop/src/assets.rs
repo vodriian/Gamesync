@@ -54,6 +54,10 @@ const COVERS: &[(&str, &[u8])] = &[
 /// Embed the shared design artwork; virtual keys keep component icon overrides stable.
 const ICONS: &[(&str, &[u8])] = &[
     (
+        "icons/hugeicons/refresh-04-stroke-rounded.svg",
+        include_bytes!("../../Design/resources/icons-new/refresh-04-stroke-rounded.svg"),
+    ),
+    (
         "icons/play-now/fast-forward.svg",
         include_bytes!("../../Design/resources/icons-new/fast-forward-stroke-rounded.svg"),
     ),
@@ -383,6 +387,7 @@ pub enum SidebarIcon {
     Wishlist,
     Collection,
     Settings,
+    Sync,
     Plus,
 }
 impl SidebarIcon {
@@ -422,6 +427,7 @@ impl gpui_component::IconNamed for SidebarIcon {
             Self::Wishlist => "icons/hugeicons/star-stroke-rounded.svg",
             Self::Collection => "icons/hugeicons/folder-01-stroke-rounded.svg",
             Self::Settings => "icons/hugeicons/settings-04-stroke-rounded.svg",
+            Self::Sync => "icons/hugeicons/refresh-04-stroke-rounded.svg",
             Self::Plus => "icons/hugeicons/plus-stroke-rounded.svg",
         }
         .into()

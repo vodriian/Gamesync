@@ -159,6 +159,11 @@ AI keys are saved in the OS credential store. AI tests and model lists are still
 Changing either input requires another test. Use **Sync now** to update Steam. Cancel stops after the current
 request; completed writes stay. Failed metadata stages retry on the next sync.
 
+The refresh button before Settings in the sidebar starts the same Steam sync.
+It rotates while the job runs. Reduce motion keeps the icon still and uses the
+accent color to show activity. Open Settings to cancel. If Steam is not connected,
+the button opens General settings. Sample libraries cannot sync with Steam.
+
 Keys use macOS Keychain or Linux Secret Service and stay outside the library.
 Unlock secure storage if it is unavailable. Remove key appears on the right only
 when a key is saved, and keeps your games. Linux requires D-Bus development libraries and an unlocked Secret

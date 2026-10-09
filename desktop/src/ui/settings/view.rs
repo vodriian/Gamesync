@@ -70,7 +70,7 @@ impl SettingsView {
                         .small()
                         .icon(IconName::Info)
                         .tooltip("Edit Steam connection")
-                        .disabled(self.busy || !has_library)
+                        .disabled(self.steam_busy(cx) || !has_library)
                         .on_click(
                             cx.listener(|this, _, window, cx| this.open_steam_editor(window, cx)),
                         ),
@@ -84,9 +84,9 @@ impl SettingsView {
             .rounded(cx.theme().radius_lg)
             .bg(cx.theme().group_box)
             .child("Steam profile or ID")
-            .child(Input::new(&self.profile).disabled(self.busy || !has_library))
+            .child(Input::new(&self.profile).disabled(self.steam_busy(cx) || !has_library))
             .child("API key")
-            .child(Input::new(&self.key).disabled(self.busy || !has_library))
+            .child(Input::new(&self.key).disabled(self.steam_busy(cx) || !has_library))
             .child(steam_help(cx))
             .child(
                 h_flex()
@@ -94,7 +94,7 @@ impl SettingsView {
                     .child(
                         Button::new("test-steam")
                             .label("Test key")
-                            .disabled(self.busy || !has_library)
+                            .disabled(self.steam_busy(cx) || !has_library)
                             .on_click(cx.listener(|this, _, _, cx| this.test_key(cx))),
                     )
                     .when(tested, |row| {
@@ -102,7 +102,7 @@ impl SettingsView {
                             Button::new("save-steam")
                                 .primary()
                                 .label("Save key")
-                                .disabled(self.busy)
+                                .disabled(self.steam_busy(cx))
                                 .on_click(cx.listener(|this, _, _, cx| this.save_key(cx))),
                         )
                     }),
@@ -172,12 +172,12 @@ impl Render for SettingsView {
         }
         let source = self.library.read(cx).source.clone();
         let id = source.as_ref().map(|(_, m)| m.library_id);
-        if id != self.library_id && !self.busy {
+        if id != self.library_id && !self.steam_busy(cx) {
             self.library_id = id;
             self.tested = None;
             self.key_saved = false;
             self.last_sync = None;
-            self.message.clear();
+            self.message = self.steam.read(cx).message.clone();
             self.key = Self::masked_input("Enter a key to save or replace", window, cx);
             self.profile.update(cx, |input, cx| {
                 input.set_value(
@@ -207,19 +207,15 @@ impl Render for SettingsView {
                         Button::new("sync-steam")
                             .primary()
                             .label("Sync now")
-                            .disabled(self.busy || !has_library || !self.key_saved)
+                            .disabled(self.steam_busy(cx) || !has_library || !self.key_saved)
                             .on_click(cx.listener(|this, _, _, cx| this.sync(cx))),
                     )
                     .child(
                         Button::new("cancel-sync")
                             .label("Cancel sync")
-                            .disabled(self.cancel.is_none())
+                            .disabled(!self.steam.read(cx).running())
                             .on_click(cx.listener(|this, _, _, cx| {
-                                if let Some(cancel) = &this.cancel {
-                                    cancel.store(true, Ordering::Relaxed);
-                                    this.message = "Cancelling after the current request…".into();
-                                    cx.notify();
-                                }
+                                this.steam.update(cx, |job, cx| job.cancel(cx));
                             })),
                     ),
             )
@@ -301,7 +297,7 @@ impl SettingsView {
     fn select_section(&mut self, section: Section, cx: &mut Context<Self>) {
         self.section = section;
         self.stop_confirm = false;
-        if !self.busy {
+        if !self.steam_busy(cx) {
             self.message.clear();
         }
         cx.notify();

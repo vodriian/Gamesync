@@ -88,6 +88,11 @@ Keep primary navigation at the top of the sidebar. Place the subdued GameSync
 wordmark and Settings control together in a fixed footer; do not add a tagline
 that competes with the library navigation.
 
+Place Steam sync directly before Settings. Use `refresh-04-stroke-rounded` at
+18 px. Rotate only the icon, clockwise at one turn per second while sync runs.
+Reduce motion keeps it still; the accent color and progress tooltip show activity.
+Both entry points share one job. Cancellation stays in Settings.
+
 ## Motion and input
 
 - Give press feedback immediately. Commit the action on release when applicable.

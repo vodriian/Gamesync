@@ -11,7 +11,8 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 | [App plan](app-plan.md) | Scope, architecture, data rules, milestones, and acceptance checks |
 | [Guardrails](guardrails.md) | Code quality, tests, writing, and efficient agent work |
 | [Design](design.md) | Eagle GUI reference and design rules |
-| [Latest log](logs/2026-10-07-ai-play-now.md) | AI profile analysis for Play now: providers, validation, checks |
+| [Latest log](logs/2026-10-09-sidebar-steam-sync.md) | Sidebar Steam sync button and rotation checks |
+| [AI log](logs/2026-10-07-ai-play-now.md) | AI profile analysis for Play now: providers, validation, checks |
 | [Native UI log](logs/2026-10-07-native-ui-mode.md) | Native UI mode: macOS look, system accent, Settings form, book turn |
 | [Play now delivery log](logs/2026-10-07-play-now-delivery.md) | Play now delivery, Elyx states, and final checks |
 | [Book details log](logs/2026-10-05.md) | Best on demo prototype and book details prototype |
