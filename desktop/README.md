@@ -18,6 +18,38 @@ The script builds the app. On macOS it also creates a development bundle at
 `desktop/target/GameSync.app`. It is not a signed release package.
 You can also run `cargo run --manifest-path desktop/Cargo.toml` directly.
 
+### Windows first build
+
+Install stable Rust (the MSVC toolchain), Git, and Visual Studio 2022 Build Tools.
+Select **Desktop development with C++**, including MSVC x64 tools and a Windows
+SDK. The SDK supplies `fxc.exe` for GPUI's release shaders.
+
+From PowerShell at the repository root:
+
+```powershell
+& .\desktop\scripts\windows.ps1 -Command build
+& .\desktop\target\debug\gamesync-desktop.exe
+```
+
+The script loads the installed MSVC and SDK environment for this process.
+Use `-Release` to build `desktop/target/release/gamesync-desktop.exe`.
+Use `-Command test`, `-Command fmt`, or `-Command clippy` for checks.
+Builds use `Cargo.lock`. `-UpdateLock` is only for a deliberate dependency change.
+The executable includes its artwork and UI assets. It is a local test build;
+an installer and public release signing remain pending.
+Other PCs need the Microsoft Visual C++ x64 runtime. The first-build copy is
+`desktop/target/windows/GameSync.exe`.
+
+Windows builds embed `icon/app-icon.ico` as resource ID 1, which GPUI uses for
+the window and taskbar icon. It is derived from `icon/app-icon.png` at seven
+sizes from 16 to 256 px. After changing the PNG, run
+`& .\desktop\scripts\make_windows_icon.ps1` before rebuilding.
+
+Windows keeps keys in Credential Manager. Local library writes use flushed
+staging files and write-through renames. Windows has no equivalent of the Unix
+directory flush used here; power-loss durability depends on the filesystem and
+device. Steam installation detection and game launching still need Windows support.
+
 Connect Steam in Settings. GameSync prepares its local store automatically;
 there is no folder picker, Open Library command, or `--library` option.
 An existing readable store from earlier versions is retained internally so
@@ -100,7 +132,8 @@ saved version. Both branches remain in history. A late version or changed librar
 definition rejects the choice. Unsaved inspector drafts remain separate.
 Library-definition conflicts still require service-level resolution.
 Local publication does not confirm Dropbox upload.
-Only macOS has been tested; Windows writes are disabled.
+Windows writes are enabled for the first Windows build. See the platform checks
+in [the project log](../plan/logs/2026-10-11-windows-first-run.md).
 
 ## Try sample games
 

@@ -1,4 +1,4 @@
-#![cfg(unix)]
+#![cfg(any(unix, windows))]
 use gamesync_desktop::{
     library::LibraryStore, library_reader::LibraryReader, record_store::RecordStore,
     records::GameData,

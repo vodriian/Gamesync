@@ -7,9 +7,11 @@ use crate::{
 };
 use anyhow::{ensure, Context, Result};
 use serde::{Deserialize, Serialize};
+#[cfg(unix)]
+use std::fs::File;
 use std::{
     collections::BTreeSet,
-    fs::{self, File},
+    fs,
     path::{Path, PathBuf},
 };
 use uuid::Uuid;
@@ -200,7 +202,7 @@ impl LibraryStore {
     /// A failed initialization leaves its partial folder available for inspection.
     pub fn create(root: impl Into<PathBuf>, name: impl Into<String>) -> Result<Self> {
         ensure!(
-            cfg!(unix),
+            cfg!(any(unix, windows)),
             "Library storage is not implemented for this platform"
         );
         let root = root.into();
@@ -238,7 +240,7 @@ impl LibraryStore {
     /// Open without changing files. Partial/newer/conflicting manifests remain inspectable.
     pub fn open(root: impl Into<PathBuf>) -> Result<Self> {
         ensure!(
-            cfg!(unix),
+            cfg!(any(unix, windows)),
             "Library storage is not implemented for this platform"
         );
         let root = root.into();

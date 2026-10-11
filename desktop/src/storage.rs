@@ -10,7 +10,7 @@ use anyhow::{bail, Context, Result};
 use serde::Serialize;
 use tempfile::{Builder, NamedTempFile};
 
-/// Save a typed record in existing directories on macOS or Linux.
+/// Save a typed record in existing directories on macOS, Linux, or Windows.
 ///
 /// `revision` must be a new, immutable history path. An exact retry is allowed;
 /// different bytes at that path cause an error. Both files contain the same JSON.
@@ -20,7 +20,7 @@ use tempfile::{Builder, NamedTempFile};
 /// This function does not lock records or reject stale edits. A library service
 /// must do that before exposing this operation to the editor.
 pub fn save_record<T: Serialize>(current: &Path, revision: &Path, record: &T) -> Result<()> {
-    if !cfg!(unix) {
+    if !cfg!(any(unix, windows)) {
         bail!("Durable file writes are not implemented for this platform");
     }
     if current == revision {
@@ -45,9 +45,9 @@ pub fn save_record<T: Serialize>(current: &Path, revision: &Path, record: &T) ->
 /// Publish an immutable file. An exact retry succeeds; different bytes fail.
 pub(crate) fn publish_revision(path: &Path, bytes: &[u8]) -> Result<()> {
     let staged = stage(path, bytes)?;
-    match staged.persist_noclobber(path) {
+    match publish(staged, path, false) {
         Ok(_) => {}
-        Err(error) if error.error.kind() == std::io::ErrorKind::AlreadyExists => {
+        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
             let previous = fs::read(path)
                 .with_context(|| format!("Could not read revision at {}", path.display()))?;
             if previous != bytes {
@@ -58,9 +58,9 @@ pub(crate) fn publish_revision(path: &Path, bytes: &[u8]) -> Result<()> {
             }
             // A retry can follow a failed directory sync. Flush again before
             // allowing the current record to reference this revision.
-            fs::File::open(path)?.sync_all()?;
+            sync_file(path)?;
         }
-        Err(error) => return Err(error.error).context("Could not publish revision"),
+        Err(error) => return Err(error).context("Could not publish revision"),
     }
     sync_parent(path).context("Could not confirm revision directory")
 }
@@ -74,11 +74,73 @@ pub(crate) fn retain_revision<T: Serialize>(path: &Path, record: &T) -> Result<(
 
 /// Atomically replace a file that has one writer.
 pub(crate) fn replace_current(path: &Path, bytes: &[u8]) -> Result<()> {
-    stage(path, bytes)?
-        .persist(path)
-        .map_err(|error| error.error)
-        .context("Could not replace current file")?;
+    publish(stage(path, bytes)?, path, true).context("Could not replace current file")?;
     sync_parent(path)
+}
+
+#[cfg(not(windows))]
+pub(crate) fn publish(file: NamedTempFile, path: &Path, replace: bool) -> std::io::Result<()> {
+    let result = if replace {
+        file.persist(path)
+    } else {
+        file.persist_noclobber(path)
+    };
+    result.map(|_| ()).map_err(|error| error.error)
+}
+
+#[cfg(windows)]
+pub(crate) fn publish(file: NamedTempFile, path: &Path, replace: bool) -> std::io::Result<()> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Storage::FileSystem::{
+        MoveFileExW, MOVEFILE_REPLACE_EXISTING, MOVEFILE_WRITE_THROUGH,
+    };
+
+    // Close the staged handle before rename. TempPath removes it on failure.
+    // Both paths are on the same volume; immutable history never uses replace.
+    let staged = file.into_temp_path();
+    let wide = |path: &Path| -> std::io::Result<Vec<u16>> {
+        let mut value: Vec<_> = path.as_os_str().encode_wide().collect();
+        if value.contains(&0) {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "Path contains NUL",
+            ));
+        }
+        value.push(0);
+        Ok(value)
+    };
+    let source = wide(&staged)?;
+    let destination = wide(path)?;
+    let flags = MOVEFILE_WRITE_THROUGH
+        | if replace {
+            MOVEFILE_REPLACE_EXISTING
+        } else {
+            0
+        };
+    for attempt in 0..8 {
+        // SAFETY: Both pointers refer to live, NUL-terminated UTF-16 paths.
+        if unsafe { MoveFileExW(source.as_ptr(), destination.as_ptr(), flags) } != 0 {
+            return Ok(());
+        }
+        let error = std::io::Error::last_os_error();
+        // Readers and virus scanners can briefly prevent a Windows rename.
+        // Bound retries to 140 ms; a lasting failure keeps revision recovery.
+        if attempt == 7 || !matches!(error.raw_os_error(), Some(5 | 32 | 33)) {
+            return Err(error);
+        }
+        std::thread::sleep(std::time::Duration::from_millis(5 * (attempt + 1)));
+    }
+    unreachable!("Every final publication attempt returns")
+}
+
+pub(crate) fn sync_file(path: &Path) -> Result<()> {
+    // FlushFileBuffers requires write access on Windows. Do not truncate history.
+    fs::OpenOptions::new()
+        .read(true)
+        .write(cfg!(windows))
+        .open(path)?
+        .sync_all()?;
+    Ok(())
 }
 
 fn stage(path: &Path, bytes: &[u8]) -> Result<NamedTempFile> {
@@ -104,14 +166,22 @@ fn parent(path: &Path) -> Result<&Path> {
 }
 
 #[cfg(unix)]
-fn sync_parent(path: &Path) -> Result<()> {
+pub(crate) fn sync_parent(path: &Path) -> Result<()> {
     // Sync the directory entry as well as the data before reporting success.
     // Hardware and cloud clients can add their own persistence limits.
     fs::File::open(parent(path)?)?.sync_all()?;
     Ok(())
 }
 
-#[cfg(not(unix))]
-fn sync_parent(_: &Path) -> Result<()> {
+#[cfg(windows)]
+pub(crate) fn sync_parent(_: &Path) -> Result<()> {
+    // Windows publication uses MoveFileExW with WRITE_THROUGH after flushing
+    // file data. It has no supported equivalent of Unix directory fsync;
+    // power-loss durability still depends on the filesystem and device.
+    Ok(())
+}
+
+#[cfg(not(any(unix, windows)))]
+pub(crate) fn sync_parent(_: &Path) -> Result<()> {
     bail!("Directory sync is not implemented for this platform")
 }

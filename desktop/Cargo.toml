@@ -41,6 +41,12 @@ objc = "0.2.7"
 [target.'cfg(target_os = "windows")'.dependencies]
 # Reads the user's Windows accent color; already in the lock through other crates.
 windows-registry = "0.5"
+# Write-through publication for local records; this version is already locked.
+windows-sys = { version = "=0.61.2", features = ["Win32_Storage_FileSystem"] }
+
+[target.'cfg(windows)'.build-dependencies]
+# Embed the application icon with the resource compiler already used by GPUI.
+embed-resource = "=3.0.11"
 
 # objc 0.2 macros (system accent) test a legacy `cargo-clippy` feature in this crate.
 [lints.rust]

@@ -40,6 +40,14 @@ parent. It cannot lock another computer or Dropbox. Late remote revisions become
 conflicts when their files arrive. Every conforming writer must publish history
 before its current file. Do not remove history or conflict copies by hand.
 
+On Windows, staged file data is flushed before `MoveFileExW` publishes the file
+with `MOVEFILE_WRITE_THROUGH`. History publication does not replace existing
+files. Current-file replacement stays on the same volume. Retry and parent
+history flushes open the file with write access, as Windows requires.
+Windows has no supported equivalent of the Unix directory flush used here;
+power-loss durability depends on the filesystem and device. This does not
+confirm cloud upload.
+
 ## Current limits
 
 - `LibraryStore` creates a new offline library folder. Existing folders are never overwritten. `RecordStore` remains a lower-level service; it does not check status membership yet.

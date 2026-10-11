@@ -1,4 +1,4 @@
-#![cfg(unix)]
+#![cfg(any(unix, windows))]
 use gamesync_desktop::{
     library::LibraryStore,
     library_reader::LibraryReader,
@@ -159,9 +159,16 @@ fn tombstones_hide_games_and_deleting_the_index_rebuilds_it() {
 }
 
 #[test]
-fn media_and_cache_cannot_escape_their_expected_folders() {
+fn cache_cannot_be_inside_the_library() {
     let f = Fixture::new();
     assert!(LibraryReader::open(&f.root, &f.root.join("media")).is_err());
+}
+
+// Windows symlink creation needs developer mode or elevated privileges.
+#[cfg(unix)]
+#[test]
+fn media_cannot_escape_its_expected_folder() {
+    let f = Fixture::new();
     let outside = f.temp.path().join("outside.jpg");
     fs::write(&outside, "not an image").unwrap();
     std::os::unix::fs::symlink(outside, f.root.join("media/cover.jpg")).unwrap();

@@ -22,7 +22,7 @@ pub struct RecordStore {
 impl RecordStore {
     pub fn open(root: impl Into<PathBuf>) -> Result<Self> {
         ensure!(
-            cfg!(unix),
+            cfg!(any(unix, windows)),
             "Record storage is not implemented for this platform"
         );
         let root = root.into();

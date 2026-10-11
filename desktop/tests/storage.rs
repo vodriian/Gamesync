@@ -1,4 +1,4 @@
-#![cfg(unix)]
+#![cfg(any(unix, windows))]
 
 use std::{fs, path::PathBuf, sync::Arc, thread};
 
@@ -177,4 +177,25 @@ fn readers_see_complete_records_during_replacement() {
     }
     reader.join().unwrap();
     assert_eq!(files.read_current(), record(16));
+}
+
+#[cfg(windows)]
+#[test]
+fn locked_current_retains_the_revision_and_recovers_after_release() {
+    use std::os::windows::fs::OpenOptionsExt;
+    let files = LibraryFiles::new();
+    save_record(&files.current, &files.revision(1), &record(1)).unwrap();
+    // This models a Windows reader that does not share delete/rename access.
+    let reader = fs::OpenOptions::new()
+        .read(true)
+        .share_mode(1)
+        .open(&files.current)
+        .unwrap();
+    let error = save_record(&files.current, &files.revision(2), &record(2)).unwrap_err();
+    assert!(error.to_string().contains("Revision retained"));
+    assert_eq!(files.read_current(), record(1));
+    assert!(files.revision(2).exists());
+    drop(reader);
+    save_record(&files.current, &files.revision(2), &record(2)).unwrap();
+    assert_eq!(files.read_current(), record(2));
 }

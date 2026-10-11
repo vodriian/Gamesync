@@ -20,7 +20,7 @@ parser.add_argument("--missing-covers", action="store_true")
 args = parser.parse_args()
 root = Path(__file__).resolve().parents[1]
 subprocess.run(["cargo", "build", "--manifest-path", str(root / "Cargo.toml"), "--target-dir", str(root / "target")], check=True)
-binary = root / "target/debug/gamesync-desktop"
+binary = root / ("target/debug/gamesync-desktop.exe" if sys.platform == "win32" else "target/debug/gamesync-desktop")
 
 if sys.platform == "darwin":
     bundle = "PlayNowDemo.app" if args.play_now_demo else "BestOnDemo.app" if args.best_on_demo else "GameSync.app"

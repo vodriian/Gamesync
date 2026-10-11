@@ -1,4 +1,4 @@
-#![cfg(unix)]
+#![cfg(any(unix, windows))]
 //! Exercise the same library-aware write entry point as the native inspector.
 use gamesync_desktop::{
     library::LibraryStore,

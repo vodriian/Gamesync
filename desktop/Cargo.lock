@@ -2459,6 +2459,7 @@ dependencies = [
  "age",
  "anyhow",
  "directories",
+ "embed-resource",
  "env_logger",
  "flate2",
  "futures",
@@ -2478,6 +2479,7 @@ dependencies = [
  "tempfile",
  "uuid",
  "windows-registry 0.5.3",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
