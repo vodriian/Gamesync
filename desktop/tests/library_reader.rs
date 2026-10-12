@@ -81,6 +81,33 @@ fn the_index_gives_the_last_valid_library_before_a_scan() {
 }
 
 #[test]
+fn the_digest_changes_only_when_the_shown_library_changes() {
+    let f = Fixture::new();
+    fs::write(f.root.join("media/cover.jpg"), "fixture").unwrap();
+    let mut reader = f.reader();
+    let first = reader.refresh().unwrap().digest();
+    assert_eq!(reader.refresh().unwrap().digest(), first);
+    // The index gives the same library after a restart.
+    assert_eq!(f.reader().last_valid().unwrap().unwrap().digest(), first);
+    // An edit publishes a new revision.
+    let mut personal = f.game.game.personal.clone();
+    personal.cover = Some("media/cover.jpg".into());
+    RecordStore::open(&f.root)
+        .unwrap()
+        .edit_personal(f.game.game_id, f.game.revision_id, personal)
+        .unwrap();
+    let edited = reader.refresh().unwrap().digest();
+    assert_ne!(edited, first);
+    // New artwork at the same path.
+    fs::write(f.root.join("media/cover.jpg"), "changed cover").unwrap();
+    let recovered = reader.refresh().unwrap().digest();
+    assert_ne!(recovered, edited);
+    // A file problem is also part of what the view shows.
+    fs::write(f.current(), "{").unwrap();
+    assert_ne!(reader.refresh().unwrap().digest(), recovered);
+}
+
+#[test]
 fn partial_files_and_missing_sources_keep_valid_data_after_restart() {
     let f = Fixture::new();
     f.reader().refresh().unwrap();

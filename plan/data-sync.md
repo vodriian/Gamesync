@@ -255,10 +255,17 @@ values for each field: the local value now, the value at the last round
   loses nothing.
 - **Missing folder:** an unmounted or replaced sync folder is an error. The
   engine never creates its folders on the local disk in its place.
-- **Rounds:** the library refresh loop runs a round after each library read:
-  after a local save (library file watcher), at start, on Sync now, and every
-  10 seconds. The sync folder has no watcher; the 10-second scan finds new
-  batches. A round that wrote to the library reads it again at once.
+- **Rounds:** the library refresh loop runs a round after a local save
+  (library file watcher), at start, on Sync now, and every 10 seconds. The
+  sync folder has no watcher; the 10-second round finds new batches. A round
+  that wrote to the library reads it again at once.
+- **Library reads (changed 2026-10-12):** a round uses the latest library read.
+  The loop reads the library folder again after a watcher event, a manual
+  refresh, a watcher failure (then on each round), and at least every
+  5 minutes. A full read opens every revision file, so it no longer runs on
+  each 10-second round. A round's game writes check the expected revision, so
+  a read that missed a change cannot replace newer data; that write fails and
+  the next round retries.
 - **Shared settings from another device** are applied to the open windows:
   reduce motion, hidden games, sort and grouping, and section views.
 - **Offline at start:** if the folder cannot open, each later round tries

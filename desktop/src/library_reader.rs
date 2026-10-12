@@ -29,6 +29,28 @@ pub struct LoadedLibrary {
     pub issues: Vec<String>,
 }
 
+impl LoadedLibrary {
+    /// Identity of everything a view shows from this read. Two reads with the
+    /// same digest display the same library. Revisions are immutable, so a
+    /// revision ID stands for its record content; `media_version` covers
+    /// artwork files.
+    pub fn digest(&self) -> u64 {
+        let mut hash = std::collections::hash_map::DefaultHasher::new();
+        self.root.hash(&mut hash);
+        self.manifest.library_id.hash(&mut hash);
+        self.manifest.revision_id.hash(&mut hash);
+        for game in &self.games {
+            game.game_id.hash(&mut hash);
+            game.revision_id.hash(&mut hash);
+        }
+        self.conflicts.hash(&mut hash);
+        self.media_version.hash(&mut hash);
+        self.write_issue.hash(&mut hash);
+        self.issues.hash(&mut hash);
+        hash.finish()
+    }
+}
+
 pub struct LibraryReader {
     root: PathBuf,
     index: Connection,

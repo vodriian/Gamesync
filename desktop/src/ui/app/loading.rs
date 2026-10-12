@@ -6,9 +6,12 @@ use futures::{
     channel::{mpsc, oneshot},
     StreamExt,
 };
-use gamesync_desktop::library_reader::LibraryReader;
+use gamesync_desktop::library_reader::{LibraryReader, LoadedLibrary};
 use gpui::{prelude::*, Context};
-use std::{path::PathBuf, time::Duration};
+use std::{
+    path::PathBuf,
+    time::{Duration, Instant},
+};
 
 impl GameSyncApp {
     pub(super) fn open_folder(&mut self, path: PathBuf, cx: &mut Context<Self>) {
@@ -40,10 +43,12 @@ impl GameSyncApp {
             let mut reader = LibraryReader::open(&root, &cache)?;
             crate::startup_trace::mark("index_open");
             // An unusable index only delays the first view until the scan.
+            let mut shown = None;
             if let Some(loaded) = existed
                 .then(|| reader.last_valid().ok().flatten())
                 .flatten()
             {
+                shown = Some(loaded.digest());
                 let mut model = Library::from_loaded(&loaded);
                 model.demo = sample_mode;
                 let _ = cached_sender.send((reader.root().to_path_buf(), model, loaded.issues));
@@ -61,8 +66,12 @@ impl GameSyncApp {
                     Err(error) => log::warn!("Could not fill sample values: {error:#}"),
                 }
             }
-            let mut model = Library::from_loaded(&loaded);
-            model.demo = sample_mode;
+            // The scan usually confirms the indexed library. Then the view stays as it is.
+            let model = (shown != Some(loaded.digest())).then(|| {
+                let mut model = Library::from_loaded(&loaded);
+                model.demo = sample_mode;
+                model
+            });
             let (watcher, warning) = match crate::watcher::watch(&root, sender) {
                 Ok(watcher) => (Some(watcher), None),
                 Err(error) => (
@@ -76,7 +85,7 @@ impl GameSyncApp {
                 .last_sync
                 .get(&loaded.manifest.library_id.to_string())
                 .copied();
-            Ok::<_, anyhow::Error>((reader, model, loaded.issues, watcher, warning, last_sync))
+            Ok::<_, anyhow::Error>((reader, loaded, model, watcher, warning, last_sync))
         });
         self.load_task = Some(cx.spawn(async move |this, cx| {
             // A dropped sender means no indexed library; the scan result follows.
@@ -89,7 +98,7 @@ impl GameSyncApp {
                     return;
                 }
             }
-            let (reader, model, mut issues, watcher, watch_warning, last_sync) = match load.await {
+            let (reader, loaded, model, watcher, watch_warning, last_sync) = match load.await {
                 Ok(loaded) => loaded,
                 Err(error) => {
                     // A library shown from the index stays on screen.
@@ -103,20 +112,31 @@ impl GameSyncApp {
                 }
             };
             let path = reader.root().to_path_buf();
+            let mut issues = loaded.issues.clone();
             if let Some(warning) = &watch_warning {
                 issues.push(warning.clone());
             }
             let _ = this.update(cx, |this, cx| {
                 this.last_sync = last_sync;
-                this.show_library(&path, model, &issues, cx);
+                match model {
+                    Some(model) => this.show_library(&path, model, &issues, cx),
+                    None => this.show_issues(&issues, cx),
+                }
                 crate::startup_trace::mark("library_applied");
                 this.loading = false;
                 this.refresh = Some(refresh);
-                this.start_refresh(reader, events, watcher, watch_warning, sample_mode, cx);
-                // Sync without waiting for the first periodic scan.
-                if this.sync.read(cx).enabled() && !sample_mode {
-                    this.refresh_library(cx);
-                }
+                // Sync without waiting for the first periodic round.
+                let sync_now = this.sync.read(cx).enabled() && !sample_mode;
+                let live = LiveUpdates {
+                    events,
+                    watcher,
+                    warning: watch_warning,
+                    sample_mode,
+                    sync_now,
+                };
+                this.start_refresh(reader, loaded, live, cx);
+                // The status tooltip reads `loading` and `last_sync`.
+                cx.notify();
             });
         }));
         cx.notify();
@@ -144,34 +164,54 @@ impl GameSyncApp {
         self.review_folder = None;
     }
 
+    /// Keep the view current. A watcher event or a manual refresh scans the
+    /// folder. While a working watcher reports no change, the last read is
+    /// still the folder's state: sync rounds reuse it, and no scan runs.
     fn start_refresh(
         &mut self,
         mut reader: LibraryReader,
-        mut events: mpsc::Receiver<Result<(), String>>,
-        watcher: Option<notify::RecommendedWatcher>,
-        mut watch_warning: Option<String>,
-        sample_mode: bool,
+        loaded: LoadedLibrary,
+        live: LiveUpdates,
         cx: &mut Context<Self>,
     ) {
+        let LiveUpdates {
+            mut events,
+            watcher,
+            warning: mut watch_warning,
+            sample_mode,
+            sync_now,
+        } = live;
         self.watch_task = Some(cx.spawn(async move |this, cx| {
             let _watcher = watcher;
+            // The library on screen, and the read that it came from.
+            let mut shown = loaded.digest();
+            let mut current = Some(loaded);
+            let mut scanned = Instant::now();
+            let mut wait = !sync_now;
             loop {
-                let timer = cx.background_executor().timer(Duration::from_secs(10));
-                futures::pin_mut!(timer);
-                if let futures::future::Either::Left((Some(event), _)) =
-                    futures::future::select(events.next(), timer).await
-                {
-                    if let Err(warning) = event {
-                        watch_warning = Some(warning);
-                    }
-                    cx.background_executor()
-                        .timer(Duration::from_millis(500))
-                        .await;
-                    // Drain the bounded burst before the next scan.
-                    while let Ok(event) = events.try_recv() {
-                        if let Err(warning) = event {
-                            watch_warning = Some(warning);
+                let mut changed = false;
+                if std::mem::replace(&mut wait, true) {
+                    let timer = cx.background_executor().timer(ROUND_INTERVAL);
+                    futures::pin_mut!(timer);
+                    match futures::future::select(events.next(), timer).await {
+                        futures::future::Either::Left((Some(event), _)) => {
+                            changed = true;
+                            if let Err(warning) = event {
+                                watch_warning = Some(warning);
+                            }
+                            cx.background_executor()
+                                .timer(Duration::from_millis(500))
+                                .await;
+                            // Drain the bounded burst before the next scan.
+                            while let Ok(event) = events.try_recv() {
+                                if let Err(warning) = event {
+                                    watch_warning = Some(warning);
+                                }
+                            }
                         }
+                        // Every sender is gone: the app is closing.
+                        futures::future::Either::Left((None, _)) => return,
+                        futures::future::Either::Right(_) => {}
                     }
                 }
                 let (sync_handle, sync_folder) = match this.update(cx, |this, cx| {
@@ -181,48 +221,78 @@ impl GameSyncApp {
                     Ok(sync) => sync,
                     Err(_) => return,
                 };
+                // Sample libraries never sync.
+                let sync_folder = sync_folder.filter(|_| !sample_mode);
+                // A failed watcher falls back to a scan on each tick. The
+                // safety scan bounds the effect of an event that never arrived.
+                let scan = changed
+                    || current.is_none()
+                    || watch_warning.is_some()
+                    || scanned.elapsed() >= SAFETY_SCAN;
+                if !scan && sync_folder.is_none() {
+                    continue;
+                }
+                let previous = current.take().filter(|_| !scan);
                 let (returned, result, synced, timing) = cx
                     .background_spawn(async move {
                         let mut synced = None;
-                        let started = std::time::Instant::now();
+                        let started = Instant::now();
                         let mut timing = (0., 0.);
-                        let result = reader.refresh().map(|mut loaded| {
+                        let read = match previous {
+                            Some(loaded) => Ok(loaded),
+                            None => reader.refresh(),
+                        };
+                        let result = read.map(|mut loaded| {
                             timing.0 = started.elapsed().as_secs_f64() * 1000.;
-                            // Sample libraries never sync. A round uses the
-                            // library just read, as the engine requires.
-                            if let Some(folder) = sync_folder.filter(|_| !sample_mode) {
-                                let round = std::time::Instant::now();
+                            // A round needs the library as it is on disk. Its
+                            // writes check each game's revision, so a read that
+                            // missed a change cannot replace newer data.
+                            if let Some(folder) = sync_folder {
+                                let round = Instant::now();
                                 let outcome =
                                     sync_round(&mut reader, &mut loaded, sync_handle, &folder);
                                 timing.1 = round.elapsed().as_secs_f64() * 1000.;
                                 synced = Some(outcome);
                             }
-                            let mut model = Library::from_loaded(&loaded);
-                            model.demo = sample_mode;
-                            (model, loaded.issues)
+                            let digest = loaded.digest();
+                            let model = (digest != shown).then(|| {
+                                let mut model = Library::from_loaded(&loaded);
+                                model.demo = sample_mode;
+                                model
+                            });
+                            (loaded, digest, model)
                         });
                         (reader, result, synced, timing)
                     })
                     .await;
                 reader = returned;
-                crate::startup_trace::idle(timing.0, timing.1, result.is_ok());
+                if scan {
+                    scanned = Instant::now();
+                }
+                // After an error `current` stays empty, so the next tick scans.
+                let result = result.map(|(loaded, digest, model)| {
+                    let mut issues = loaded.issues.clone();
+                    if let Some(warning) = &watch_warning {
+                        issues.push(warning.clone());
+                    }
+                    current = Some(loaded);
+                    shown = digest;
+                    (model, issues)
+                });
+                crate::startup_trace::idle(timing.0, timing.1, matches!(&result, Ok((Some(_), _))));
                 if this
                     .update(cx, |this, cx| {
                         if let Some(synced) = synced {
                             this.apply_sync(synced, cx);
                         }
+                        this.refreshing = false;
                         match result {
-                            Ok((model, mut issues)) => {
-                                if let Some(warning) = &watch_warning {
-                                    issues.push(warning.clone());
-                                }
-                                if this.refreshing {
-                                    this.refreshing = false;
-                                }
-                                this.apply_library(model, &issues, true, cx);
+                            Ok((Some(model), issues)) => {
+                                this.apply_library(model, &issues, true, cx)
                             }
+                            // Nothing changed. Leave the model and the view alone.
+                            Ok((None, issues)) => this.show_issues(&issues, cx),
                             Err(error) => {
-                                this.refreshing = false;
                                 this.notice = format!(
                                     "Could not refresh: {error:#}. Showing last valid data."
                                 );
@@ -258,7 +328,14 @@ impl GameSyncApp {
             library.replace(model, same);
             cx.notify();
         });
-        self.notice = if issues.is_empty() {
+        self.show_issues(issues, cx);
+        cx.notify();
+    }
+
+    /// Show the first library issue as the notice. With no issue this clears
+    /// a notice that an earlier action left. Renders only when the text changes.
+    fn show_issues(&mut self, issues: &[String], cx: &mut Context<Self>) {
+        let notice = if issues.is_empty() {
             String::new()
         } else {
             format!(
@@ -277,8 +354,26 @@ impl GameSyncApp {
             }
             self.last_issues = issues.to_vec();
         }
-        cx.notify();
+        if self.notice != notice {
+            self.notice = notice;
+            cx.notify();
+        }
     }
+}
+
+/// Sync rounds run at this interval. See `plan/data-sync.md`.
+const ROUND_INTERVAL: Duration = Duration::from_secs(10);
+/// A full scan runs at least this often, also while the watcher reports no change.
+const SAFETY_SCAN: Duration = Duration::from_secs(300);
+
+/// What the refresh loop needs besides the reader and its first read.
+struct LiveUpdates {
+    events: mpsc::Receiver<Result<(), String>>,
+    watcher: Option<notify::RecommendedWatcher>,
+    warning: Option<String>,
+    sample_mode: bool,
+    /// Run a sync round at once, with the read from startup.
+    sync_now: bool,
 }
 
 /// The result of one sync attempt in the refresh loop.
@@ -292,7 +387,7 @@ pub(super) struct SyncOutcome {
 /// round wrote to it. A folder that cannot open is retried next time.
 fn sync_round(
     reader: &mut LibraryReader,
-    loaded: &mut gamesync_desktop::library_reader::LoadedLibrary,
+    loaded: &mut LoadedLibrary,
     handle: Option<std::sync::Arc<crate::sync_runtime::Handle>>,
     folder: &std::path::Path,
 ) -> SyncOutcome {
