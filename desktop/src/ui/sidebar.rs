@@ -3,7 +3,7 @@
 
 use crate::assets::SidebarIcon;
 use crate::model::{Library, Scope};
-use gpui::{div, prelude::*, px, Entity, Window};
+use gpui::{div, percentage, prelude::*, px, Animation, AnimationExt as _, Entity, Window};
 use gpui_component::{
     button::{Button, ButtonVariants as _},
     h_flex,
@@ -17,6 +17,7 @@ mod smart;
 pub struct LibrarySidebar {
     library: Entity<Library>,
     sync: Entity<crate::sync_runtime::SyncState>,
+    steam: Entity<super::steam_job::SteamJob>,
     play_now: Entity<super::play_now::PlayNowView>,
     collections_open: bool,
     collections_motion: super::motion::Motion,
@@ -26,8 +27,6 @@ pub struct LibrarySidebar {
     smart: smart::SmartState,
     busy: bool,
     message: String,
-    toast: Option<String>,
-    toast_task: Option<gpui::Task<()>>,
 }
 
 impl LibrarySidebar {
@@ -39,10 +38,13 @@ impl LibrarySidebar {
     ) -> Self {
         cx.observe(&library, |_, _, cx| cx.notify()).detach();
         cx.observe(&sync, |_, _, cx| cx.notify()).detach();
+        let steam = cx.global::<super::steam_job::SteamGlobal>().0.clone();
+        cx.observe(&steam, |_, _, cx| cx.notify()).detach();
         cx.observe(&play_now, |_, _, cx| cx.notify()).detach();
         Self {
             library,
             sync,
+            steam,
             play_now,
             collections_open: true,
             collections_motion: super::motion::Motion::new(1.),
@@ -52,24 +54,15 @@ impl LibrarySidebar {
             smart: smart::SmartState::new(),
             busy: false,
             message: String::new(),
-            toast: None,
-            toast_task: None,
         }
     }
 
     pub(super) fn show_toast(&mut self, message: &str, cx: &mut Context<Self>) {
         self.message.clear();
-        self.toast = Some(message.into());
-        // Replacing the task gives each new message its full display time.
-        self.toast_task = Some(cx.spawn(async move |this, cx| {
-            cx.background_executor()
-                .timer(std::time::Duration::from_secs(3))
-                .await;
-            let _ = this.update(cx, |this, cx| {
-                this.toast = None;
-                cx.notify();
-            });
-        }));
+        let toasts = cx.global::<super::toast::ToastGlobal>().0.clone();
+        toasts.update(cx, |toasts, cx| {
+            toasts.show(super::toast::Kind::Success, message.to_owned(), None, cx);
+        });
         cx.notify();
     }
 
@@ -79,6 +72,52 @@ impl LibrarySidebar {
             && !self.library.read(cx).play_now
             && self.library.read(cx).scope == scope;
         self.scope_row(scope, Some(Icon::new(icon.selected(selected))), count, cx)
+    }
+
+    fn steam_button(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let job = self.steam.read(cx);
+        let running = job.running();
+        let library = self.library.read(cx);
+        let unavailable = library.demo || library.source.is_none();
+        let connected = library
+            .source
+            .as_ref()
+            .is_some_and(|(_, manifest)| manifest.definitions.steam_account.is_some());
+        let tooltip = if library.demo {
+            "Steam sync is unavailable in the sample library".to_owned()
+        } else if library.source.is_none() {
+            "Your games are still loading…".to_owned()
+        } else if running {
+            format!("Syncing Steam… {}", job.message)
+        } else if !connected {
+            "Connect Steam in Settings".to_owned()
+        } else {
+            "Sync Steam".to_owned()
+        };
+        let icon = Icon::new(SidebarIcon::Sync).size(px(18.));
+        // Only the artwork rotates. The button and its hit area stay still.
+        let icon = if running && !super::motion::reduced(cx) {
+            icon.with_animation(
+                "steam-sync-rotation",
+                Animation::new(std::time::Duration::from_secs(1)).repeat(),
+                |icon, progress| icon.rotate(percentage(progress)),
+            )
+            .into_any_element()
+        } else {
+            icon.into_any_element()
+        };
+        Button::new("sidebar-sync-steam")
+            .ghost()
+            .small()
+            .text_color(if running {
+                cx.theme().primary
+            } else {
+                cx.theme().sidebar_foreground
+            })
+            .child(icon)
+            .tooltip(tooltip)
+            .disabled(running || unavailable)
+            .on_click(|_, window, cx| window.dispatch_action(Box::new(crate::SyncSteam), cx))
     }
 
     /// Callers pass `count` so smart rows can use cached counts.
@@ -359,6 +398,7 @@ impl Render for LibrarySidebar {
                                 }),
                         )
                     })
+                    .child(self.steam_button(cx))
                     .child(
                         Button::new("settings")
                             .text_color(cx.theme().sidebar_foreground)
@@ -371,26 +411,5 @@ impl Render for LibrarySidebar {
                             }),
                     ),
             )
-            .when_some(self.toast.as_ref(), |sidebar, message| {
-                sidebar.child(
-                    h_flex()
-                        .absolute()
-                        .bottom(px(64.))
-                        .left_3()
-                        .right_3()
-                        .px_3()
-                        .py_2()
-                        .gap_2()
-                        .rounded(cx.theme().radius_lg)
-                        .border_1()
-                        .border_color(cx.theme().border)
-                        .bg(cx.theme().popover)
-                        .text_color(cx.theme().popover_foreground)
-                        .shadow_sm()
-                        .text_xs()
-                        .child(Icon::new(IconName::CircleCheck).size_3())
-                        .child(message.clone()),
-                )
-            })
     }
 }

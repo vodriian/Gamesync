@@ -107,3 +107,19 @@ real data. Add Windows Steam detection and launching before release.
   stay under ignored `desktop/target/`. They are not source-control artifacts.
 - The feature branch is `windows-first-run`; the destination is
   `origin/windows-first-run`. Main is not changed by this delivery.
+
+## Integration with main — 2026-10-12
+
+- Merged current `origin/main` (`577cf50`) into this branch. It includes the
+  Steam sync button and completion toasts from merged PR #11.
+- Code merged without conflicts. The log-index conflict in `plan/README.md`
+  was resolved by keeping the Windows log as latest and retaining a separate
+  sidebar-sync log link.
+- Fresh checks on macOS arm64: formatting and locked binary compile passed;
+  full deterministic suite passed (211 tests, 11 optional tests ignored);
+  strict all-target Clippy and whitespace checks passed.
+- The Windows checks above apply to the original Windows commit. The existing
+  Windows build workflow will check the integrated branch separately. Its test
+  step is non-blocking; inspect that step as well as the build result.
+- Windows visual review, real Steam credentials/sync, cross-device sync, and
+  Windows Steam launching remain outside this integration check.

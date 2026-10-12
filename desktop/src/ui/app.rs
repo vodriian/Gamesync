@@ -40,6 +40,7 @@ pub struct GameSyncApp {
     home: Entity<HomeView>,
     play_now: Entity<super::play_now::PlayNowView>,
     sidebar: Entity<LibrarySidebar>,
+    toasts: Entity<super::toast::ToastHost>,
     sidebar_shown: bool,
     sidebar_motion: super::motion::Motion,
     detail: Entity<DetailPanel>,
@@ -99,6 +100,38 @@ impl GameSyncApp {
         cx.set_global(super::best_on_state::BestOnGlobal(best_on));
         let analysis = cx.new(|_| super::analysis_job::AnalysisJob::new(library.clone()));
         cx.set_global(super::analysis_job::AnalysisGlobal(analysis));
+        let toasts = cx.new(|cx| super::toast::ToastHost::new(window, cx));
+        cx.set_global(super::toast::ToastGlobal(toasts.clone()));
+        let steam = cx.new(|_| super::steam_job::SteamJob::new(library.clone()));
+        cx.set_global(super::steam_job::SteamGlobal(steam.clone()));
+        let steam_subscription = cx.subscribe(
+            &steam,
+            |this, job, event: &super::steam_job::Finished, cx| {
+                let job = job.read(cx);
+                if job.last_sync.is_some() {
+                    this.last_sync = job.last_sync;
+                }
+                let message = job.message.clone();
+                let (kind, title) = match event.0 {
+                    super::steam_job::Completion::Success => {
+                        (super::toast::Kind::Success, "Steam sync complete")
+                    }
+                    super::steam_job::Completion::Cancelled => {
+                        (super::toast::Kind::Info, "Steam sync cancelled")
+                    }
+                    super::steam_job::Completion::NeedsReview => {
+                        (super::toast::Kind::Warning, "Steam sync needs attention")
+                    }
+                    super::steam_job::Completion::Failed => {
+                        (super::toast::Kind::Error, "Steam sync failed")
+                    }
+                };
+                this.toasts.update(cx, |toasts, cx| {
+                    toasts.show(kind, title, Some(message.into()), cx)
+                });
+                this.refresh_library(cx);
+            },
+        );
         let sync = cx.new(|_| crate::sync_runtime::SyncState {
             folder: settings.sync_folder.clone(),
             ..Default::default()
@@ -182,8 +215,14 @@ impl GameSyncApp {
         );
         let bulk_subscription =
             cx.subscribe(&grid, |this, _, event: &super::grid::BulkSaved, cx| {
-                this.sidebar
-                    .update(cx, |sidebar, cx| sidebar.show_toast(&event.0, cx));
+                this.toasts.update(cx, |toasts, cx| {
+                    toasts.show(
+                        super::toast::Kind::Success,
+                        "Library updated",
+                        Some(event.0.clone().into()),
+                        cx,
+                    )
+                });
             });
         let library_subscription = cx.observe(&library, |this, library, cx| {
             let (section, in_wishlist) = {
@@ -227,6 +266,7 @@ impl GameSyncApp {
             home,
             play_now,
             sidebar,
+            toasts,
             sidebar_shown: true,
             sidebar_motion: super::motion::Motion::new(1.),
             detail,
@@ -243,6 +283,7 @@ impl GameSyncApp {
             omarchy_watch_task: None,
             appearance_revision: Default::default(),
             _subscriptions: vec![
+                steam_subscription,
                 grid_subscription,
                 home_subscription,
                 play_subscription,
@@ -279,6 +320,28 @@ impl GameSyncApp {
             app.open_folder(path, cx);
         }
         app
+    }
+
+    pub fn sync_steam(&mut self, cx: &mut Context<Self>) {
+        if self
+            .settings_view
+            .as_ref()
+            .is_some_and(|view| view.read(cx).busy(cx))
+        {
+            return;
+        }
+        let connected = self
+            .library
+            .read(cx)
+            .source
+            .as_ref()
+            .is_some_and(|(_, manifest)| manifest.definitions.steam_account.is_some());
+        if !connected {
+            self.open_steam_settings(cx);
+            return;
+        }
+        let steam = cx.global::<super::steam_job::SteamGlobal>().0.clone();
+        steam.update(cx, |job, cx| job.start(cx));
     }
 
     pub fn refresh_library(&mut self, cx: &mut Context<Self>) {
@@ -319,10 +382,15 @@ impl GameSyncApp {
             cx.notify();
             return false;
         }
-        if self
-            .settings_view
-            .as_ref()
-            .is_some_and(|view| view.read(cx).busy())
+        if cx
+            .global::<super::steam_job::SteamGlobal>()
+            .0
+            .read(cx)
+            .running()
+            || self
+                .settings_view
+                .as_ref()
+                .is_some_and(|view| view.read(cx).busy(cx))
         {
             self.notice =
                 "Wait for Settings to finish, or cancel the Steam sync, before closing.".into();
@@ -568,13 +636,16 @@ impl Render for GameSyncApp {
             // The native macOS detail page is flush; its header shares the titlebar row.
             if crate::theme::macos_shell(cx) {
                 return v_flex()
+                    .relative()
                     .size_full()
                     .bg(super::card::tabletop(cx))
                     .child(self.detail.clone())
                     .children(gpui_component::Root::render_dialog_layer(window, cx))
+                    .child(self.toasts.clone())
                     .into_any_element();
             }
             return v_flex()
+                .relative()
                 .size_full()
                 .bg(cx.theme().sidebar)
                 .child(
@@ -591,6 +662,7 @@ impl Render for GameSyncApp {
                 )
                 // The fit details modal opens from the detail panel.
                 .children(gpui_component::Root::render_dialog_layer(window, cx))
+                .child(self.toasts.clone())
                 .into_any_element();
         }
         let sidebar_progress = self.sidebar_progress(cx);
@@ -783,6 +855,7 @@ impl Render for GameSyncApp {
                 shell.child(div().absolute().inset_0().child(self.detail.clone()))
             })
             .children(gpui_component::Root::render_dialog_layer(window, cx))
+            .child(self.toasts.clone())
             .into_any_element()
     }
 }
