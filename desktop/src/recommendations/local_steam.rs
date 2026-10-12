@@ -120,10 +120,21 @@ pub fn scan_roots(roots: &[PathBuf]) -> Installations {
     result
 }
 pub fn scan() -> Installations {
+    let mut result = scan_roots(&steam_roots());
+    result.on_deck = cfg!(target_os = "linux")
+        && read(Path::new("/sys/devices/virtual/dmi/id/product_name"))
+            .is_some_and(|name| matches!(name.trim(), "Jupiter" | "Galileo"));
+    result
+}
+
+/// Folders where a Steam client can keep its first library. Other libraries
+/// come from `libraryfolders.vdf` inside them.
+#[cfg(not(target_os = "windows"))]
+fn steam_roots() -> Vec<PathBuf> {
     let Some(home) = directories::BaseDirs::new().map(|d| d.home_dir().to_owned()) else {
-        return Installations::default();
+        return Vec::new();
     };
-    let roots = if cfg!(target_os = "macos") {
+    if cfg!(target_os = "macos") {
         vec![home.join("Library/Application Support/Steam")]
     } else {
         vec![
@@ -131,26 +142,70 @@ pub fn scan() -> Installations {
             home.join(".local/share/Steam"),
             home.join(".var/app/com.valvesoftware.Steam/.local/share/Steam"),
         ]
-    };
-    let mut result = scan_roots(&roots);
-    result.on_deck = cfg!(target_os = "linux")
-        && read(Path::new("/sys/devices/virtual/dmi/id/product_name"))
-            .is_some_and(|name| matches!(name.trim(), "Jupiter" | "Galileo"));
-    result
+    }
+}
+
+/// The client records its folder for the user and the installer records it
+/// for the machine. The default install folders cover a missing registry value.
+#[cfg(target_os = "windows")]
+fn steam_roots() -> Vec<PathBuf> {
+    use windows_registry::{CURRENT_USER, LOCAL_MACHINE};
+    let mut roots = Vec::new();
+    for (hive, key, value) in [
+        (CURRENT_USER, r"Software\Valve\Steam", "SteamPath"),
+        (
+            LOCAL_MACHINE,
+            r"SOFTWARE\WOW6432Node\Valve\Steam",
+            "InstallPath",
+        ),
+        (LOCAL_MACHINE, r"SOFTWARE\Valve\Steam", "InstallPath"),
+    ] {
+        if let Ok(path) = hive.open(key).and_then(|key| key.get_string(value)) {
+            roots.push(PathBuf::from(path));
+        }
+    }
+    for variable in ["ProgramFiles(x86)", "ProgramFiles"] {
+        if let Some(folder) = std::env::var_os(variable) {
+            roots.push(PathBuf::from(folder).join("Steam"));
+        }
+    }
+    roots
+}
+
+/// The system command that opens a URI with its registered application.
+fn uri_opener() -> Result<std::process::Command> {
+    #[cfg(target_os = "macos")]
+    {
+        Ok(std::process::Command::new("open"))
+    }
+    #[cfg(target_os = "linux")]
+    {
+        Ok(std::process::Command::new("xdg-open"))
+    }
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt as _;
+        // `start` asks the shell to open the URI; its first quoted argument is
+        // a window title. Without this flag a console window flashes.
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        let mut command = std::process::Command::new("cmd");
+        command
+            .args(["/C", "start", ""])
+            .creation_flags(CREATE_NO_WINDOW);
+        Ok(command)
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+    {
+        anyhow::bail!("Steam launch is not supported on this platform")
+    }
 }
 
 /// Success means the OS accepted the URI. It does not prove that Steam started
-/// the game or that the user played it. Never pass a title or external URL here.
+/// the game or that the user played it. Never pass a title or external URL
+/// here: the URI is built from the numeric ID only, so no text reaches a shell.
 pub fn request_launch(app_id: u32) -> Result<()> {
     ensure!(app_id > 0, "Invalid Steam App ID");
-    let program = if cfg!(target_os = "macos") {
-        "open"
-    } else if cfg!(target_os = "linux") {
-        "xdg-open"
-    } else {
-        anyhow::bail!("Steam launch is not supported on this platform")
-    };
-    let output = std::process::Command::new(program)
+    let output = uri_opener()?
         .arg(format!("steam://rungameid/{app_id}"))
         .output()
         .context("Could not ask the system to open Steam")?;
@@ -183,5 +238,39 @@ mod tests {
         assert!(result.scanned);
         assert_eq!(result.apps, BTreeSet::from([42]));
         assert_eq!(result.for_target(42, super::super::Device::SteamDeck), None);
+    }
+
+    #[test]
+    fn library_folders_list_other_drives_with_escaped_paths() {
+        // Steam writes Windows paths with doubled backslashes.
+        assert_eq!(
+            tokens("\"path\"\t\t\"D:\\\\SteamLibrary\""),
+            ["path", "D:\\SteamLibrary"]
+        );
+        let root = tempfile::tempdir().unwrap();
+        let other = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(root.path().join("steamapps")).unwrap();
+        std::fs::create_dir_all(other.path().join("steamapps/common/Other")).unwrap();
+        // On Windows this is a real escaped path; elsewhere it has no backslash.
+        let escaped = other.path().display().to_string().replace('\\', "\\\\");
+        std::fs::write(
+            root.path().join("steamapps/libraryfolders.vdf"),
+            format!("\"libraryfolders\" {{ \"1\" {{ \"path\" \"{escaped}\" }} }}"),
+        )
+        .unwrap();
+        std::fs::write(
+            other.path().join("steamapps/appmanifest_7.acf"),
+            "\"appid\" \"7\" \"StateFlags\" \"4\" \"installdir\" \"Other\"",
+        )
+        .unwrap();
+        assert_eq!(
+            scan_roots(&[root.path().to_owned()]).apps,
+            BTreeSet::from([7])
+        );
+    }
+
+    #[test]
+    fn launch_rejects_an_invalid_app_id_before_any_command() {
+        assert!(request_launch(0).is_err());
     }
 }

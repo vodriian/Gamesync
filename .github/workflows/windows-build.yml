@@ -28,6 +28,25 @@ jobs:
         # Results are reported; a failure does not block the test build.
         continue-on-error: true
         run: cargo test --release --locked
+      - name: Card proof start check
+        # The card compositor has no test. Start the proof and confirm that it
+        # stays up; the trace shows whether a face was drawn. The runner uses
+        # a software renderer. A failure is reported and does not block.
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $env:GAMESYNC_PREVIEW_DIR = Join-Path $env:RUNNER_TEMP 'gamesync-preview'
+          $env:GAMESYNC_CARD_TRACE = '1'
+          $log = Join-Path $env:RUNNER_TEMP 'card-proof.log'
+          $process = Start-Process -FilePath target/release/gamesync-desktop.exe `
+            -ArgumentList '--card-proof' -RedirectStandardError $log -PassThru
+          Start-Sleep -Seconds 10
+          if ($process.HasExited) {
+            Get-Content $log
+            throw "The card proof exited with code $($process.ExitCode)."
+          }
+          Stop-Process -Id $process.Id
+          Get-Content $log | Select-Object -First 40
       - name: Package
         shell: pwsh
         run: |

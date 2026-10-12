@@ -11,7 +11,9 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 | [App plan](app-plan.md) | Scope, architecture, data rules, milestones, and acceptance checks |
 | [Guardrails](guardrails.md) | Code quality, tests, writing, and efficient agent work |
 | [Design](design.md) | Eagle GUI reference and design rules |
-| [Latest log](logs/2026-10-11-windows-first-run.md) | First Windows build, storage fixes, and platform checks |
+| [Latest log](logs/2026-10-12-fixes-optimization.md) | Startup and idle speed, display-paced motion, Windows 3D cards and Steam |
+| [macOS build log](logs/2026-10-12-macos-build.md) | Merged-main macOS package and the popup shadow fix |
+| [Windows first run log](logs/2026-10-11-windows-first-run.md) | First Windows build, storage fixes, and platform checks |
 | [Sidebar sync log](logs/2026-10-09-sidebar-steam-sync.md) | Sidebar Steam sync, completion toasts, and motion checks |
 | [AI log](logs/2026-10-07-ai-play-now.md) | AI profile analysis for Play now: providers, validation, checks |
 | [Native UI log](logs/2026-10-07-native-ui-mode.md) | Native UI mode: macOS look, system accent, Settings form, book turn |
@@ -48,7 +50,11 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 - Native offline Play now merged in PR #7. Opt-in AI profile analysis is on `vova/ai-play-now`; see [Play now](play-now.md#ai-profile-analysis--october-7).
 - Native UI mode is on `native-ui-mode` (PR to `windows-test-build`): a native macOS look by default, with system colors and accent, kit window geometry, and a tabbed Settings form. See [native look](chrome-themes.md#native-look).
 - Runtime targets: macOS, Linux, and a Windows test executable. Windows
-  cross-device sync and Steam launching remain unverified.
+  cross-device sync remains unverified.
+- Branch `fixes-optimization` shows the indexed library before the folder
+  scan, stops idle scans, paces motion to the display, and adds Windows 3D
+  cards and Windows Steam detection and launch. The Windows parts are
+  unverified until a Windows build and visual check; see the latest log.
 - Existing React/Express app: retained as a reference.
 
 ## Current UI direction

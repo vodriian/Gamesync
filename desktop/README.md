@@ -48,7 +48,11 @@ sizes from 16 to 256 px. After changing the PNG, run
 Windows keeps keys in Credential Manager. Local library writes use flushed
 staging files and write-through renames. Windows has no equivalent of the Unix
 directory flush used here; power-loss durability depends on the filesystem and
-device. Steam installation detection and game launching still need Windows support.
+device. Play now finds installed games through the Steam folder in the registry
+and starts a game through the `steam://` link. Windows cards tilt and the book
+turns through the DirectX card compositor; set `GAMESYNC_FLAT_CARDS=1` to keep
+cards flat if a GPU draws them wrongly. These Windows parts still need a check
+on a Windows PC; see [the fixes log](../plan/logs/2026-10-12-fixes-optimization.md).
 
 Connect Steam in Settings. GameSync prepares its local store automatically;
 there is no folder picker, Open Library command, or `--library` option.
@@ -240,6 +244,8 @@ The pinned GPUI 0.2.2 patch lives in `vendor/gpui`; see its `GAMESYNC-PATCH.md`.
 Run `--card-proof` for the isolated real-card renderer check. Use
 `GAMESYNC_CARD_TRACE=1` to measure GPU time and additional texture memory.
 Add `GAMESYNC_FRAME_TRACE=1` to measure native layout and paint CPU time.
+Use `GAMESYNC_STARTUP_TRACE=1` for startup phase times and one line for each
+background refresh. `GAMESYNC_FLAT_CARDS=1` turns the card compositor off.
 These opt-in debug traces are diagnostics, not a release benchmark.
 
 Start GUI proofs from an Omarchy terminal. Agent or SSH shells can omit the
