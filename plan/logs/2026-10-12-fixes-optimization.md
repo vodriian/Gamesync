@@ -98,6 +98,13 @@ macOS 27.0 arm64, Rust 1.99.0:
   Not run on Linux.
 - **Motion feel** on macOS. Frame counts are measured; the feel is the user's.
 
+## Behavior change to know
+
+The app no longer redraws every 10 seconds while idle. Text that depends on
+the clock, such as "Sale ends today" in Wishlist, now updates on the next
+redraw, for example after pointer or keyboard input. The Play now timer has its
+own one-second tick and is not affected.
+
 ## Found, not changed
 
 - Each game save reads and flushes every earlier revision of that game
