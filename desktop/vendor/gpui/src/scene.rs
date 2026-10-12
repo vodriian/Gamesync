@@ -222,6 +222,7 @@ impl Primitive {
 
     #[cfg(any(
         target_os = "linux",
+        target_os = "windows",
         all(target_os = "macos", not(feature = "macos-blade"))
     ))]
     pub(crate) fn translate(&mut self, offset: Point<ScaledPixels>) {
@@ -691,7 +692,7 @@ pub(crate) struct PaintSurface {
     pub content_mask: ContentMask<ScaledPixels>,
     #[cfg(target_os = "macos")]
     pub image_buffer: Option<core_video::pixel_buffer::CVPixelBuffer>,
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
     pub card: Option<std::sync::Arc<crate::card_layer::CardLayer>>,
 }
 

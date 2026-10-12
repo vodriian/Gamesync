@@ -23,6 +23,15 @@ pub fn front(
     let paper = cx.theme().background;
     let angle = light.map_or(140., |(x, y)| 105. + x * 55. + y * 25.);
     let shine = if light.is_some() { 0.23 } else { 0.045 };
+    let artwork_radius = crate::theme::interface_radius(cx, px(10.));
+    // Metal masks the composited artwork once. Other renderers keep it as
+    // flat elements, and GPUI clips overflow to rectangles, so each layer
+    // takes the radius itself.
+    let flat_radius = if gpui::card_mask_supported() {
+        px(0.)
+    } else {
+        artwork_radius
+    };
     v_flex()
         .relative()
         .w(px(width))
@@ -43,16 +52,18 @@ pub fn front(
             surface_id(game.id, 0),
             artwork_size,
             gpui::CardPose::default(),
-            crate::theme::interface_radius(cx, px(10.)),
+            artwork_radius,
             div()
                 .relative()
                 .w(artwork_size.width)
                 .h(artwork_size.height)
                 .overflow_hidden()
+                .rounded(flat_radius)
                 .bg(cx.theme().secondary)
                 .child(
                     img(cover_image(game))
                         .size_full()
+                        .rounded(flat_radius)
                         .object_fit(ObjectFit::Cover)
                         .with_fallback(|| {
                             v_flex()
@@ -65,23 +76,35 @@ pub fn front(
                                 .into_any_element()
                         }),
                 )
-                .child(div().absolute().inset_0().bg(linear_gradient(
-                    180.,
-                    linear_color_stop(rgba(0x10131a00), 0.42),
-                    linear_color_stop(rgba(0x10131af2), 1.),
-                )))
-                .child(div().absolute().inset_0().bg(linear_gradient(
-                    angle,
-                    linear_color_stop(gpui::Hsla::from(rgb(0xffffff)).opacity(shine), 0.),
-                    linear_color_stop(
-                        gpui::Hsla::from(rgb(0xa8c9f5)).opacity(if light.is_some() {
-                            0.07
-                        } else {
-                            0.
-                        }),
-                        0.75,
-                    ),
-                )))
+                .child(
+                    div()
+                        .absolute()
+                        .inset_0()
+                        .rounded(flat_radius)
+                        .bg(linear_gradient(
+                            180.,
+                            linear_color_stop(rgba(0x10131a00), 0.42),
+                            linear_color_stop(rgba(0x10131af2), 1.),
+                        )),
+                )
+                .child(
+                    div()
+                        .absolute()
+                        .inset_0()
+                        .rounded(flat_radius)
+                        .bg(linear_gradient(
+                            angle,
+                            linear_color_stop(gpui::Hsla::from(rgb(0xffffff)).opacity(shine), 0.),
+                            linear_color_stop(
+                                gpui::Hsla::from(rgb(0xa8c9f5)).opacity(if light.is_some() {
+                                    0.07
+                                } else {
+                                    0.
+                                }),
+                                0.75,
+                            ),
+                        )),
+                )
                 .child(
                     v_flex()
                         .absolute()

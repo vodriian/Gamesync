@@ -488,9 +488,9 @@ impl Render for DetailPanel {
             .clamp(160., 460.);
         let height = width * 1.46;
         let tilt = super::motion::card_3d_enabled(cx);
-        // Only the Metal compositor turns a face on its edge. Other renderers
-        // switch between the closed card and the open book without motion.
-        let book_motion = tilt && cfg!(target_os = "macos");
+        // Metal and DirectX turn a face on its edge. Other renderers switch
+        // between the closed card and the open book without motion.
+        let book_motion = tilt && gpui::card_hinge_supported();
         let turning = book_motion && self.turn.active();
         let angle = if book_motion {
             self.turn.value()

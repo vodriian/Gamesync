@@ -5,14 +5,8 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
     time::Instant,
 };
+use crate::card_layer::{card_allocation_size as allocation_size, card_passes, card_uniforms};
 const BUDGET: usize = 64 * 1024 * 1024;
-fn allocation_size(surface: &PaintSurface) -> (u64, u64) {
-    let bucket = |value: f32| (value.ceil().max(1.) as u64).div_ceil(64) * 64;
-    (
-        bucket(surface.bounds.size.width.0),
-        bucket(surface.bounds.size.height.0),
-    )
-}
 
 struct CachedFace {
     texture: metal::Texture,
@@ -215,52 +209,15 @@ impl CardRenderer {
         }) else {
             return;
         };
-        let b = surface.bounds;
-        let clip = surface.content_mask.bounds;
-        let mut uniforms = [
-            b.origin.x.0,
-            b.origin.y.0,
-            b.size.width.0,
-            b.size.height.0,
-            viewport.width.0 as f32,
-            viewport.height.0 as f32,
-            card.pose.pitch,
-            card.pose.yaw,
-            card.radius,
-            if card.pose.back { 1. } else { 0. },
-            if card.pose.material && card.pose.frosted_top == 0. {
-                1.
-            } else {
-                0.
-            },
-            0.,
-            clip.origin.x.0,
-            clip.origin.y.0,
-            clip.size.width.0,
-            clip.size.height.0,
-            b.size.width.0 / face.texture.width() as f32,
-            b.size.height.0 / face.texture.height() as f32,
-            card.pose.frosted_top,
-            card.scale_factor,
-            card.pose.hinge,
-            card.pose.spine_round,
-            0.,
-            0.,
-        ];
+        let mut uniforms = card_uniforms(
+            surface,
+            card,
+            [viewport.width.0 as f32, viewport.height.0 as f32],
+            [face.texture.width() as f32, face.texture.height() as f32],
+        );
         encoder.set_render_pipeline_state(&self.pipeline);
         encoder.set_fragment_texture(0, Some(&face.texture));
-        // A hinged face is one page of a book; the app draws a single table
-        // shadow for the whole book, so the page casts no projected shadow.
-        let modes: &[f32] = if card.pose.material && card.pose.frosted_top == 0. {
-            if card.pose.hinge != 0. {
-                &[1., 0.]
-            } else {
-                &[2., 1., 0.]
-            }
-        } else {
-            &[0.]
-        };
-        for &mode in modes {
+        for &mode in card_passes(&card.pose) {
             uniforms[11] = mode;
             encoder.set_vertex_bytes(
                 0,

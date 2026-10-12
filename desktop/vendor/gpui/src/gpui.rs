@@ -32,7 +32,10 @@ mod path_builder;
 mod platform;
 pub mod prelude;
 mod scene;
-pub use card_layer::{CardPose, card_layer, set_linux_card_compositor_enabled};
+pub use card_layer::{
+    CardPose, card_compositor_available, card_hinge_supported, card_layer, card_mask_supported,
+    set_linux_card_compositor_enabled,
+};
 mod shared_string;
 mod shared_uri;
 mod style;

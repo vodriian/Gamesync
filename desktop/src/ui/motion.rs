@@ -13,11 +13,10 @@ pub fn reduced(cx: &App) -> bool {
         .is_some_and(|p| p.reduced)
 }
 
-/// Linux card projection is available only while the Omarchy design language is active.
+/// Cards tilt where the renderer composites them: Metal, DirectX, and Blade
+/// on Linux while the Omarchy design language is active.
 pub fn card_3d_enabled(cx: &App) -> bool {
-    !reduced(cx)
-        && (cfg!(target_os = "macos")
-            || (cfg!(target_os = "linux") && crate::theme::omarchy_mode(cx)))
+    !reduced(cx) && gpui::card_compositor_available()
 }
 
 /// A reversible value that eases to its target. It holds no timer: the view

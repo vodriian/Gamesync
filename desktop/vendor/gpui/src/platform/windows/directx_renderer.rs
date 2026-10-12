@@ -30,6 +30,8 @@ pub(crate) const DISABLE_DIRECT_COMPOSITION: &str = "GPUI_DISABLE_DIRECT_COMPOSI
 const RENDER_TARGET_FORMAT: DXGI_FORMAT = DXGI_FORMAT_B8G8R8A8_UNORM;
 // This configuration is used for MSAA rendering on paths only, and it's guaranteed to be supported by DirectX 11.
 const PATH_MULTISAMPLE_COUNT: u32 = 4;
+/// GameSync: ceiling for card face textures, as on Metal and Blade.
+const CARD_TEXTURE_BUDGET: usize = 64 * 1024 * 1024;
 
 pub(crate) struct FontInfo {
     pub gamma_ratios: [f32; 4],
@@ -43,8 +45,128 @@ pub(crate) struct DirectXRenderer {
     resources: ManuallyDrop<DirectXResources>,
     globals: DirectXGlobalElements,
     pipelines: DirectXRenderPipelines,
+    cards: DirectXCards,
     direct_composition: Option<DirectComposition>,
     font_info: &'static FontInfo,
+}
+
+/// GameSync card compositor: offscreen card faces and the pipeline that
+/// projects them in perspective. It follows `platform/mac/card_renderer.rs`.
+/// Direct3D keeps a released texture alive until its pending draws finish, so
+/// this renderer needs no list of retired faces.
+struct DirectXCards {
+    vertex: ID3D11VertexShader,
+    fragment: ID3D11PixelShader,
+    uniforms: [Option<ID3D11Buffer>; 1],
+    sampler: [Option<ID3D11SamplerState>; 1],
+    blend_state: ID3D11BlendState,
+    faces: std::collections::HashMap<u64, CardFace>,
+    frame: u64,
+    trace: bool,
+    rasterized: usize,
+    hits: usize,
+    warned: bool,
+}
+
+/// One cached face. The view keeps its texture alive.
+struct CardFace {
+    view: [Option<ID3D11ShaderResourceView>; 1],
+    width: u32,
+    height: u32,
+    content: Arc<crate::card_layer::CardLayer>,
+    used: u64,
+}
+
+impl CardFace {
+    fn bytes(&self) -> usize {
+        self.width as usize * self.height as usize * 4
+    }
+}
+
+impl DirectXCards {
+    fn new(device: &ID3D11Device) -> Result<Self> {
+        let vertex = {
+            let raw_shader = RawShaderBytes::new(ShaderModule::Card, ShaderTarget::Vertex)?;
+            create_vertex_shader(device, raw_shader.as_bytes())?
+        };
+        let fragment = {
+            let raw_shader = RawShaderBytes::new(ShaderModule::Card, ShaderTarget::Fragment)?;
+            create_fragment_shader(device, raw_shader.as_bytes())?
+        };
+        let uniforms = unsafe {
+            let desc = D3D11_BUFFER_DESC {
+                ByteWidth: std::mem::size_of::<[f32; 24]>() as u32,
+                Usage: D3D11_USAGE_DYNAMIC,
+                BindFlags: D3D11_BIND_CONSTANT_BUFFER.0 as u32,
+                CPUAccessFlags: D3D11_CPU_ACCESS_WRITE.0 as u32,
+                ..Default::default()
+            };
+            let mut buffer = None;
+            device.CreateBuffer(&desc, None, Some(&mut buffer))?;
+            [buffer]
+        };
+        // The window sampler wraps. A face must not repeat at its edges.
+        let sampler = unsafe {
+            let desc = D3D11_SAMPLER_DESC {
+                Filter: D3D11_FILTER_MIN_MAG_MIP_LINEAR,
+                AddressU: D3D11_TEXTURE_ADDRESS_CLAMP,
+                AddressV: D3D11_TEXTURE_ADDRESS_CLAMP,
+                AddressW: D3D11_TEXTURE_ADDRESS_CLAMP,
+                MipLODBias: 0.0,
+                MaxAnisotropy: 1,
+                ComparisonFunc: D3D11_COMPARISON_ALWAYS,
+                BorderColor: [0.0; 4],
+                MinLOD: 0.0,
+                MaxLOD: D3D11_FLOAT32_MAX,
+            };
+            let mut output = None;
+            device.CreateSamplerState(&desc, Some(&mut output))?;
+            [output]
+        };
+        Ok(Self {
+            vertex,
+            fragment,
+            uniforms,
+            sampler,
+            // The card shader returns premultiplied color, like a path sprite.
+            blend_state: create_blend_state_for_path_sprite(device)?,
+            faces: std::collections::HashMap::new(),
+            frame: 0,
+            trace: std::env::var_os("GAMESYNC_CARD_TRACE").is_some(),
+            rasterized: 0,
+            hits: 0,
+            warned: false,
+        })
+    }
+
+    fn begin_frame(&mut self) {
+        self.frame += 1;
+        self.rasterized = 0;
+        self.hits = 0;
+        // Hidden cards do not accumulate textures while browsing a large library.
+        let frame = self.frame;
+        self.faces.retain(|_, face| face.used + 2 >= frame);
+    }
+
+    fn bytes(&self) -> usize {
+        self.faces.values().map(CardFace::bytes).sum()
+    }
+
+    /// True when the face texture already holds this content at this size.
+    fn cached(&mut self, surface: &PaintSurface, card: &crate::card_layer::CardLayer) -> bool {
+        let (width, height) = crate::card_layer::card_allocation_size(surface);
+        if let Some(face) = self.faces.get_mut(&card.id) {
+            if face.width as u64 == width
+                && face.height as u64 == height
+                && face.content.scene.paint_operations == card.scene.paint_operations
+            {
+                face.used = self.frame;
+                self.hits += 1;
+                return true;
+            }
+        }
+        false
+    }
 }
 
 /// Direct3D objects
@@ -143,6 +265,8 @@ impl DirectXRenderer {
             .context("Creating DirectX global elements")?;
         let pipelines = DirectXRenderPipelines::new(&devices.device)
             .context("Creating DirectX render pipelines")?;
+        let cards =
+            DirectXCards::new(&devices.device).context("Creating GameSync card pipeline")?;
 
         let direct_composition = if disable_direct_composition {
             None
@@ -162,6 +286,7 @@ impl DirectXRenderer {
             resources,
             globals,
             pipelines,
+            cards,
             direct_composition,
             font_info: Self::get_font_info(),
         })
@@ -171,7 +296,9 @@ impl DirectXRenderer {
         self.atlas.clone()
     }
 
-    fn pre_draw(&self) -> Result<()> {
+    /// Write the shader globals for the current viewport: the window, or a
+    /// GameSync card face while one is rasterized.
+    fn write_global_params(&self) -> Result<()> {
         update_buffer(
             &self.devices.device_context,
             self.globals.global_params_buffer[0].as_ref().unwrap(),
@@ -184,7 +311,11 @@ impl DirectXRenderer {
                 grayscale_enhanced_contrast: self.font_info.grayscale_enhanced_contrast,
                 _pad: 0,
             }],
-        )?;
+        )
+    }
+
+    fn pre_draw(&self) -> Result<()> {
+        self.write_global_params()?;
         unsafe {
             self.devices.device_context.ClearRenderTargetView(
                 self.resources.render_target_view[0].as_ref().unwrap(),
@@ -225,6 +356,8 @@ impl DirectXRenderer {
 
     fn handle_device_lost_impl(&mut self, directx_devices: &DirectXDevices) -> Result<()> {
         let disable_direct_composition = self.direct_composition.is_none();
+        // Card faces belong to the lost device.
+        self.cards.faces.clear();
 
         unsafe {
             #[cfg(debug_assertions)]
@@ -257,6 +390,7 @@ impl DirectXRenderer {
         )?;
         let globals = DirectXGlobalElements::new(&devices.device)?;
         let pipelines = DirectXRenderPipelines::new(&devices.device)?;
+        let cards = DirectXCards::new(&devices.device)?;
 
         let direct_composition = if disable_direct_composition {
             None
@@ -273,6 +407,7 @@ impl DirectXRenderer {
         self.resources = resources;
         self.globals = globals;
         self.pipelines = pipelines;
+        self.cards = cards;
         self.direct_composition = direct_composition;
 
         unsafe {
@@ -285,6 +420,7 @@ impl DirectXRenderer {
 
     pub(crate) fn draw(&mut self, scene: &Scene) -> Result<()> {
         self.pre_draw()?;
+        self.cards.begin_frame();
         for batch in scene.batches() {
             match batch {
                 PrimitiveBatch::Shadows(shadows) => self.draw_shadows(shadows),
@@ -311,6 +447,16 @@ impl DirectXRenderer {
                     scene.monochrome_sprites.len(),
                     scene.polychrome_sprites.len(),
                     scene.surfaces.len(),))?;
+        }
+        if self.cards.trace && (self.cards.frame < 8 || self.cards.frame % 30 == 0) {
+            eprintln!(
+                "[card-layer] frame={} textures={} bytes={} rasterized={} cache_hits={}",
+                self.cards.frame,
+                self.cards.faces.len(),
+                self.cards.bytes(),
+                self.cards.rasterized,
+                self.cards.hits
+            );
         }
         self.present()
     }
@@ -569,10 +715,172 @@ impl DirectXRenderer {
         )
     }
 
+    /// DirectX has no video surface. Every surface here is a GameSync card.
     fn draw_surfaces(&mut self, surfaces: &[PaintSurface]) -> Result<()> {
-        if surfaces.is_empty() {
-            return Ok(());
+        for surface in surfaces {
+            let Some(card) = &surface.card else {
+                continue;
+            };
+            if !self.cards.cached(surface, card) {
+                self.rasterize_card_face(surface, card)?;
+            }
+            self.draw_card(surface, card)?;
         }
+        Ok(())
+    }
+
+    /// Draw a card's captured scene into its own texture, then return to the
+    /// window target. Pose changes reuse the texture; see `DirectXCards::cached`.
+    fn rasterize_card_face(
+        &mut self,
+        surface: &PaintSurface,
+        card: &Arc<crate::card_layer::CardLayer>,
+    ) -> Result<()> {
+        let (width, height) = crate::card_layer::card_allocation_size(surface);
+        let (width, height) = (width as u32, height as u32);
+        self.cards.faces.remove(&card.id);
+        let cost = width as usize * height as usize * 4;
+        while self.cards.bytes() + cost > CARD_TEXTURE_BUDGET {
+            let frame = self.cards.frame;
+            let oldest = self
+                .cards
+                .faces
+                .iter()
+                .filter(|(_, face)| face.used < frame)
+                .min_by_key(|(_, face)| face.used)
+                .map(|(&id, _)| id);
+            let Some(oldest) = oldest else {
+                log::error!(
+                    "Card texture budget exhausted: {} + {} bytes",
+                    self.cards.bytes(),
+                    cost
+                );
+                return Ok(());
+            };
+            self.cards.faces.remove(&oldest);
+        }
+        let (target, view) = create_card_face_texture(&self.devices.device, width, height)?;
+
+        // The window pipelines read the viewport and the global parameters.
+        // Point both at the face for this pass.
+        let face_viewport = [D3D11_VIEWPORT {
+            TopLeftX: 0.0,
+            TopLeftY: 0.0,
+            Width: width as f32,
+            Height: height as f32,
+            MinDepth: 0.0,
+            MaxDepth: 1.0,
+        }];
+        let window_viewport = std::mem::replace(&mut self.resources.viewport, face_viewport);
+        let mut drawn = self.write_global_params();
+        if drawn.is_ok() {
+            unsafe {
+                self.devices
+                    .device_context
+                    .ClearRenderTargetView(target[0].as_ref().unwrap(), &[0.0; 4]);
+                self.devices
+                    .device_context
+                    .OMSetRenderTargets(Some(&target), None);
+            }
+            drawn = self.draw_card_scene(&card.scene);
+        }
+        // Restore the window target, also after an error.
+        self.resources.viewport = window_viewport;
+        let restored = self.write_global_params();
+        unsafe {
+            self.devices
+                .device_context
+                .OMSetRenderTargets(Some(&self.resources.render_target_view), None);
+            self.devices
+                .device_context
+                .RSSetViewports(Some(&self.resources.viewport));
+        }
+        drawn?;
+        restored?;
+
+        self.cards.faces.insert(
+            card.id,
+            CardFace {
+                view,
+                width,
+                height,
+                content: card.clone(),
+                used: self.cards.frame,
+            },
+        );
+        self.cards.rasterized += 1;
+        Ok(())
+    }
+
+    /// The face uses the same native primitives as the window. Vector paths
+    /// need the window-sized intermediate target, and a nested card needs a
+    /// second face pass; the current card faces contain neither.
+    fn draw_card_scene(&mut self, scene: &Scene) -> Result<()> {
+        for batch in scene.batches() {
+            match batch {
+                PrimitiveBatch::Shadows(shadows) => self.draw_shadows(shadows)?,
+                PrimitiveBatch::Quads(quads) => self.draw_quads(quads)?,
+                PrimitiveBatch::Underlines(underlines) => self.draw_underlines(underlines)?,
+                PrimitiveBatch::MonochromeSprites {
+                    texture_id,
+                    sprites,
+                } => self.draw_monochrome_sprites(texture_id, sprites)?,
+                PrimitiveBatch::PolychromeSprites {
+                    texture_id,
+                    sprites,
+                } => self.draw_polychrome_sprites(texture_id, sprites)?,
+                PrimitiveBatch::Paths(_) | PrimitiveBatch::Surfaces(_) => {
+                    if !self.cards.warned {
+                        self.cards.warned = true;
+                        log::warn!("A card face skipped a vector path or a nested surface");
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Project a cached face into the window: shadow, edge, then the face.
+    fn draw_card(
+        &mut self,
+        surface: &PaintSurface,
+        card: &crate::card_layer::CardLayer,
+    ) -> Result<()> {
+        // No face means the texture budget was exhausted.
+        let Some(face) = self.cards.faces.get(&card.id) else {
+            return Ok(());
+        };
+        let viewport = &self.resources.viewport;
+        let mut uniforms = crate::card_layer::card_uniforms(
+            surface,
+            card,
+            [viewport[0].Width, viewport[0].Height],
+            [face.width as f32, face.height as f32],
+        );
+        let context = &self.devices.device_context;
+        unsafe {
+            context.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+            context.RSSetViewports(Some(viewport));
+            context.VSSetShader(&self.cards.vertex, None);
+            context.PSSetShader(&self.cards.fragment, None);
+            context.VSSetConstantBuffers(1, Some(&self.cards.uniforms));
+            context.PSSetConstantBuffers(1, Some(&self.cards.uniforms));
+            context.PSSetShaderResources(0, Some(&face.view));
+            context.PSSetSamplers(0, Some(&self.cards.sampler));
+            context.OMSetBlendState(&self.cards.blend_state, None, 0xFFFFFFFF);
+        }
+        for &mode in crate::card_layer::card_passes(&card.pose) {
+            uniforms[11] = mode;
+            update_buffer(
+                context,
+                self.cards.uniforms[0].as_ref().unwrap(),
+                &[uniforms],
+            )?;
+            unsafe { context.Draw(6, 0) };
+        }
+        // Release the face from the pixel stage. A texture cannot be a shader
+        // input while a later face pass renders into it.
+        unsafe { context.PSSetShaderResources(0, Some(&[None])) };
         Ok(())
     }
 
@@ -1158,6 +1466,22 @@ fn create_path_intermediate_texture(
     Ok((texture, [Some(shader_resource_view.unwrap())]))
 }
 
+/// GameSync card face: the same format and bind flags as the path texture,
+/// with a render target view to draw the face and a resource view to sample it.
+fn create_card_face_texture(
+    device: &ID3D11Device,
+    width: u32,
+    height: u32,
+) -> Result<(
+    [Option<ID3D11RenderTargetView>; 1],
+    [Option<ID3D11ShaderResourceView>; 1],
+)> {
+    let (texture, view) = create_path_intermediate_texture(device, width, height)?;
+    let mut target = None;
+    unsafe { device.CreateRenderTargetView(&texture, None, Some(&mut target))? };
+    Ok(([Some(target.unwrap())], view))
+}
+
 #[inline]
 fn create_path_intermediate_msaa_texture_and_view(
     device: &ID3D11Device,
@@ -1410,6 +1734,8 @@ pub(crate) mod shader_resources {
         MonochromeSprite,
         PolychromeSprite,
         EmojiRasterization,
+        /// GameSync card compositor.
+        Card,
     }
 
     #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -1482,6 +1808,10 @@ pub(crate) mod shader_resources {
                 ShaderModule::EmojiRasterization => match target {
                     ShaderTarget::Vertex => EMOJI_RASTERIZATION_VERTEX_BYTES,
                     ShaderTarget::Fragment => EMOJI_RASTERIZATION_FRAGMENT_BYTES,
+                },
+                ShaderModule::Card => match target {
+                    ShaderTarget::Vertex => CARD_VERTEX_BYTES,
+                    ShaderTarget::Fragment => CARD_FRAGMENT_BYTES,
                 },
             };
             Self { inner: bytes }
@@ -1569,6 +1899,7 @@ pub(crate) mod shader_resources {
                 ShaderModule::MonochromeSprite => "monochrome_sprite",
                 ShaderModule::PolychromeSprite => "polychrome_sprite",
                 ShaderModule::EmojiRasterization => "emoji_rasterization",
+                ShaderModule::Card => "card",
             }
         }
     }

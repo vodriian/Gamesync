@@ -80,8 +80,8 @@ remain only for preview modes without a store (`--stress`, `--empty`,
 A conflict review replaces the right page. The editor builds both pages and
 keeps all drafts and save status. The detail panel places them on the book.
 
-Only Metal turns a face on its edge (`CardPose::hinge`). Other renderers and
-reduced motion switch between the closed card and the open book immediately.
+Metal and DirectX turn a face on its edge (`CardPose::hinge`). Other renderers
+and reduced motion switch between the closed card and the open book immediately.
 
 ## Platform boundary
 
@@ -91,6 +91,15 @@ retain native flat content and immediate face changes. The Linux POC supports
 the card primitives used by Cards and the focused front. Nested surfaces and
 vector paths remain deferred. Linux compilation is not a visual or performance
 acceptance result.
+
+Windows DirectX composites material faces since October 12: the hover tilt in
+Cards, the focused front, and the book turn. It ports the Metal shader. Mask-only
+layers stay flat on Windows and Linux; the card rounds its artwork layers
+itself there, because GPUI clips overflow to rectangles. The app asks GPUI
+which parts a renderer supports (`card_compositor_available`,
+`card_hinge_supported`, `card_mask_supported`) instead of testing the OS.
+`GAMESYNC_FLAT_CARDS=1` turns the compositor off on any platform. Windows
+results are in the [fixes log](logs/2026-10-12-fixes-optimization.md).
 
 ## Validation
 

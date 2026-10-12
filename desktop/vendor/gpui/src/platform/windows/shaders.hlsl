@@ -1180,3 +1180,149 @@ float4 polychrome_sprite_fragment(PolychromeSpriteFragmentInput input): SV_Targe
     color.a *= sprite.opacity * saturate(0.5 - distance);
     return color;
 }
+
+/*
+**
+**              GameSync card compositor
+**
+** A port of platform/mac/card_shaders.metal. A card face is drawn once into
+** a texture; this shader projects that texture in perspective. The uniform
+** layout is `card_uniforms` in card_layer.rs. Pass modes: 2 is the projected
+** shadow, 1 the thin edge, 0 the face. The Metal toolbar blur
+** (`frosted_top`) is not ported.
+**
+*/
+
+cbuffer CardUniforms: register(b1) {
+    // Origin and size in device pixels.
+    float4 card_rect;
+    // Viewport size, then pitch and yaw in radians.
+    float4 card_viewport_pose;
+    // Corner radius, back face flag, material flag, pass mode.
+    float4 card_shape;
+    // Content mask origin and size in device pixels.
+    float4 card_clip;
+    // Used fraction of the face texture, frosted_top, display scale.
+    float4 card_texture_region;
+    // Hinge axis, spine corner fraction, two unused values.
+    float4 card_hinge;
+};
+
+struct CardVertexOutput {
+    float4 position: SV_Position;
+    float2 uv: TEXCOORD0;
+};
+
+static const float2 CARD_VERTICES[6] = {
+    float2(0.0, 0.0), float2(1.0, 0.0), float2(0.0, 1.0),
+    float2(0.0, 1.0), float2(1.0, 0.0), float2(1.0, 1.0)
+};
+
+CardVertexOutput card_vertex(uint vertex_id: SV_VertexID) {
+    float2 uv = CARD_VERTICES[vertex_id];
+    float2 dimensions = card_rect.zw;
+    float pitch = card_viewport_pose.z;
+    float yaw = card_viewport_pose.w - card_shape.y * M_PI_F;
+    float2 local = (uv - 0.5) * dimensions;
+    float z = 0.0;
+    if (card_shape.w == 2.0) {
+        local *= (dimensions + 120.0 * card_texture_region.w) / dimensions;
+        uv = local / dimensions + 0.5;
+    }
+    if (card_shape.w == 1.0) {
+        // A thin physical edge remains visible when the face is edge-on.
+        // A hinged face shows its edge on the free side, opposite the spine.
+        float side = card_hinge.x != 0.0 ? -sign(card_hinge.x) : (sin(yaw) >= 0.0 ? 1.0 : -1.0);
+        local.x = side * (dimensions.x / 2.0 - 0.8);
+        local.y *= (dimensions.y - 2.0 * card_shape.x) / dimensions.y;
+        z = (uv.x - 0.5) * 3.0;
+    }
+    // Rotate around the hinge axis, then place that axis back at its rest position.
+    float axis = card_hinge.x * dimensions.x * 0.5;
+    local.x -= axis;
+    float3 p = float3(local.x * cos(yaw) + z * sin(yaw), local.y, -local.x * sin(yaw) + z * cos(yaw));
+    p = float3(p.x, p.y * cos(pitch) - p.z * sin(pitch), p.y * sin(pitch) + p.z * cos(pitch));
+    float eye = max(dimensions.x, dimensions.y) * 3.0;
+    float w = 1.0 - p.z / eye;
+    float2 center = card_rect.xy + dimensions * 0.5 + float2(axis, 0.0);
+    if (card_shape.w == 2.0) {
+        center += float2(0.0, 20.0 * card_texture_region.w);
+    }
+    float2 screen = center + p.xy / w;
+    float2 ndc = screen / card_viewport_pose.xy * 2.0 - 1.0;
+
+    CardVertexOutput output;
+    output.position = float4(ndc.x * w, -ndc.y * w, 0.0, w);
+    output.uv = uv;
+    return output;
+}
+
+float card_sdf(float2 uv, float2 dimensions, float radius) {
+    float2 q = abs((uv - 0.5) * dimensions) - dimensions * 0.5 + radius;
+    return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - radius;
+}
+
+// Corners on the hinge edge use a fraction of the radius, so a turning page
+// can meet its neighbor at a square spine.
+float card_face_radius(float2 uv) {
+    bool spine = card_hinge.x != 0.0 && (uv.x - 0.5) * card_hinge.x > 0.0;
+    return spine ? card_shape.x * card_hinge.y : card_shape.x;
+}
+
+float4 card_fragment(CardVertexOutput input): SV_Target {
+    // Sample and take derivatives before any branch, so every pixel has them.
+    float4 color = t_sprite.Sample(s_sprite, input.uv * card_texture_region.xy);
+    float d = card_sdf(input.uv, card_rect.zw, card_face_radius(input.uv));
+    float aa = max(fwidth(d), 0.7);
+
+    float2 pixel = input.position.xy;
+    if (any(pixel < card_clip.xy) || any(pixel > card_clip.xy + card_clip.zw)) {
+        discard;
+    }
+    // Cull the face that points away from the viewer.
+    float yaw = card_viewport_pose.w - card_shape.y * M_PI_F;
+    float pitch = card_viewport_pose.z;
+    if (cos(yaw) * cos(pitch) < 0.0) {
+        discard;
+    }
+    if (card_shape.w == 2.0) {
+        // Figma hover shadow: y 20, blur 40 (sigma 20), spread -20, black 27%.
+        float scale = card_texture_region.w;
+        float spread = 20.0 * scale;
+        float2 dimensions = max(card_rect.zw - 2.0 * spread, float2(1.0, 1.0));
+        float2 shadow_uv = ((input.uv - 0.5) * card_rect.zw) / dimensions + 0.5;
+        float sd = card_sdf(shadow_uv, dimensions, max(card_shape.x - spread, 0.0));
+        float x = sd / (20.0 * scale);
+        float cdf = 0.5 * (1.0 - tanh(0.79788456 * (x + 0.044715 * x * x * x)));
+        return float4(0.0, 0.0, 0.0, 0.27 * cdf);
+    }
+    if (card_shape.w == 1.0) {
+        float edge_alpha = 0.9;
+        return float4(float3(0.38, 0.40, 0.43) * edge_alpha, edge_alpha);
+    }
+    // The face texture holds premultiplied color. Keep it premultiplied.
+    color *= 1.0 - smoothstep(-aa * 0.5, aa * 0.5, d);
+    if (card_shape.z > 0.5 && card_shape.y < 0.5) {
+        // A clear coat follows the card angle. This is evaluated over cached
+        // pixels, so pointer motion never re-rasterizes the native face.
+        float2 uv = input.uv;
+        float sweep = uv.x + uv.y * 0.32 - 0.66 - sin(yaw) * 1.65 - sin(pitch) * 0.85;
+        float broad_x = sweep / 0.30;
+        float glint_x = sweep / 0.055;
+        float broad = exp(-broad_x * broad_x);
+        float glint = exp(-glint_x * glint_x);
+        float angle = clamp(length(float2(sin(yaw), sin(pitch))) * 3.0, 0.0, 1.0);
+        // Fade above the printed title and footer; concentrate on the cover.
+        float artwork = smoothstep(0.025, 0.07, uv.y)
+            * (1.0 - smoothstep(0.60, 0.83, uv.y))
+            * smoothstep(0.02, 0.06, uv.x)
+            * (1.0 - smoothstep(0.94, 0.98, uv.x));
+        float rim = (1.0 - smoothstep(0.0, 7.0 * card_texture_region.w, -d))
+            * (0.4 + 0.6 * angle);
+        float reflection = artwork * (broad * 0.10 + glint * (0.07 + 0.12 * angle));
+        float3 coat = float3(0.92, 0.96, 1.0);
+        color.rgb = color.rgb * (0.98 + 0.02 * cos(yaw))
+            + (coat * reflection + float3(0.08, 0.08, 0.08) * rim) * color.a;
+    }
+    return color;
+}

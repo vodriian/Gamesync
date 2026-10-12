@@ -3203,6 +3203,7 @@ impl Window {
     /// Capture a card face without a CPU readback. Native backends cache equal scenes.
     #[cfg(any(
         target_os = "linux",
+        target_os = "windows",
         all(target_os = "macos", not(feature = "macos-blade"))
     ))]
     pub(crate) fn paint_card_layer(
