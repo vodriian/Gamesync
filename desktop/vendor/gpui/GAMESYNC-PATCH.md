@@ -99,7 +99,7 @@ October 12 DirectX: Windows composites material card faces.
   cache hits on Windows. It has no GPU time there.
 
 Checks: the Metal card proof is pixel-identical before and after the shared
-uniform code. The HLSL passes a `glslc -x hlsl` parse and type check on macOS;
-that is not `fxc`. The DirectX Rust code was not compiled on macOS. See
-`plan/logs/2026-10-12-fixes-optimization.md` for the Windows build and
-visual results.
+uniform code. The Windows workflow compiled the DirectX code and the HLSL
+with `fxc`, and its card proof drew and cached one face on the runner's
+software renderer. No Windows visual check exists yet. See
+`plan/logs/2026-10-12-fixes-optimization.md`.

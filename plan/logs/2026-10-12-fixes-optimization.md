@@ -84,13 +84,25 @@ macOS 27.0 arm64, Rust 1.99.0:
 - HLSL: `card_vertex` and `card_fragment` pass a `glslc -x hlsl` parse and
   type check. A broken copy fails it. This is not `fxc`.
 
+Windows, GitHub Actions run 38240358283 on commit `448fae5`
+(`windows-latest`, Rust 1.94.0):
+
+- The locked release build passed on the first run. It compiles the DirectX
+  code and, with `fxc`, the card shader. The DirectX code cannot be compiled
+  on macOS, because a C dependency needs the Windows SDK.
+- The test step passed: 219 passed, 0 failed, 12 ignored. This step is
+  non-blocking, so the totals come from its log, not from its status.
+- The card proof start check passed. The proof stayed open for 10 seconds on
+  the runner's software renderer. Its trace shows one face drawn in frame 1
+  (884,736 bytes, a 384 x 576 texture) and a cache hit in each later frame.
+  This shows that the pipeline runs. It does not show that the card looks right.
+- Artifact: `GameSync-windows-x64` (14.3 MB ZIP), kept until October 26.
+
 ## Not verified
 
-- **Windows build.** The DirectX code was not compiled on macOS: a C dependency
-  needs the Windows SDK. The Windows workflow must compile it. Record the run
-  here.
 - **Windows visuals.** Card tilt, clear coat, shadow, book turn, flat artwork,
-  and motion smoothness on Windows need a check on a Windows PC.
+  and motion smoothness on Windows need a check on a Windows PC. No Windows
+  screenshot exists yet.
 - **Windows Steam.** Registry lookup and launch need a PC with Steam installed.
 - **A real sync round** with the reused library read. Check that a remote edit
   still appears within 10 seconds.
@@ -116,8 +128,8 @@ own one-second tick and is not affected.
 
 ## Next
 
-1. Run the Windows workflow on this branch. Fix compile errors.
-2. Check `GameSync.exe --card-proof`, Cards hover, the book turn, and Play now
-   install state and launch on Windows.
-3. Send Windows screenshots of Home, Grid, Cards, an open game and Settings in
+1. On a Windows PC, run the artifact: `GameSync.exe --card-proof`, then Cards
+   hover, the book turn, and Play now install state and launch.
+2. Send Windows screenshots of Home, Grid, Cards, an open game and Settings in
    light and dark. Fix the concrete differences from macOS.
+3. Check one real sync round on macOS.
