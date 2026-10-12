@@ -13,7 +13,8 @@ that fit the user's mood, time, and energy.
 
 - Use this repository. Add Rust/GPUI code under `desktop/` on a feature branch.
 - Retain the existing web app as a reference until its removal is requested.
-- Support macOS and Linux first. Windows follows after data sync works between them.
+- Support macOS and Linux. Build a Windows test executable now; Windows
+  cross-device sync and Steam launching still need acceptance checks.
 - Open into the library. Keep Choose and Analysis as dedicated areas.
 - Use app-managed local storage for Steam sync. Remove folder opening from the
   product. Retain existing readable stores internally; do not move or delete user data.

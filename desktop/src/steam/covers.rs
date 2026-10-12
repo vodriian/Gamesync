@@ -8,7 +8,7 @@ use crate::{
     records::{GameRevision, SteamMetadata},
 };
 use anyhow::{ensure, Context, Result};
-use std::{fs, io::Write, path::Path};
+use std::{io::Write, path::Path};
 use uuid::Uuid;
 
 /// No API key is needed for public Steam artwork. Personal covers retain priority.
@@ -75,9 +75,8 @@ fn write_media(root: &Path, prefix: &str, bytes: &[u8]) -> Result<String> {
     let mut staged = tempfile::NamedTempFile::new_in(&media)?;
     staged.write_all(bytes)?;
     staged.as_file().sync_all()?;
-    staged
-        .persist_noclobber(root.join(&relative))
-        .map_err(|error| error.error)?;
-    fs::File::open(&media)?.sync_all()?;
+    let path = root.join(&relative);
+    crate::storage::publish(staged, &path, false)?;
+    crate::storage::sync_parent(&path)?;
     Ok(relative)
 }

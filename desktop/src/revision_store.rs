@@ -172,7 +172,7 @@ impl RevisionFiles {
                     read_record::<T>(&path, self.entity_id)? == *previous,
                     "History changed; review the latest revisions"
                 );
-                File::open(&path)?.sync_all()?;
+                storage::sync_file(&path)?;
             } else {
                 storage::retain_revision(&path, previous)?;
             }

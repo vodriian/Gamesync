@@ -1,4 +1,4 @@
-#![cfg(unix)]
+#![cfg(any(unix, windows))]
 
 use gamesync_desktop::{
     library::{LibraryDefinitions, LibraryStore, StatusDefinition},
