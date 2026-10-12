@@ -21,6 +21,7 @@ impl GameSyncApp {
             let opened = cx
                 .background_spawn(async move {
                     crate::managed_storage::prepare(&root, &samples)?;
+                    crate::startup_trace::mark("storage_ready");
                     let cache = directories::ProjectDirs::from("app", "GameSync", "GameSync")
                         .context("Local cache directory is unavailable")?
                         .cache_dir()
@@ -28,7 +29,9 @@ impl GameSyncApp {
                     let cache = crate::settings::preview_dir().map(|p| p.join("cache")).unwrap_or(cache);
                     std::fs::create_dir_all(&cache)?;
                     let mut reader = LibraryReader::open(&root, &cache)?;
+                    crate::startup_trace::mark("index_open");
                     let mut loaded = reader.refresh()?;
+                    crate::startup_trace::mark("scan_done");
                     if sample_mode {
                         match crate::managed_storage::fill_samples(&root, &loaded) {
                             Ok(true) => loaded = reader.refresh()?,
@@ -77,6 +80,7 @@ impl GameSyncApp {
                 }
                 this.last_sync = last_sync;
                 this.apply_library(model, &issues, same, cx);
+                crate::startup_trace::mark("library_applied");
                 this.folder = Some(path);
                 this.review_folder = None;
                 this.loading = false;
@@ -128,25 +132,31 @@ impl GameSyncApp {
                     Ok(sync) => sync,
                     Err(_) => return,
                 };
-                let (returned, result, synced) = cx
+                let (returned, result, synced, timing) = cx
                     .background_spawn(async move {
                         let mut synced = None;
+                        let started = std::time::Instant::now();
+                        let mut timing = (0., 0.);
                         let result = reader.refresh().map(|mut loaded| {
+                            timing.0 = started.elapsed().as_secs_f64() * 1000.;
                             // Sample libraries never sync. A round uses the
                             // library just read, as the engine requires.
                             if let Some(folder) = sync_folder.filter(|_| !sample_mode) {
+                                let round = std::time::Instant::now();
                                 let outcome =
                                     sync_round(&mut reader, &mut loaded, sync_handle, &folder);
+                                timing.1 = round.elapsed().as_secs_f64() * 1000.;
                                 synced = Some(outcome);
                             }
                             let mut model = Library::from_loaded(&loaded);
                             model.demo = sample_mode;
                             (model, loaded.issues)
                         });
-                        (reader, result, synced)
+                        (reader, result, synced, timing)
                     })
                     .await;
                 reader = returned;
+                crate::startup_trace::idle(timing.0, timing.1, result.is_ok());
                 if this
                     .update(cx, |this, cx| {
                         if let Some(synced) = synced {

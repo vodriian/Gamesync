@@ -618,6 +618,9 @@ impl GameSyncApp {
 
 impl Render for GameSyncApp {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        static FIRST_RENDER: std::sync::atomic::AtomicBool =
+            std::sync::atomic::AtomicBool::new(false);
+        crate::startup_trace::mark_once(&FIRST_RENDER, "first_render");
         if self.restore_grid_focus {
             self.restore_grid_focus = false;
             window.focus(&self.grid.focus_handle(cx));

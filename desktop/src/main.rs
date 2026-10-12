@@ -5,6 +5,7 @@ mod dashboard;
 mod fixtures;
 mod managed_storage;
 mod model;
+mod startup_trace;
 mod sync_runtime;
 use gamesync_desktop::settings;
 mod system_accent;
@@ -39,6 +40,7 @@ gpui::actions!(
 );
 
 fn main() -> anyhow::Result<()> {
+    startup_trace::mark("main");
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn"))
         .filter_module("reqwest", log::LevelFilter::Off)
         .filter_module("hyper", log::LevelFilter::Off)
@@ -164,7 +166,9 @@ fn main() -> anyhow::Result<()> {
     Application::new()
         .with_assets(assets::Assets)
         .run(move |cx: &mut App| {
+            startup_trace::mark("app_run");
             gpui_component::init(cx);
+            startup_trace::mark("components_ready");
             cx.on_window_closed(|cx| {
                 if cx.windows().is_empty() {
                     cx.quit();
@@ -204,6 +208,8 @@ fn main() -> anyhow::Result<()> {
                     ..Default::default()
                 },
                 move |window, cx| {
+                    // The platform window and its renderer exist from here.
+                    startup_trace::mark("window_created");
                     if let Some(theme) = &initial_omarchy {
                         theme::apply_omarchy(theme, window, cx);
                     } else {
@@ -220,6 +226,7 @@ fn main() -> anyhow::Result<()> {
                             cx,
                         )
                     });
+                    startup_trace::mark("app_built");
                     let close_view = view.downgrade();
                     window.on_window_should_close(cx, move |_, cx| {
                         close_view
@@ -265,6 +272,7 @@ fn main() -> anyhow::Result<()> {
                     cx.new(|cx| Root::new(view, window, cx))
                 },
             );
+            startup_trace::mark("window_open");
             if let Err(error) = result {
                 log::error!("Could not open GameSync: {error}");
                 cx.quit();
