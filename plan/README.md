@@ -53,8 +53,9 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
   cross-device sync remains unverified.
 - Branch `fixes-optimization` shows the indexed library before the folder
   scan, stops idle scans, paces motion to the display, and adds Windows 3D
-  cards and Windows Steam detection and launch. The Windows parts are
-  unverified until a Windows build and visual check; see the latest log.
+  cards and Windows Steam detection and launch. The Windows build and tests
+  pass in CI. Windows visuals and Steam are unverified until a check on a
+  Windows PC; the latest log lists the checks and where the work stopped.
 - Existing React/Express app: retained as a reference.
 
 ## Current UI direction

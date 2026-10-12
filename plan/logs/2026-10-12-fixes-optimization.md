@@ -133,3 +133,22 @@ own one-second tick and is not affected.
 2. Send Windows screenshots of Home, Grid, Cards, an open game and Settings in
    light and dark. Fix the concrete differences from macOS.
 3. Check one real sync round on macOS.
+
+## Stopped here (October 12)
+
+All work that can be done on the Mac is committed and pushed. The branch waits
+for the Windows checks above. No code change is in progress.
+
+- **State.** `fixes-optimization` equals `origin/fixes-optimization`. No pull
+  request is open; open one only on request.
+- **Windows polish has not started.** It needs the screenshots from step 2.
+  The limit is two rounds in this branch; larger design work becomes follow-up.
+- **New Windows build.** Run
+  `gh workflow run windows-build.yml --ref fixes-optimization`. The test step
+  and the card proof step do not block the run, so read their logs.
+- **If cards draw wrongly on Windows.** `GAMESYNC_FLAT_CARDS=1` gives flat
+  cards. `GAMESYNC_CARD_TRACE=1` prints the face cache state for each frame.
+  If the result is still wrong after two visual rounds, make the compositor
+  opt-in on Windows and write a handoff for a session on the Windows PC.
+- **Open decision.** `b299e43` (macOS popup shadow fix, from another session)
+  is on this branch and not on `main`. Decide whether it merges with this work.
