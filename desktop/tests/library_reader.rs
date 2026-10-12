@@ -65,6 +65,22 @@ fn refresh_loads_updates_and_keeps_source_files_unchanged() {
 }
 
 #[test]
+fn the_index_gives_the_last_valid_library_before_a_scan() {
+    let f = Fixture::new();
+    // A new index has nothing to show.
+    assert!(f.reader().last_valid().unwrap().is_none());
+    let scanned = f.reader().refresh().unwrap();
+    // After a restart the index answers without the record files.
+    fs::rename(f.root.join("games"), f.temp.path().join("games-away")).unwrap();
+    fs::rename(f.root.join("history"), f.temp.path().join("history-away")).unwrap();
+    let cached = f.reader().last_valid().unwrap().expect("indexed library");
+    assert_eq!(cached.games, scanned.games);
+    assert_eq!(cached.manifest, scanned.manifest);
+    assert!(cached.write_issue.is_none());
+    assert!(cached.issues.is_empty());
+}
+
+#[test]
 fn partial_files_and_missing_sources_keep_valid_data_after_restart() {
     let f = Fixture::new();
     f.reader().refresh().unwrap();
@@ -291,6 +307,9 @@ fn scan_timing_probe() {
     let start = Instant::now();
     let mut reader = LibraryReader::open(&root, &cache).unwrap();
     report("open_warm_index", start);
+    let start = Instant::now();
+    assert_eq!(reader.last_valid().unwrap().unwrap().games.len(), games);
+    report("last_valid", start);
     let start = Instant::now();
     assert_eq!(reader.refresh().unwrap().games.len(), games);
     report("scan_after_reopen", start);

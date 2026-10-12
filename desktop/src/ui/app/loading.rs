@@ -2,7 +2,10 @@
 use super::GameSyncApp;
 use crate::model::Library;
 use anyhow::Context as _;
-use futures::{channel::mpsc, StreamExt};
+use futures::{
+    channel::{mpsc, oneshot},
+    StreamExt,
+};
 use gamesync_desktop::library_reader::LibraryReader;
 use gpui::{prelude::*, Context};
 use std::{path::PathBuf, time::Duration};
@@ -16,48 +19,80 @@ impl GameSyncApp {
         let sample_mode = !samples.is_empty();
         let (sender, events) = mpsc::channel(1);
         let refresh = sender.clone();
+        // The worker starts now, while the window draws its first frame. It
+        // sends the library that the index last recorded, then scans the
+        // folder. The scan reads every revision and takes much longer.
+        let (cached_sender, cached) = oneshot::channel();
+        let root = path.clone();
+        let load = cx.background_spawn(async move {
+            // A store created now has no earlier contents to show.
+            let existed = root.exists();
+            crate::managed_storage::prepare(&root, &samples)?;
+            crate::startup_trace::mark("storage_ready");
+            let cache = directories::ProjectDirs::from("app", "GameSync", "GameSync")
+                .context("Local cache directory is unavailable")?
+                .cache_dir()
+                .to_owned();
+            let cache = crate::settings::preview_dir()
+                .map(|p| p.join("cache"))
+                .unwrap_or(cache);
+            std::fs::create_dir_all(&cache)?;
+            let mut reader = LibraryReader::open(&root, &cache)?;
+            crate::startup_trace::mark("index_open");
+            // An unusable index only delays the first view until the scan.
+            if let Some(loaded) = existed
+                .then(|| reader.last_valid().ok().flatten())
+                .flatten()
+            {
+                let mut model = Library::from_loaded(&loaded);
+                model.demo = sample_mode;
+                let _ = cached_sender.send((reader.root().to_path_buf(), model, loaded.issues));
+            } else {
+                drop(cached_sender);
+            }
+
+            let mut loaded = reader.refresh()?;
+            crate::startup_trace::mark("scan_done");
+            if sample_mode {
+                match crate::managed_storage::fill_samples(&root, &loaded) {
+                    Ok(true) => loaded = reader.refresh()?,
+                    Ok(false) => {}
+                    // Sample values are optional; the demo still opens.
+                    Err(error) => log::warn!("Could not fill sample values: {error:#}"),
+                }
+            }
+            let mut model = Library::from_loaded(&loaded);
+            model.demo = sample_mode;
+            let (watcher, warning) = match crate::watcher::watch(&root, sender) {
+                Ok(watcher) => (Some(watcher), None),
+                Err(error) => (
+                    None,
+                    Some(format!(
+                        "Live updates unavailable: {error}. Checking every 10 seconds."
+                    )),
+                ),
+            };
+            let last_sync = crate::settings::load()?
+                .last_sync
+                .get(&loaded.manifest.library_id.to_string())
+                .copied();
+            Ok::<_, anyhow::Error>((reader, model, loaded.issues, watcher, warning, last_sync))
+        });
         self.load_task = Some(cx.spawn(async move |this, cx| {
-            let root = path.clone();
-            let opened = cx
-                .background_spawn(async move {
-                    crate::managed_storage::prepare(&root, &samples)?;
-                    crate::startup_trace::mark("storage_ready");
-                    let cache = directories::ProjectDirs::from("app", "GameSync", "GameSync")
-                        .context("Local cache directory is unavailable")?
-                        .cache_dir()
-                        .to_owned();
-                    let cache = crate::settings::preview_dir().map(|p| p.join("cache")).unwrap_or(cache);
-                    std::fs::create_dir_all(&cache)?;
-                    let mut reader = LibraryReader::open(&root, &cache)?;
-                    crate::startup_trace::mark("index_open");
-                    let mut loaded = reader.refresh()?;
-                    crate::startup_trace::mark("scan_done");
-                    if sample_mode {
-                        match crate::managed_storage::fill_samples(&root, &loaded) {
-                            Ok(true) => loaded = reader.refresh()?,
-                            Ok(false) => {}
-                            // Sample values are optional; the demo still opens.
-                            Err(error) => log::warn!("Could not fill sample values: {error:#}"),
-                        }
-                    }
-                    let mut model = Library::from_loaded(&loaded);
-                    model.demo = sample_mode;
-                    let (watcher, warning) = match crate::watcher::watch(&root, sender) {
-                        Ok(watcher) => (Some(watcher), None),
-                        Err(error) => (
-                            None,
-                            Some(format!(
-                                "Live updates unavailable: {error}. Checking every 10 seconds."
-                            )),
-                        ),
-                    };
-                    let last_sync = crate::settings::load()?.last_sync.get(&loaded.manifest.library_id.to_string()).copied();
-                    Ok::<_, anyhow::Error>((reader, model, loaded.issues, watcher, warning, last_sync))
-                })
-                .await;
-            let (reader, model, mut issues, watcher, watch_warning, last_sync) = match opened {
-                Ok(opened) => opened,
+            // A dropped sender means no indexed library; the scan result follows.
+            if let Ok((path, model, issues)) = cached.await {
+                let shown = this.update(cx, |this, cx| {
+                    this.show_library(&path, model, &issues, cx);
+                    crate::startup_trace::mark("cached_applied");
+                });
+                if shown.is_err() {
+                    return;
+                }
+            }
+            let (reader, model, mut issues, watcher, watch_warning, last_sync) = match load.await {
+                Ok(loaded) => loaded,
                 Err(error) => {
+                    // A library shown from the index stays on screen.
                     let _ = this.update(cx, |this, cx| {
                         this.loading = false;
                         this.review_folder = Some(path);
@@ -72,17 +107,9 @@ impl GameSyncApp {
                 issues.push(warning.clone());
             }
             let _ = this.update(cx, |this, cx| {
-                let same = this.folder.as_ref() == Some(&path);
-                if !same {
-                    if let Some(handle) = this.collections_window.take() { let _ = handle.update(cx, |_, window, _| window.remove_window()); }
-                    this.collections_view = None;
-                    this.collection_root = None;
-                }
                 this.last_sync = last_sync;
-                this.apply_library(model, &issues, same, cx);
+                this.show_library(&path, model, &issues, cx);
                 crate::startup_trace::mark("library_applied");
-                this.folder = Some(path);
-                this.review_folder = None;
                 this.loading = false;
                 this.refresh = Some(refresh);
                 this.start_refresh(reader, events, watcher, watch_warning, sample_mode, cx);
@@ -93,6 +120,28 @@ impl GameSyncApp {
             });
         }));
         cx.notify();
+    }
+
+    /// Display a library read from `path`. A second call for the same folder
+    /// keeps selection, filters, and scroll position.
+    fn show_library(
+        &mut self,
+        path: &std::path::Path,
+        model: Library,
+        issues: &[String],
+        cx: &mut Context<Self>,
+    ) {
+        let same = self.folder.as_deref() == Some(path);
+        if !same {
+            if let Some(handle) = self.collections_window.take() {
+                let _ = handle.update(cx, |_, window, _| window.remove_window());
+            }
+            self.collections_view = None;
+            self.collection_root = None;
+        }
+        self.apply_library(model, issues, same, cx);
+        self.folder = Some(path.to_path_buf());
+        self.review_folder = None;
     }
 
     fn start_refresh(

@@ -225,8 +225,9 @@ pub(crate) fn discover(
             }
         }
     }
-    // Read each current file once for discovery. Full validation and history
-    // reconciliation use the shared record service, including renamed copies.
+    // A canonical or conflict-copy filename starts with the game ID. Read a
+    // file here only when its name does not, as for a renamed copy. Full
+    // validation and history reconciliation use the shared record service.
     for entry in fs::read_dir(root.join("games"))? {
         let path = entry?.path();
         if path.extension().is_none_or(|ext| ext != "json") {
@@ -237,26 +238,24 @@ pub(crate) fn discover(
             .and_then(|name| name.to_str())
             .and_then(|name| name.get(..36))
             .and_then(|prefix| Uuid::parse_str(prefix).ok());
-        let parsed = (|| -> Result<Uuid> {
-            let mut bytes = Vec::new();
-            File::open(&path)?
-                .take(1024 * 1024 + 1)
-                .read_to_end(&mut bytes)?;
-            ensure!(bytes.len() <= 1024 * 1024, "Record exceeds 1 MiB");
-            #[derive(serde::Deserialize)]
-            struct Header {
-                game_id: Uuid,
-            }
-            Ok(serde_json::from_slice::<Header>(&bytes)?.game_id)
-        })();
-        match (filename_id, parsed) {
-            (Some(id), _) => {
-                candidates.entry(id).or_default().push(path);
-            }
-            (None, Ok(id)) => {
-                candidates.entry(id).or_default().push(path);
-            }
-            (None, Err(error)) => issues.push(format!("{}: {error:#}", path.display())),
+        let id = match filename_id {
+            Some(id) => Ok(id),
+            None => (|| -> Result<Uuid> {
+                let mut bytes = Vec::new();
+                File::open(&path)?
+                    .take(1024 * 1024 + 1)
+                    .read_to_end(&mut bytes)?;
+                ensure!(bytes.len() <= 1024 * 1024, "Record exceeds 1 MiB");
+                #[derive(serde::Deserialize)]
+                struct Header {
+                    game_id: Uuid,
+                }
+                Ok(serde_json::from_slice::<Header>(&bytes)?.game_id)
+            })(),
+        };
+        match id {
+            Ok(id) => candidates.entry(id).or_default().push(path),
+            Err(error) => issues.push(format!("{}: {error:#}", path.display())),
         }
     }
     Ok(candidates)

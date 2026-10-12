@@ -229,19 +229,28 @@ fn read_record<T: Revision>(path: &Path, entity_id: Option<Uuid>) -> Result<T> {
         bytes.len() as u64 <= MAX_RECORD_BYTES,
         "Record exceeds the 1 MiB limit"
     );
-    // Read the version first so a newer shape is reported as unsupported, not corrupt.
-    #[derive(serde::Deserialize)]
-    struct Header {
-        schema_version: u32,
-    }
-    let header: Header = serde_json::from_slice(&bytes)?;
-    ensure!(
-        header.schema_version == SCHEMA_VERSION,
-        "Unsupported schema version {}",
-        header.schema_version
-    );
-    let record: T = serde_json::from_slice(&bytes)?;
-    record.validate()?;
+    // Parse once. Scans read every revision, so a second pass doubles their cost.
+    let parsed = serde_json::from_slice::<T>(&bytes)
+        .map_err(anyhow::Error::from)
+        .and_then(|record| record.validate().map(|()| record));
+    let record = match parsed {
+        Ok(record) => record,
+        Err(error) => {
+            // Report a newer shape as unsupported, not corrupt.
+            #[derive(serde::Deserialize)]
+            struct Header {
+                schema_version: u32,
+            }
+            if let Ok(header) = serde_json::from_slice::<Header>(&bytes) {
+                ensure!(
+                    header.schema_version == SCHEMA_VERSION,
+                    "Unsupported schema version {}",
+                    header.schema_version
+                );
+            }
+            return Err(error);
+        }
+    };
     ensure!(
         entity_id.is_none_or(|id| record.entity_id() == id),
         "Record identity does not match its file location"

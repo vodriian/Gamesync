@@ -284,6 +284,29 @@ fn partial_and_newer_files_block_edits_without_losing_valid_history() {
 }
 
 #[test]
+fn a_newer_schema_is_reported_as_unsupported_not_corrupt() {
+    let library = Library::new();
+    // One newer file no longer has the current shape; the other still does.
+    let mut same_shape = serde_json::to_value(&library.first).unwrap();
+    same_shape["schema_version"] = json!(2);
+    for bytes in [
+        br#"{"schema_version":2,"new_shape":true}"#.to_vec(),
+        serde_json::to_vec(&same_shape).unwrap(),
+    ] {
+        fs::write(library.current(), bytes).unwrap();
+        let snapshot = library.store.inspect(library.first.game_id).unwrap();
+        assert!(
+            snapshot
+                .issues
+                .iter()
+                .any(|issue| issue.contains("Unsupported schema version 2")),
+            "{:?}",
+            snapshot.issues
+        );
+    }
+}
+
+#[test]
 fn supported_unknown_fields_survive_personal_edits() {
     let library = Library::new();
     let mut record = library.first.clone();

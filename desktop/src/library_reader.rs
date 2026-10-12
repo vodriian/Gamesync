@@ -101,6 +101,16 @@ impl LibraryReader {
         })
     }
 
+    /// The library as the index last recorded it, without reading record files.
+    /// `None` until a scan has stored a manifest, as on a first launch.
+    /// Show it while the first scan runs; writes still check revisions on disk.
+    pub fn last_valid(&self) -> Result<Option<LoadedLibrary>> {
+        if self.manifest.is_none() {
+            return Ok(None);
+        }
+        self.loaded(Vec::new()).map(Some)
+    }
+
     pub fn refresh(&mut self) -> Result<LoadedLibrary> {
         self.conflicts.clear();
         let mut issues = Vec::new();
