@@ -526,11 +526,12 @@ fragment float4 shadow_fragment(ShadowFragmentInput input [[stage_in]],
     float start = clamp(-3. * shadow.blur_radius, low, high);
     float end = clamp(3. * shadow.blur_radius, low, high);
 
-    // Accumulate samples (we can get away with surprisingly few samples)
-    float step = (end - start) / 4.;
+    // Sparse vertical sampling leaves visible bands around rounded popup menus.
+    const int sample_count = 32;
+    float step = (end - start) / float(sample_count);
     float y = start + step * 0.5;
     alpha = 0.;
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < sample_count; i++) {
       alpha += blur_along_x(point.x, point.y - y, shadow.blur_radius,
                             corner_radius, half_size) *
                gaussian(y, shadow.blur_radius) * step;

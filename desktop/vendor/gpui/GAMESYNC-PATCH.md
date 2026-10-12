@@ -13,6 +13,8 @@ Changed upstream files:
 - `src/scene.rs`: compare captured content and translate its primitives.
 - `src/platform/mac/metal_renderer.rs`: render nested card scenes to private GPU
   textures and resume the parent pass. Offscreen alpha uses source-over blending.
+- `src/platform/mac/shaders.metal`: use 32 vertical Gaussian samples for smooth
+  UI shadows. Four samples produced visible bands around rounded popup menus.
 - `src/platform/blade/blade_renderer.rs`: unwrap the existing video surface field.
   Blade does not render card textures.
 
