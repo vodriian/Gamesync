@@ -903,6 +903,7 @@ impl Render for PlayNowView {
             self.restore_focus = false;
             window.focus(&self.focus);
         }
+        self.controls.animate(window);
         if self.needs_rank && !self.ranking && self.active_play.is_none() {
             self.refresh_rank(cx);
         }

@@ -273,6 +273,10 @@ impl ToastHost {
 
 impl Render for ToastHost {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        for toast in &self.toasts {
+            toast.motion.animate(window);
+            toast.offset.animate(window);
+        }
         v_flex()
             .id("toasts")
             .absolute()

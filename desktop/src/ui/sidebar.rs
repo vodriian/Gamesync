@@ -230,6 +230,7 @@ impl Render for LibrarySidebar {
             self.restore_focus = false;
             window.focus(&self.focus);
         }
+        self.collections_motion.animate(window);
         v_flex()
             .relative()
             .track_focus(&self.focus)

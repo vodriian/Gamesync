@@ -668,6 +668,7 @@ impl Render for GameSyncApp {
                 .child(self.toasts.clone())
                 .into_any_element();
         }
+        self.sidebar_motion.animate(window);
         let sidebar_progress = self.sidebar_progress(cx);
         let sidebar_width = px(255. * sidebar_progress);
         let macos_shell = crate::theme::macos_shell(cx);

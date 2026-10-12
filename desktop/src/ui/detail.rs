@@ -464,6 +464,7 @@ impl Render for DetailPanel {
             }
         }
         let busy = self.busy(cx);
+        self.strip_motion.animate(window);
         let strip_progress = if self.overlay {
             0.
         } else if super::motion::reduced(cx) {

@@ -92,6 +92,13 @@ impl ControlMotion {
             brain: Motion::with_duration(f32::from(context.brain_dead), motion::CONTROL),
         }
     }
+    /// Request frames while a selection pill or the switch still moves.
+    pub fn animate(&self, window: &mut gpui::Window) {
+        for group in self.groups.values() {
+            group.borrow().progress.animate(window);
+        }
+        self.brain.animate(window);
+    }
     fn targets(context: &rec::Context) -> [(&'static str, String); 5] {
         [
             ("time", format!("time-{:?}", context.minutes)),
