@@ -1,5 +1,8 @@
 //! Library identity and ordered status definitions. Game values stay in game files.
 mod steam;
+#[cfg(test)]
+pub(crate) use steam::full_scan_count as steam_scan_count;
+pub(crate) use steam::{SteamChange, SteamImport};
 
 use crate::{
     records::{check_extra, ExtraFields, SCHEMA_VERSION},

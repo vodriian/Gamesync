@@ -107,6 +107,18 @@ impl RecordStore {
         app_id: u32,
         update: impl FnOnce(&mut crate::records::SteamData),
     ) -> Result<GameRevision> {
+        self.update_steam_with_change(id, app_id, update)
+            .map(|(record, _)| record)
+    }
+
+    /// Classify provider changes under the record lock, so concurrent personal
+    /// edits do not inflate the sync's updated-game count.
+    pub(crate) fn update_steam_with_change(
+        &self,
+        id: Uuid,
+        app_id: u32,
+        update: impl FnOnce(&mut crate::records::SteamData),
+    ) -> Result<(GameRevision, bool)> {
         let files = self.files(id);
         let _lock = files.lock()?;
         let snapshot = self.inspect(id)?;
@@ -124,9 +136,9 @@ impl RecordStore {
         ensure!(steam.app_id == app_id, "Steam identity changed");
         update(steam);
         if record == previous {
-            return Ok(record);
+            return Ok((record, false));
         }
-        files.publish_child(record, snapshot)
+        Ok((files.publish_child(record, snapshot)?, true))
     }
 
     /// Cache a validated AI estimate under the game lock. The game's inputs
@@ -225,8 +237,8 @@ pub(crate) fn discover(
             }
         }
     }
-    // Read each current file once for discovery. Full validation and history
-    // reconciliation use the shared record service, including renamed copies.
+    // Only nonstandard filenames need a header read to identify the game.
+    // Full validation and history reconciliation use the shared record service.
     for entry in fs::read_dir(root.join("games"))? {
         let path = entry?.path();
         if path.extension().is_none_or(|ext| ext != "json") {
@@ -237,6 +249,13 @@ pub(crate) fn discover(
             .and_then(|name| name.to_str())
             .and_then(|name| name.get(..36))
             .and_then(|prefix| Uuid::parse_str(prefix).ok());
+        // Normal and UUID-prefixed conflict filenames already identify the game.
+        // Avoid reading every game's contents during each guarded record write.
+        // inspect_candidates still validates content/identity for the target.
+        if let Some(id) = filename_id {
+            candidates.entry(id).or_default().push(path);
+            continue;
+        }
         let parsed = (|| -> Result<Uuid> {
             let mut bytes = Vec::new();
             File::open(&path)?
@@ -249,14 +268,11 @@ pub(crate) fn discover(
             }
             Ok(serde_json::from_slice::<Header>(&bytes)?.game_id)
         })();
-        match (filename_id, parsed) {
-            (Some(id), _) => {
+        match parsed {
+            Ok(id) => {
                 candidates.entry(id).or_default().push(path);
             }
-            (None, Ok(id)) => {
-                candidates.entry(id).or_default().push(path);
-            }
-            (None, Err(error)) => issues.push(format!("{}: {error:#}", path.display())),
+            Err(error) => issues.push(format!("{}: {error:#}", path.display())),
         }
     }
     Ok(candidates)

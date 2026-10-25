@@ -176,10 +176,19 @@ Run separate resumable stages:
 2. Fetch missing or stale descriptions, covers, and review summaries.
 3. Fetch optional ProtonDB data independently.
 
+Build one full local identity index per Steam sync, shared by owned-game and
+wishlist matching. Keep per-record conflict and revision checks before writes.
+Report new, updated, and unchanged games separately. Detail progress uses only
+pending metadata steps; the final summary reports steps that are still missing.
+
 Bound requests, honor backoff, support cancellation, and retry individual
 failures. Retain valid cached values on failure. Use the documented
-[review endpoint](https://partner.steamgames.com/doc/store/getreviews) rather
+[review service](https://partner.steamgames.com/doc/webapi/IUserReviewsService) rather
 than copying GameSync's review URL and scraping fallback.
+
+Keep bounded, device-local Steam sync diagnostics for later troubleshooting.
+Exclude keys, account IDs, request queries, response bodies, and personal fields.
+Logging failures must not block sync. See [Steam sync logs](../desktop/README.md#steam-sync-logs).
 
 Keep ProtonDB tiers separate from Valve's Deck assessment. Do not label a
 ProtonDB platinum game as Deck Verified. See

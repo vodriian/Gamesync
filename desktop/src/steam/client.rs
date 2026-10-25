@@ -1,9 +1,11 @@
 //! Steam wire formats. Errors deliberately exclude request URLs and response bodies.
+use super::diagnostics::{Event, SyncLog};
 use anyhow::{bail, ensure, Context, Result};
 use reqwest::blocking::Client;
 use serde::Deserialize;
 use serde_json::Value;
 use std::{collections::BTreeMap, io::Read, time::Duration};
+use std::{sync::Arc, time::Instant};
 
 #[derive(Clone, Default, Deserialize)]
 pub struct OwnedGame {
@@ -49,39 +51,99 @@ pub struct WishlistItem {
 
 pub struct SteamClient {
     client: Client,
+    diagnostics: Option<Arc<SyncLog>>,
 }
 impl SteamClient {
     pub fn new() -> Result<Self> {
+        Self::with_diagnostics(None)
+    }
+    pub(super) fn with_diagnostics(diagnostics: Option<Arc<SyncLog>>) -> Result<Self> {
         Ok(Self {
             client: Client::builder()
                 .timeout(Duration::from_secs(20))
                 .connect_timeout(Duration::from_secs(10))
                 .redirect(reqwest::redirect::Policy::none())
                 .build()?,
+            diagnostics,
         })
     }
     fn bytes(&self, url: &str, query: &[(&str, &str)], limit: u64) -> Result<Vec<u8>> {
-        let response = self.client.get(url).query(query).send().map_err(|_| {
+        let started = Instant::now();
+        let endpoint = diagnostic_endpoint(url);
+        let response = self.client.get(url).query(query).send().map_err(|error| {
+            if let Some(log) = &self.diagnostics {
+                log.record(Event::Request {
+                    endpoint: &endpoint,
+                    status: None,
+                    content_type: None,
+                    retry_after: None,
+                    elapsed_ms: started.elapsed().as_millis(),
+                    outcome: if error.is_timeout() {
+                        "timeout"
+                    } else if error.is_connect() {
+                        "connection_failed"
+                    } else {
+                        "request_failed"
+                    },
+                });
+            }
             anyhow::anyhow!("Steam request failed. Check your connection and retry.")
         })?;
         let status = response.status();
-        if !status.is_success() {
-            bail!(
-                "Steam returned HTTP {}. Check the key, visibility, or retry later.",
-                status.as_u16()
-            );
+        let content_type = response
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .map(str::to_owned);
+        let retry_after = response
+            .headers()
+            .get(reqwest::header::RETRY_AFTER)
+            .and_then(|v| v.to_str().ok())
+            .map(str::to_owned);
+        let result = (|| {
+            if !status.is_success() {
+                bail!(
+                    "Steam returned HTTP {}. Check the key, visibility, or retry later.",
+                    status.as_u16()
+                );
+            }
+            let mut bytes = Vec::new();
+            response
+                .take(limit + 1)
+                .read_to_end(&mut bytes)
+                .map_err(|_| anyhow::anyhow!("Steam response was interrupted"))?;
+            ensure!(bytes.len() as u64 <= limit, "Steam response is too large");
+            Ok(bytes)
+        })();
+        if let Some(log) = &self.diagnostics {
+            log.record(Event::Request {
+                endpoint: &endpoint,
+                status: Some(status.as_u16()),
+                content_type: content_type.as_deref(),
+                retry_after: retry_after.as_deref(),
+                elapsed_ms: started.elapsed().as_millis(),
+                outcome: if result.is_ok() {
+                    "received"
+                } else if status.is_redirection() {
+                    "redirect"
+                } else if status.is_success() {
+                    "body_failed"
+                } else {
+                    "http_error"
+                },
+            });
         }
-        let mut bytes = Vec::new();
-        response
-            .take(limit + 1)
-            .read_to_end(&mut bytes)
-            .map_err(|_| anyhow::anyhow!("Steam response was interrupted"))?;
-        ensure!(bytes.len() as u64 <= limit, "Steam response is too large");
-        Ok(bytes)
+        result
     }
     fn json(&self, url: &str, query: &[(&str, &str)]) -> Result<Value> {
-        serde_json::from_slice(&self.bytes(url, query, 8 * 1024 * 1024)?)
-            .map_err(|_| anyhow::anyhow!("Steam returned an invalid response"))
+        serde_json::from_slice(&self.bytes(url, query, 8 * 1024 * 1024)?).map_err(|_| {
+            if let Some(log) = &self.diagnostics {
+                log.record(Event::Issue {
+                    detail: &format!("{}: invalid JSON response", diagnostic_endpoint(url)),
+                });
+            }
+            anyhow::anyhow!("Steam returned an invalid response")
+        })
     }
     pub fn account(&self, key: &str, input: &str) -> Result<String> {
         let input = input.trim().trim_end_matches('/');
@@ -148,20 +210,21 @@ impl SteamClient {
         Ok(result["data"].clone())
     }
     pub fn reviews(&self, id: u32) -> Result<Value> {
+        // The old /appreviews route redirects to the store homepage. The service
+        // uses numeric filters and wraps its result in `response`, without `success`.
+        let request = serde_json::json!({
+            "appid": id,
+            "languages": ["all"],
+            "purchase_type": 1,
+            "review_type": 0,
+            "cursor": "*",
+            "num_per_page": 1
+        });
         let data = self.json(
-            &format!("https://store.steampowered.com/appreviews/{id}"),
-            &[
-                ("json", "1"),
-                ("language", "all"),
-                ("purchase_type", "all"),
-                ("num_per_page", "0"),
-            ],
+            "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/",
+            &[("input_json", &request.to_string())],
         )?;
-        ensure!(
-            data["success"] == 1 && data["query_summary"].is_object(),
-            "Reviews are unavailable"
-        );
-        Ok(data["query_summary"].clone())
+        parse_review_summary(&data)
     }
     /// Valve's Steam Deck compatibility report. This store endpoint is not a
     /// documented API; `parse_setup` rejects any shape it does not expect.
@@ -676,6 +739,118 @@ fn trusted_header(id: u32, value: &str) -> bool {
                 .starts_with(&format!("/store_item_assets/steam/apps/{id}/"))
                 || url.path().starts_with(&format!("/steam/apps/{id}/")))
     })
+}
+
+fn diagnostic_endpoint(url: &str) -> String {
+    reqwest::Url::parse(url)
+        .map(|url| format!("{}{}", url.host_str().unwrap_or("unknown"), url.path()))
+        .unwrap_or_else(|_| "invalid endpoint".into())
+}
+
+fn parse_review_summary(data: &Value) -> Result<Value> {
+    let summary = &data["response"]["query_summary"];
+    ensure!(summary.is_object(), "Reviews are unavailable");
+    Ok(summary.clone())
+}
+
+#[cfg(test)]
+mod review_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn service_summary_needs_no_legacy_success_field() {
+        for summary in [
+            json!({"total_reviews": 10, "total_positive": 9, "review_score_desc": "Positive"}),
+            json!({"total_reviews": 0, "total_positive": 0}),
+        ] {
+            let response = json!({"response": {"query_summary": summary, "reviews": []}});
+            assert_eq!(parse_review_summary(&response).unwrap(), summary);
+        }
+    }
+
+    #[test]
+    fn missing_or_invalid_service_summary_stays_retryable() {
+        for data in [
+            json!({}),
+            json!({"response": {}}),
+            json!({"response": {"query_summary": null}}),
+            json!({"response": {"query_summary": []}}),
+            json!({"success": 1, "query_summary": {"total_reviews": 0}}),
+        ] {
+            assert!(parse_review_summary(&data).is_err());
+        }
+    }
+}
+
+#[cfg(test)]
+mod diagnostic_tests {
+    use super::*;
+    use std::io::Write;
+
+    #[test]
+    fn request_logs_keep_status_and_type_without_queries_or_bodies() {
+        let temp = tempfile::tempdir().unwrap();
+        let log = Arc::new(SyncLog::open(temp.path(), "76561198000000000", "test-key").unwrap());
+        let client = SteamClient::with_diagnostics(Some(log.clone())).unwrap();
+        for status in ["302 Found", "429 Too Many Requests", "200 OK"] {
+            let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+            let address = listener.local_addr().unwrap();
+            let response = format!("HTTP/1.1 {status}\r\nContent-Type: text/html\r\nRetry-After: 60\r\nContent-Length: 12\r\nConnection: close\r\n\r\nprivate-body");
+            let server = std::thread::spawn(move || {
+                let (mut stream, _) = listener.accept().unwrap();
+                stream
+                    .set_read_timeout(Some(Duration::from_secs(5)))
+                    .unwrap();
+                let mut buffer = [0; 4096];
+                assert!(stream.read(&mut buffer).unwrap() > 0);
+                stream.write_all(response.as_bytes()).unwrap();
+            });
+            assert!(client
+                .json(
+                    &format!("http://{address}/reviews"),
+                    &[("key", "test-key"), ("steamid", "76561198000000000")]
+                )
+                .is_err());
+            server.join().unwrap();
+        }
+        log.finish("needs_retry", 1, 3);
+        let path = std::fs::read_dir(temp.path())
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap()
+            .path();
+        let text = std::fs::read_to_string(path).unwrap();
+        for private in ["test-key", "76561198000000000", "private-body", "?key="] {
+            assert!(!text.contains(private));
+        }
+        let entries = text
+            .lines()
+            .map(|line| serde_json::from_str::<Value>(line).unwrap())
+            .collect::<Vec<_>>();
+        let requests = entries
+            .iter()
+            .filter(|entry| entry["event"] == "request")
+            .collect::<Vec<_>>();
+        assert_eq!(requests.len(), 3);
+        assert_eq!(requests[0]["status"], 302);
+        assert_eq!(requests[0]["outcome"], "redirect");
+        assert_eq!(requests[1]["status"], 429);
+        assert_eq!(requests[1]["retry_after"], "60");
+        assert_eq!(requests[2]["content_type"], "text/html");
+        assert!(text.contains("invalid JSON response"));
+    }
+
+    #[test]
+    fn endpoint_omits_url_credentials_query_and_fragment() {
+        assert_eq!(
+            diagnostic_endpoint(
+                "https://user:password@api.steampowered.com/reviews?key=secret#token"
+            ),
+            "api.steampowered.com/reviews"
+        );
+    }
 }
 
 #[cfg(test)]

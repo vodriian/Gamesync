@@ -1,6 +1,18 @@
 //! Optional smoke check. No account or API key is used.
 use gamesync_desktop::steam::SteamClient;
 #[test]
+#[ignore = "Reads public Steam review summaries; no account or API key is used"]
+fn review_service_returns_counts_for_released_and_upcoming_games() {
+    let client = SteamClient::new().unwrap();
+    for id in [620, 990080, 4435490] {
+        let summary = client.reviews(id).unwrap();
+        let total = summary["total_reviews"].as_u64().unwrap();
+        let positive = summary["total_positive"].as_u64().unwrap();
+        assert!(positive <= total, "Invalid review counts for {id}");
+    }
+}
+
+#[test]
 #[ignore = "Reads public Steam endpoints; keep network separate from deterministic tests"]
 fn public_store_metadata_and_portrait_are_available() {
     let client = SteamClient::new().unwrap();

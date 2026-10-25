@@ -40,6 +40,36 @@ an installer and public release signing remain pending.
 Other PCs need the Microsoft Visual C++ x64 runtime. The first-build copy is
 `desktop/target/windows/GameSync.exe`.
 
+### Steam sync logs
+
+Each Steam sync builds one full library identity index for owned and wishlisted
+games. It still checks filenames and rereads the target game's current revisions
+before a write, so new conflict copies and personal edits remain protected.
+It does not reread every game's contents for each match.
+
+Progress shows new, updated, and unchanged games. Updated games have changed
+ownership, playtime, activity, or wishlist data; personal edits do not affect
+these counts. Missing details count only pending metadata steps (description,
+reviews, covers, Steam Deck data, and tags), including retries. Completed steps
+are skipped. The final message reports how many detail steps are still missing.
+
+Steam sync writes one JSON Lines log per run, after it reads the saved key.
+The final sync message includes its path. On Windows the folder is
+`%LOCALAPPDATA%\GameSync\GameSync\data\logs\steam-sync\`.
+Other platforms use the GameSync local data directory under `logs/steam-sync/`.
+Preview runs use their isolated storage folder.
+
+Logs include UTC Unix timestamps in milliseconds, app version and platform,
+sync stages, Steam App IDs, request timings, HTTP status, content type,
+Retry-After, errors, and the final result. Request queries, response bodies,
+API keys, account IDs, and personal game fields are excluded. Errors can
+include game titles and local file paths. Logs stay on this device.
+
+The latest 10 logs are retained, with a 2 MiB limit per run. Active logs are
+kept until a later cleanup. A size-limit marker and final result remain when
+details reach the limit. On Windows, open the log after the run ends.
+Logging failures do not stop sync; the final message reports them.
+
 Windows builds embed `icon/app-icon.ico` as resource ID 1, which GPUI uses for
 the window and taskbar icon. It is derived from `icon/app-icon.png` at seven
 sizes from 16 to 256 px. After changing the PNG, run

@@ -160,9 +160,272 @@ fn run(store: &LibraryStore, source: &Source) -> SyncProgress {
         source,
         Duration::ZERO,
         &mut |_| {},
+        None,
     )
     .unwrap()
 }
+
+#[test]
+fn import_index_keeps_latest_personal_edits_and_rejects_late_conflicts() {
+    let (_temp, library) = library();
+    let input = source(false).owned("", "").unwrap().remove(0);
+    let base = library.import_steam(ACCOUNT, &input).unwrap();
+    let store = RecordStore::open(library.root()).unwrap();
+    let mut imports = library.steam_import(ACCOUNT).unwrap();
+    assert!(library.import_steam(ACCOUNT, &input).is_err());
+    let mut personal = base.game.personal.clone();
+    personal.notes = "Edited while sync was running".into();
+    store
+        .edit_personal(base.game_id, base.revision_id, personal.clone())
+        .unwrap();
+    let result = imports.import_steam(&input).unwrap();
+    assert_eq!(result.change, SteamChange::Unchanged);
+    assert_eq!(result.record.game.personal, personal);
+    let mut remote = base.clone();
+    remote.revision_id = uuid::Uuid::new_v4();
+    remote.parents = vec![base.revision_id];
+    remote.game.personal.notes = "Concurrent edit".into();
+    std::fs::write(
+        library.root().join("games/remote-copy.json"),
+        serde_json::to_vec(&remote).unwrap(),
+    )
+    .unwrap();
+    assert!(imports.import_steam(&input).is_err());
+    assert!(store.inspect(base.game_id).unwrap().has_conflict());
+}
+
+#[test]
+fn import_index_reuses_new_ids_and_rejects_unreadable_library_files() {
+    let (_temp, library) = library();
+    let input = source(false).owned("", "").unwrap().remove(0);
+    {
+        let mut imports = library.steam_import(ACCOUNT).unwrap();
+        let first = imports.import_steam(&input).unwrap();
+        let second = imports.import_steam(&input).unwrap();
+        assert_eq!(first.change, SteamChange::New);
+        assert_eq!(second.change, SteamChange::Unchanged);
+        assert_eq!(first.record.revision_id, second.record.revision_id);
+    }
+    std::fs::write(library.root().join("games/partial.json"), "{").unwrap();
+    assert!(library.steam_import(ACCOUNT).is_err());
+}
+
+#[test]
+fn sync_scans_once_and_counts_owned_wishlist_changes_and_missing_steps() {
+    let (_temp, library) = library();
+    let mut source = source(false);
+    *source.wishlist.borrow_mut() = Some(vec![50, 51]);
+    let scans = crate::library::steam_scan_count();
+    let first = run(&library, &source);
+    assert_eq!(crate::library::steam_scan_count() - scans, 1);
+    assert_eq!(
+        (first.new_games, first.updated_games, first.unchanged_games),
+        (3, 0, 0)
+    );
+    assert_eq!(
+        (
+            first.missing_details,
+            first.details_completed,
+            first.details_attempted
+        ),
+        (18, 18, 18)
+    );
+    assert!(first.message.contains("3 new games"));
+    assert!(first.message.contains("0 missing detail steps"));
+
+    let scans = crate::library::steam_scan_count();
+    let second = run(&library, &source);
+    assert_eq!(crate::library::steam_scan_count() - scans, 1);
+    assert_eq!(
+        (
+            second.new_games,
+            second.updated_games,
+            second.unchanged_games
+        ),
+        (0, 0, 3)
+    );
+    assert_eq!(second.missing_details, 0);
+    assert_eq!(source.details_calls.get(), 3);
+
+    source.last_played += 100;
+    let changed = run(&library, &source);
+    assert_eq!(
+        (
+            changed.new_games,
+            changed.updated_games,
+            changed.unchanged_games
+        ),
+        (0, 1, 2)
+    );
+    assert_eq!(changed.missing_details, 0);
+
+    *source.wishlist.borrow_mut() = Some(vec![51, 52]);
+    let wishlist = run(&library, &source);
+    assert_eq!(
+        (
+            wishlist.new_games,
+            wishlist.updated_games,
+            wishlist.unchanged_games
+        ),
+        (1, 2, 1)
+    );
+    assert_eq!(wishlist.missing_details, 6);
+}
+
+#[test]
+fn detail_progress_counts_only_pending_work_including_retries() {
+    let (_temp, library) = library();
+    let first = run(&library, &source(true));
+    assert_eq!((first.missing_details, first.details_completed), (6, 5));
+    assert!(first.message.contains("1 missing detail steps"));
+    let mut updates = Vec::new();
+    let result = run_sync(
+        library.root(),
+        ACCOUNT,
+        "dummy",
+        Arc::new(AtomicBool::new(false)),
+        &source(false),
+        Duration::ZERO,
+        &mut |p| updates.push(p),
+        None,
+    )
+    .unwrap();
+    assert_eq!(
+        (
+            result.new_games,
+            result.updated_games,
+            result.unchanged_games
+        ),
+        (0, 0, 1)
+    );
+    assert_eq!(
+        (
+            result.missing_details,
+            result.details_completed,
+            result.details_attempted
+        ),
+        (1, 1, 1)
+    );
+    assert!(updates
+        .iter()
+        .any(|p| p.message.contains("0 of 1 steps checked")));
+    assert!(updates
+        .iter()
+        .any(|p| p.message.contains("1 of 1 steps checked")));
+    assert!(updates
+        .iter()
+        .all(|p| !p.message.contains("Imported") && !p.message.contains("Loading details")));
+}
+
+#[test]
+fn diagnostic_log_tracks_a_failed_stage_and_successful_retry() {
+    let (_temp, library) = library();
+    let logs = tempfile::tempdir().unwrap();
+    for (label, fail_details) in [("first", true), ("retry", false)] {
+        let folder = logs.path().join(label);
+        let log = Arc::new(SyncLog::open(&folder, ACCOUNT, "dummy").unwrap());
+        let result = run_sync(
+            library.root(),
+            ACCOUNT,
+            "dummy",
+            Arc::new(AtomicBool::new(false)),
+            &source(fail_details),
+            Duration::ZERO,
+            &mut |_| {},
+            Some(&log),
+        );
+        let state = finish_sync(result, Ok(log), &mut |_| {}).unwrap();
+        assert_eq!(state.failures, usize::from(fail_details));
+        let path = std::fs::read_dir(folder)
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap()
+            .path();
+        let text = std::fs::read_to_string(path).unwrap();
+        let entries = text
+            .lines()
+            .map(|line| serde_json::from_str::<serde_json::Value>(line).unwrap())
+            .collect::<Vec<_>>();
+        assert!(entries
+            .iter()
+            .any(|e| e["stage"] == "description" && e["app_id"] == 42));
+        assert_eq!(
+            entries.last().unwrap()["outcome"],
+            if fail_details {
+                "needs_retry"
+            } else {
+                "success"
+            }
+        );
+        assert_eq!(text.contains("Offline"), fail_details);
+    }
+}
+
+#[test]
+fn diagnostic_log_keeps_issues_beyond_the_ui_limit_and_reports_outcomes() {
+    let temp = tempfile::tempdir().unwrap();
+    for (name, cancelled, fatal) in [
+        ("retry", false, false),
+        ("cancel", true, false),
+        ("fatal", false, true),
+    ] {
+        let folder = temp.path().join(name);
+        let log = Arc::new(SyncLog::open(&folder, ACCOUNT, "dummy").unwrap());
+        let mut state = SyncProgress {
+            cancelled,
+            ..Default::default()
+        };
+        for i in 0..25 {
+            note_issue(
+                Some(&log),
+                &mut state,
+                1,
+                format!("Steam {i} · reviews: HTTP 429"),
+            );
+        }
+        assert_eq!(state.issues.len(), 20);
+        let result = if fatal {
+            Err(anyhow::anyhow!("Owned library unavailable"))
+        } else {
+            Ok(state)
+        };
+        let result = finish_sync(result, Ok(log), &mut |_| {});
+        if fatal {
+            assert!(result.err().unwrap().to_string().contains("Sync log:"));
+        } else {
+            assert!(result.unwrap().message.contains("Sync log:"));
+        }
+        let path = std::fs::read_dir(folder)
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap()
+            .path();
+        let text = std::fs::read_to_string(path).unwrap();
+        assert!(text.contains("Steam 24"));
+        let last: serde_json::Value = serde_json::from_str(text.lines().last().unwrap()).unwrap();
+        assert_eq!(
+            last["outcome"],
+            if fatal {
+                "failed"
+            } else if cancelled {
+                "cancelled"
+            } else {
+                "needs_retry"
+            }
+        );
+    }
+    let result = finish_sync(
+        Ok(SyncProgress::default()),
+        Err(anyhow::anyhow!("Disk full")),
+        &mut |_| {},
+    )
+    .unwrap();
+    assert_eq!(result.failures, 0);
+    assert!(result.message.contains("Could not create"));
+}
+
 #[test]
 fn partial_sync_retries_only_failed_stages_and_preserves_personal_data() {
     let (_temp, library) = library();
@@ -225,6 +488,7 @@ fn cancellation_keeps_completed_stages_and_a_later_sync_resumes() {
         &first,
         Duration::ZERO,
         &mut |_| {},
+        None,
     )
     .unwrap();
     assert!(result.cancelled);
@@ -250,6 +514,7 @@ fn cancelled_before_import_and_simultaneous_sync_make_no_changes() {
         &source(false),
         Duration::ZERO,
         &mut |_| {},
+        None,
     )
     .unwrap();
     assert!(result.cancelled);
@@ -267,7 +532,8 @@ fn cancelled_before_import_and_simultaneous_sync_make_no_changes() {
         Arc::new(AtomicBool::new(false)),
         &source(false),
         Duration::ZERO,
-        &mut |_| {}
+        &mut |_| {},
+        None
     )
     .is_err());
 }

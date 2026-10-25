@@ -123,3 +123,21 @@ real data. Add Windows Steam detection and launching before release.
   step is non-blocking; inspect that step as well as the build result.
 - Windows visual review, real Steam credentials/sync, cross-device sync, and
   Windows Steam launching remain outside this integration check.
+
+## Windows rebuild — 2026-10-25
+
+- Fetched origin and fast-forwarded `windows-first-run` to `056abe7`.
+  Its source tree matches `origin/main` at `8903379` (PR #12 merge).
+- The locked Windows release build passed with the installed MSVC toolchain.
+- The full default test suite passed outside the sandbox. Optional integration
+  tests stayed ignored. The first restricted run failed file/localhost checks
+  and stalled; it was stopped after the unrestricted run passed.
+- Formatting and Git whitespace checks passed. No app source changed.
+- Copied the release to `desktop/target/windows/GameSync.exe`.
+  PE headers confirm x64 and the Windows GUI subsystem.
+- Artifact: 37,713,920 bytes. SHA-256:
+  `0b6902b980797e4d4b653597db33b9a0120abf330f450f7bc8ba440d9e31911b`.
+- Existing GPUI float-literal and `proc-macro-error2` future compatibility
+  warnings remain. No dependency update was made.
+- No app launch or visual check was performed for this rebuild. The executable
+  remains an unsigned local test build. Next: review the updated Windows UI.

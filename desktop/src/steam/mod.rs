@@ -1,13 +1,16 @@
 //! Sequential, cancellable Steam import. Stage completion lives with provider metadata.
 pub mod client;
 pub mod covers;
+mod diagnostics;
 use crate::{
-    library::LibraryStore,
+    library::{LibraryStore, SteamChange, SteamImport},
     record_store::RecordStore,
     records::{GameRevision, SteamMetadata},
 };
 use anyhow::{Context, Result};
 pub use client::{OwnedGame, SteamClient, WishlistItem};
+pub use diagnostics::directory as log_directory;
+use diagnostics::{Event, SyncLog};
 use std::{
     collections::BTreeMap,
     fs::OpenOptions,
@@ -23,9 +26,52 @@ use std::{
 pub struct SyncProgress {
     pub message: String,
     pub imported: usize,
+    pub new_games: usize,
+    pub updated_games: usize,
+    pub unchanged_games: usize,
+    /// Number of missing metadata steps planned for this run, including tags.
+    pub missing_details: usize,
+    pub details_completed: usize,
+    pub details_attempted: usize,
     pub failures: usize,
     pub cancelled: bool,
     pub issues: Vec<String>,
+}
+impl SyncProgress {
+    fn count_change(&mut self, change: SteamChange) {
+        match change {
+            SteamChange::New => self.new_games += 1,
+            SteamChange::Updated => self.updated_games += 1,
+            SteamChange::Unchanged => self.unchanged_games += 1,
+        }
+    }
+    fn counts(&self) -> String {
+        format!(
+            "{} new games · {} updated games · {} unchanged games",
+            self.new_games, self.updated_games, self.unchanged_games
+        )
+    }
+    fn detail_progress(&self) -> String {
+        format!(
+            "Fetching missing details · {} of {} steps checked · {} still missing",
+            self.details_attempted,
+            self.missing_details,
+            self.missing_details - self.details_completed
+        )
+    }
+}
+
+fn missing_stages(metadata: &SteamMetadata) -> [bool; 5] {
+    [
+        !metadata.details_complete,
+        !metadata.reviews_complete,
+        !metadata.cover_complete,
+        !metadata
+            .setup
+            .as_ref()
+            .is_some_and(|setup| setup.workshop.is_some()),
+        metadata.banner.is_none(),
+    ]
 }
 pub type Cancellation = Arc<AtomicBool>;
 fn cancelled(cancel: &Cancellation) -> bool {
@@ -47,27 +93,96 @@ pub fn sync(
     cancel: Cancellation,
     mut progress: impl FnMut(SyncProgress),
 ) -> Result<SyncProgress> {
-    let client = SteamClient::new()?;
-    let result = run_sync(
-        root,
-        account,
-        key,
-        cancel,
-        &client,
-        Duration::from_millis(1200),
-        &mut progress,
-    )?;
-    // Prices use the profile country. A hidden country keeps the old value.
-    match client.country(key, account) {
-        Ok(Some(code)) => {
-            if let Err(error) = crate::settings::update(|s| s.detected_country = Some(code)) {
-                log::warn!("Could not save the store country: {error:#}");
+    let log = log_directory()
+        .and_then(|folder| SyncLog::open(&folder, account, key))
+        .map(Arc::new);
+    let diagnostics = log.as_ref().ok().cloned();
+    let result = (|| {
+        let client = SteamClient::with_diagnostics(diagnostics.clone())?;
+        let result = run_sync(
+            root,
+            account,
+            key,
+            cancel,
+            &client,
+            Duration::from_millis(1200),
+            &mut progress,
+            diagnostics.as_deref(),
+        )?;
+        // Prices use the profile country. A hidden country keeps the old value.
+        match client.country(key, account) {
+            Ok(Some(code)) => {
+                if let Err(error) = crate::settings::update(|s| s.detected_country = Some(code)) {
+                    if let Some(log) = &diagnostics {
+                        log.record(Event::Issue {
+                            detail: &format!("Save store country: {error:#}"),
+                        });
+                    }
+                    log::warn!("Could not save the store country: {error:#}");
+                }
+            }
+            Ok(None) => {}
+            Err(error) => {
+                if let Some(log) = &diagnostics {
+                    log.record(Event::Issue {
+                        detail: &format!("Read store country: {error:#}"),
+                    });
+                }
+                log::warn!("Could not read the profile country: {error:#}");
             }
         }
-        Ok(None) => {}
-        Err(error) => log::warn!("Could not read the profile country: {error:#}"),
+        Ok(result)
+    })();
+    finish_sync(result, log, &mut progress)
+}
+
+fn finish_sync(
+    result: Result<SyncProgress>,
+    log: Result<Arc<SyncLog>>,
+    progress: &mut impl FnMut(SyncProgress),
+) -> Result<SyncProgress> {
+    let feedback = match &log {
+        Ok(log) => {
+            match &result {
+                Ok(state) => {
+                    log.record(Event::Counts {
+                        new_games: state.new_games,
+                        updated_games: state.updated_games,
+                        unchanged_games: state.unchanged_games,
+                        missing_details: state.missing_details,
+                        details_completed: state.details_completed,
+                    });
+                    log.finish(
+                        if state.cancelled {
+                            "cancelled"
+                        } else if state.failures > 0 {
+                            "needs_retry"
+                        } else {
+                            "success"
+                        },
+                        state.imported,
+                        state.failures,
+                    );
+                }
+                Err(error) => {
+                    log.record(Event::Issue {
+                        detail: &format!("Sync stopped: {error:#}"),
+                    });
+                    log.finish("failed", 0, 1);
+                }
+            }
+            log.feedback()
+        }
+        Err(error) => format!("Could not create the Steam sync log: {error}"),
+    };
+    match result {
+        Ok(mut state) => {
+            state.message.push_str(&format!("\n{feedback}"));
+            progress(state.clone());
+            Ok(state)
+        }
+        Err(error) => Err(anyhow::anyhow!("{error}\n{feedback}")),
     }
-    Ok(result)
 }
 
 /// The transport boundary lets recovery tests use fixed responses without real keys.
@@ -119,6 +234,7 @@ impl SteamSource for SteamClient {
         self.banner(id)
     }
 }
+#[allow(clippy::too_many_arguments)]
 fn run_sync(
     root: &Path,
     account: &str,
@@ -127,7 +243,14 @@ fn run_sync(
     client: &impl SteamSource,
     delay: Duration,
     progress: &mut impl FnMut(SyncProgress),
+    log: Option<&SyncLog>,
 ) -> Result<SyncProgress> {
+    if let Some(log) = log {
+        log.record(Event::Stage {
+            stage: "open_library",
+            app_id: None,
+        });
+    }
     let library = LibraryStore::open(root)?;
     let lock = OpenOptions::new()
         .create(true)
@@ -142,41 +265,85 @@ fn run_sync(
         ..Default::default()
     };
     progress(state.clone());
+    if let Some(log) = log {
+        log.record(Event::Stage {
+            stage: "owned_games",
+            app_id: None,
+        });
+    }
     let games = client.owned(key, account)?;
+    state.message = "Scanning local library…".into();
+    progress(state.clone());
+    let mut imports = library.steam_import(account)?;
+    if let Some(log) = log {
+        log.record(Event::Stage {
+            stage: "library_index_ready",
+            app_id: None,
+        });
+    }
     let mut records = Vec::new();
     for game in &games {
         if cancelled(&cancel) {
             break;
         }
-        match library.import_steam(account, game) {
-            Ok(record) => {
+        match imports.import_steam(game) {
+            Ok(imported) => {
                 state.imported += 1;
-                records.push(record);
+                state.count_change(imported.change);
+                records.push(imported.record);
             }
             Err(error) => {
-                state.failures += 1;
-                if state.issues.len() < 20 {
-                    state.issues.push(format!("{}: {error}", game.name));
-                }
+                note_issue(
+                    log,
+                    &mut state,
+                    1,
+                    format!("{} (Steam {}) · import: {error:#}", game.name, game.appid),
+                );
             }
         }
         state.message = format!(
-            "Imported {} of {} games · {} need attention",
+            "Checking owned games · {} of {} · {}",
             state.imported,
             games.len(),
-            state.failures
+            state.counts()
         );
         progress(state.clone());
     }
     let store = RecordStore::open(root)?;
     let owned: std::collections::BTreeSet<u32> = games.iter().map(|g| g.appid).collect();
     records.extend(sync_wishlist(
-        &library, &store, account, &owned, &cancel, client, delay, &mut state, progress,
+        &mut imports,
+        &store,
+        account,
+        &owned,
+        &cancel,
+        client,
+        delay,
+        &mut state,
+        progress,
+        log,
     ));
+    drop(imports);
+    state.missing_details = records
+        .iter()
+        .filter_map(|record| record.game.steam.as_ref())
+        .map(|steam| {
+            let metadata = steam.metadata.clone().unwrap_or_default();
+            missing_stages(&metadata)
+                .into_iter()
+                .filter(|missing| *missing)
+                .count()
+                + usize::from(!metadata.tags_complete)
+        })
+        .sum();
+    if state.missing_details > 0 && !cancelled(&cancel) {
+        state.message = format!("{} · {}", state.counts(), state.detail_progress());
+        progress(state.clone());
+    }
     sync_tags(
-        &store, &records, &cancel, client, delay, &mut state, progress,
+        &store, &records, &cancel, client, delay, &mut state, progress, log,
     );
-    for (index, record) in records.iter().enumerate() {
+    for record in &records {
         if cancelled(&cancel) {
             break;
         }
@@ -185,27 +352,29 @@ fn run_sync(
         };
         let id = steam.app_id;
         let metadata = steam.metadata.clone().unwrap_or_default();
-        for stage in 0..5 {
+        for (stage, missing) in missing_stages(&metadata).into_iter().enumerate() {
             if cancelled(&cancel) {
                 break;
             }
-            if [
-                metadata.details_complete,
-                metadata.reviews_complete,
-                metadata.cover_complete,
-                // Evidence from before Workshop was read is fetched again.
-                metadata
-                    .setup
-                    .as_ref()
-                    .is_some_and(|setup| setup.workshop.is_some()),
-                metadata.banner.is_some(),
-            ][stage]
-            {
+            if !missing {
                 continue;
             }
             pause(&cancel, delay);
             if cancelled(&cancel) {
                 break;
+            }
+            let stage_name = [
+                "description",
+                "reviews",
+                "cover",
+                "Steam Deck",
+                "landscape cover",
+            ][stage];
+            if let Some(log) = log {
+                log.record(Event::Stage {
+                    stage: stage_name,
+                    app_id: Some(id),
+                });
             }
             let result = match stage {
                 0 => client
@@ -227,42 +396,40 @@ fn run_sync(
                     covers::save_banner(root, record.game_id, id, &bytes).map(|_| ())
                 }),
             };
+            state.details_attempted += 1;
             if let Err(error) = result {
-                state.failures += 1;
-                if state.issues.len() < 20 {
-                    state.issues.push(format!(
-                        "{} · {}: {error}",
-                        record.game.title,
-                        [
-                            "description",
-                            "reviews",
-                            "cover",
-                            "Steam Deck",
-                            "landscape cover"
-                        ][stage]
-                    ));
-                }
+                note_issue(
+                    log,
+                    &mut state,
+                    1,
+                    format!(
+                        "{} (Steam {id}) · {stage_name}: {error:#}",
+                        record.game.title
+                    ),
+                );
+            } else {
+                state.details_completed += 1;
             }
-            state.message = format!(
-                "Loading details · {} of {} games · {} stages need retry",
-                index + 1,
-                records.len(),
-                state.failures
-            );
+            state.message = format!("{} · {}", state.counts(), state.detail_progress());
             progress(state.clone());
         }
     }
     state.cancelled = cancelled(&cancel);
-    state.message = if state.cancelled {
-        "Sync cancelled. Saved progress stays.".into()
-    } else if state.failures > 0 {
-        format!(
-            "Sync finished · {} games · {} items need retry or conflict review",
-            state.imported, state.failures
+    state.message =
+        if state.cancelled {
+            format!("Sync cancelled · {}. Saved progress stays.", state.counts())
+        } else if state.failures > 0 {
+            format!(
+            "Sync finished · {} · {} missing detail steps · {} items need retry or conflict review",
+            state.counts(), state.missing_details - state.details_completed, state.failures
         )
-    } else {
-        format!("Synced {} games", state.imported)
-    };
+        } else {
+            format!(
+                "Sync finished · {} · {} missing detail steps",
+                state.counts(),
+                state.missing_details - state.details_completed
+            )
+        };
     if !state.issues.is_empty() {
         state
             .message
@@ -422,7 +589,11 @@ pub fn resync_game(root: &Path, game_id: uuid::Uuid) -> Result<Vec<String>> {
 }
 
 /// Count `stages` failed stages under one reported issue.
-fn note_issue(state: &mut SyncProgress, stages: usize, issue: String) {
+fn note_issue(log: Option<&SyncLog>, state: &mut SyncProgress, stages: usize, issue: String) {
+    // The UI keeps only 20 issues; the bounded disk log also records later failures.
+    if let Some(log) = log {
+        log.record(Event::Issue { detail: &issue });
+    }
     state.failures += stages;
     if state.issues.len() < 20 {
         state.issues.push(issue);
@@ -434,7 +605,7 @@ fn note_issue(state: &mut SyncProgress, stages: usize, issue: String) {
 /// anything. Returns wishlist records for the enrichment stages.
 #[allow(clippy::too_many_arguments)]
 fn sync_wishlist(
-    library: &LibraryStore,
+    imports: &mut SteamImport<'_>,
     store: &RecordStore,
     account: &str,
     owned: &std::collections::BTreeSet<u32>,
@@ -443,12 +614,19 @@ fn sync_wishlist(
     delay: Duration,
     state: &mut SyncProgress,
     progress: &mut impl FnMut(SyncProgress),
+    log: Option<&SyncLog>,
 ) -> Vec<GameRevision> {
     if cancelled(cancel) {
         return Vec::new();
     }
     state.message = "Reading Steam wishlist…".into();
     progress(state.clone());
+    if let Some(log) = log {
+        log.record(Event::Stage {
+            stage: "wishlist",
+            app_id: None,
+        });
+    }
     let items = match client.wishlist(account) {
         // Owned games are never wishlist records, even while Steam lists both.
         Ok(items) => items
@@ -456,17 +634,11 @@ fn sync_wishlist(
             .filter(|item| !owned.contains(&item.appid))
             .collect::<Vec<_>>(),
         Err(error) => {
-            note_issue(state, 1, format!("Wishlist: {error}"));
+            note_issue(log, state, 1, format!("Wishlist: {error:#}"));
             return Vec::new();
         }
     };
-    let existing = match library.steam_records() {
-        Ok(records) => records,
-        Err(error) => {
-            note_issue(state, 1, format!("Wishlist: {error}"));
-            return Vec::new();
-        }
-    };
+    let existing = imports.records();
     let known: std::collections::BTreeSet<u32> = existing
         .iter()
         .filter_map(|r| r.game.steam.as_ref().map(|s| s.app_id))
@@ -487,6 +659,7 @@ fn sync_wishlist(
         match client.store_names(batch) {
             Ok(found) => names.extend(found),
             Err(error) => note_issue(
+                log,
                 state,
                 batch.len(),
                 format!("Wishlist names for {} games: {error}", batch.len()),
@@ -504,6 +677,7 @@ fn sync_wishlist(
             None if known.contains(&item.appid) => "",
             None => {
                 note_issue(
+                    log,
                     state,
                     1,
                     format!("Wishlist game {}: store name is unavailable", item.appid),
@@ -511,9 +685,17 @@ fn sync_wishlist(
                 continue;
             }
         };
-        match library.import_wishlist(account, item, name) {
-            Ok(record) => imported.push(record),
-            Err(error) => note_issue(state, 1, format!("Wishlist game {}: {error}", item.appid)),
+        match imports.import_wishlist(item, name) {
+            Ok(result) => {
+                state.count_change(result.change);
+                imported.push(result.record);
+            }
+            Err(error) => note_issue(
+                log,
+                state,
+                1,
+                format!("Wishlist game {}: {error:#}", item.appid),
+            ),
         }
     }
     if state.failures == failures {
@@ -526,28 +708,38 @@ fn sync_wishlist(
                 && steam.wishlist.is_some_and(|w| !w.removed)
                 && !listed.contains(&steam.app_id);
             if leaving {
-                let result = store.update_steam(record.game_id, steam.app_id, |steam| {
-                    if let Some(wishlist) = &mut steam.wishlist {
-                        wishlist.removed = true;
+                let result =
+                    store.update_steam_with_change(record.game_id, steam.app_id, |steam| {
+                        if let Some(wishlist) = &mut steam.wishlist {
+                            wishlist.removed = true;
+                        }
+                    });
+                match result {
+                    Ok((_, true)) => state.updated_games += 1,
+                    Ok((_, false)) => {}
+                    Err(error) => {
+                        note_issue(
+                            log,
+                            state,
+                            1,
+                            format!(
+                                "{} (Steam {}) · wishlist: {error:#}",
+                                record.game.title, steam.app_id
+                            ),
+                        );
                     }
-                });
-                if let Err(error) = result {
-                    note_issue(
-                        state,
-                        1,
-                        format!("{} · wishlist: {error}", record.game.title),
-                    );
                 }
             }
         }
     }
-    state.message = format!("Wishlist · {} games", imported.len());
+    state.message = format!("Wishlist checked · {}", state.counts());
     progress(state.clone());
     imported
 }
 
 /// Store tags are batched: one request covers up to `TAG_BATCH` games. The tag
 /// name list is fetched only when some game still needs tags.
+#[allow(clippy::too_many_arguments)]
 fn sync_tags(
     store: &RecordStore,
     records: &[GameRevision],
@@ -556,6 +748,7 @@ fn sync_tags(
     delay: Duration,
     state: &mut SyncProgress,
     progress: &mut impl FnMut(SyncProgress),
+    log: Option<&SyncLog>,
 ) {
     let pending = records
         .iter()
@@ -568,16 +761,22 @@ fn sync_tags(
     if pending.is_empty() || cancelled(cancel) {
         return;
     }
-    state.message = "Loading Steam tags…".into();
+    state.message = format!("{} · {}", state.counts(), state.detail_progress());
     progress(state.clone());
+    if let Some(log) = log {
+        log.record(Event::Stage {
+            stage: "tags",
+            app_id: None,
+        });
+    }
     let names = match client.tag_names() {
         Ok(names) => names,
         Err(error) => {
-            note_issue(state, pending.len(), format!("Steam tags: {error}"));
+            state.details_attempted += pending.len();
+            note_issue(log, state, pending.len(), format!("Steam tags: {error:#}"));
             return;
         }
     };
-    let mut done = 0;
     for batch in pending.chunks(client::TAG_BATCH) {
         pause(cancel, delay);
         if cancelled(cancel) {
@@ -594,22 +793,26 @@ fn sync_tags(
                                 apply_tags(store, record.game_id, *id, tag_ids, &names)
                             });
                     if let Err(error) = result {
-                        note_issue(state, 1, format!("{} · tags: {error}", record.game.title));
+                        note_issue(
+                            log,
+                            state,
+                            1,
+                            format!("{} (Steam {id}) · tags: {error:#}", record.game.title),
+                        );
+                    } else {
+                        state.details_completed += 1;
                     }
                 }
             }
             Err(error) => note_issue(
+                log,
                 state,
                 batch.len(),
                 format!("Steam tags for {} games: {error}", batch.len()),
             ),
         }
-        done += batch.len();
-        state.message = format!(
-            "Loading Steam tags · {done} of {} games · {} stages need retry",
-            pending.len(),
-            state.failures
-        );
+        state.details_attempted += batch.len();
+        state.message = format!("{} · {}", state.counts(), state.detail_progress());
         progress(state.clone());
     }
 }
