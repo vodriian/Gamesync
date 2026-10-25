@@ -51,6 +51,14 @@ embed-resource = "=3.0.11"
 # objc 0.2 macros (system accent) test a legacy `cargo-clippy` feature in this crate.
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(feature, values("cargo-clippy"))'] }
+unsafe_op_in_unsafe_fn = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -2 }
+correctness = { level = "deny", priority = -1 }
+undocumented_unsafe_blocks = "warn"
+dbg_macro = "warn"
+todo = "warn"
 
 [profile.dev.package."*"]
 opt-level = 2

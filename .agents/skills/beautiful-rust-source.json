@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/morganlinton/BeautifulRust",
+  "installed_on": "2026-10-25",
+  "license": "BeautifulRust-LICENSE",
+  "paths": [
+    "skills/rust-best-practices",
+    "skills/rust-review"
+  ],
+  "revision": "2b2d53a66f6f36ab4b8d6a93070183d91e77fad4"
+}

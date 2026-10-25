@@ -11,7 +11,9 @@ Track games. Browse covers. Find something that fits your mood, time, and energy
 | [App plan](app-plan.md) | Scope, architecture, data rules, milestones, and acceptance checks |
 | [Guardrails](guardrails.md) | Code quality, tests, writing, and efficient agent work |
 | [Design](design.md) | Eagle GUI reference and design rules |
-| [Latest log](logs/2026-10-25-steam-reviews.md) | Steam review repair, sync logs, one-pass matching, and Windows rebuild |
+| [Latest log](logs/2026-10-25-rust-baseline.md) | Error-chain fix, baseline lints, checks, and Windows rebuild |
+| [Latest review](reviews/2026-10-25-steam-sync.md) | BeautifulRust skills, Steam sync commit review, and proposed Clippy policy |
+| [Steam sync log](logs/2026-10-25-steam-reviews.md) | Steam review repair, sync logs, one-pass matching, and Windows rebuild |
 | [Windows log](logs/2026-10-11-windows-first-run.md) | First Windows build, storage fixes, and platform checks |
 | [Sidebar sync log](logs/2026-10-09-sidebar-steam-sync.md) | Sidebar Steam sync, completion toasts, and motion checks |
 | [AI log](logs/2026-10-07-ai-play-now.md) | AI profile analysis for Play now: providers, validation, checks |

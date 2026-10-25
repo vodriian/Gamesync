@@ -137,7 +137,7 @@ impl SteamJob {
                     }
                     Err(error) => {
                         completion = Completion::Failed;
-                        this.message = error.to_string();
+                        this.message = format!("{error:#}");
                     }
                 }
                 cx.emit(Finished(completion));

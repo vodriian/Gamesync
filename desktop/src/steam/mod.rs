@@ -181,7 +181,7 @@ fn finish_sync(
             progress(state.clone());
             Ok(state)
         }
-        Err(error) => Err(anyhow::anyhow!("{error}\n{feedback}")),
+        Err(error) => Err(error.context(feedback)),
     }
 }
 

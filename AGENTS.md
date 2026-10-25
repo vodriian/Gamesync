@@ -10,6 +10,13 @@ Build a cozy desktop game library. Keep the app simple, clear, and fast.
 - Keep experimental Elyx designs in [Design](Design/). Read its [project instructions](Design/AGENTS.md) before design work there.
 - Read only the latest relevant log. Do not load the full project history.
 
+## Rust skills
+
+- Use [rust-best-practices](.agents/skills/rust-best-practices/SKILL.md) for Rust work.
+- For Rust reviews, also use [rust-review](.agents/skills/rust-review/SKILL.md).
+- Apply their application guidance. Project scope and guardrails take precedence;
+  do not add crates, dependencies, or API abstractions only to satisfy a skill.
+
 ## Work rules
 
 - Build the Rust/GPUI app in `desktop/` on a feature branch.

@@ -427,6 +427,40 @@ fn diagnostic_log_keeps_issues_beyond_the_ui_limit_and_reports_outcomes() {
 }
 
 #[test]
+fn fatal_sync_keeps_error_causes_with_and_without_a_log() {
+    let temp = tempfile::tempdir().unwrap();
+    for logging_available in [true, false] {
+        let log = if logging_available {
+            Ok(Arc::new(
+                SyncLog::open(temp.path(), ACCOUNT, "dummy").unwrap(),
+            ))
+        } else {
+            Err(anyhow::anyhow!("Log disk is full"))
+        };
+        let cause =
+            std::io::Error::new(std::io::ErrorKind::PermissionDenied, "Record access denied");
+        let error = anyhow::Error::new(cause).context("Could not open library");
+        let error = finish_sync(Err(error), log, &mut |_| {}).err().unwrap();
+
+        let cause = error.downcast_ref::<std::io::Error>();
+        assert!(
+            cause.is_some(),
+            "Logging must preserve the original I/O error"
+        );
+        assert_eq!(cause.unwrap().kind(), std::io::ErrorKind::PermissionDenied);
+        // The UI renders the full chain, including feedback when logging fails.
+        let message = format!("{error:#}");
+        assert!(message.contains("Could not open library"));
+        assert!(message.contains("Record access denied"));
+        assert!(message.contains(if logging_available {
+            "Sync log:"
+        } else {
+            "Could not create the Steam sync log: Log disk is full"
+        }));
+    }
+}
+
+#[test]
 fn partial_sync_retries_only_failed_stages_and_preserves_personal_data() {
     let (_temp, library) = library();
     let failed = source(true);

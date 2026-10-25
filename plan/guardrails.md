@@ -31,6 +31,7 @@ Build the smallest complete feature that meets the current need.
 - Prioritize writes, recovery, imports, field overrides, AI validation, and recommendation constraints.
 - Use small fixtures with no private data. Keep network tests separate from deterministic tests.
 - For Rust changes, run formatting checks, targeted tests, and Clippy as appropriate to the changed scope.
+- Keep the baseline lint policy in `desktop/Cargo.toml`. Run Clippy with warnings as errors; add stricter rules only with a focused cleanup of their existing findings.
 - Broaden checks when changes cross module boundaries. Do not repeat passing checks without a reason.
 - For GUI changes, inspect the running native app. A successful build is not a visual check.
 - Cover keyboard input, focus, loading, empty results, errors, and reduced motion where relevant.
